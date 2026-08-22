@@ -1,0 +1,52 @@
+{
+  "name": "kasly",
+  "version": "0.1.0",
+  "author": "BoredKevin",
+  "license": "AGPL-3.0",
+  "description": "Kasly - Built with React, Vite, and Convex",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/boredkevin/kasly.git"
+  },
+  "homepage": "https://github.com/boredkevin/kasly#readme",
+  "bugs": {
+    "url": "https://github.com/boredkevin/kasly/issues"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "convex dev --start 'npx vite'",
+    "predev": "convex init && node setup.mjs --once",
+    "typecheck": "tsc -b",
+    "build": "npm run typecheck && npx vite build",
+    "lint": "npm run typecheck && eslint .  --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@boredkevin/ui": "^0.1.1",
+    "@convex-dev/auth": "^0.0.95",
+    "convex": "^1.44.0",
+    "lucide-react": "^1.33.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@convex-dev/eslint-plugin": "^4.0.0",
+    "@eslint/js": "^9.39.5",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "@vitejs/plugin-react": "^6.0.5",
+    "dotenv": "^17.4.2",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.3",
+    "globals": "^17.9.0",
+    "prettier": "^3.9.6",
+    "tailwindcss": "^4.3.3",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "typescript-eslint": "^8.66.0",
+    "vite": "^8.2.0"
+  }
+}
