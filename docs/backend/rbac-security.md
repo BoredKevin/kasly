@@ -28,7 +28,7 @@ Permissions are declared as constant strings in [convex/permissions.ts](file:///
 | **Moderation** | `BAN_MEMBERS` | Ability to ban and unban members who have a lower hierarchy position. | No | Yes (via Admin) |
 | **Invites** | `CREATE_INVITES` | Ability to generate shareable invite links for the organization. | Yes | Yes (via Admin) |
 | **Invites** | `MANAGE_INVITES` | Ability to view all active invite links and revoke existing invites. | No | Yes (via Admin) |
-| **Content** | `VIEW_ORGANIZATION` | Basic read access to view organization profile, channels, and member lists. | Yes | Yes (via Admin) |
+| **Content** | `VIEW_ORGANIZATION` | Basic read access to view organization profile,  member list. | Yes | Yes (via Admin) |
 | **Content** | `CREATE_CONTENT` | Create messages, posts, numbers, and org-scoped resources. | Yes | Yes (via Admin) |
 | **Content** | `MANAGE_CONTENT` | Edit or delete content created by any user within the organization. | No | Yes (via Admin) |
 
