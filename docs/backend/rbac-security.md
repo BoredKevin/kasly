@@ -19,18 +19,18 @@ Permissions are declared as constant strings in [convex/permissions.ts](file:///
 
 | Category | Permission Constant | Description | Default `@everyone` | Default `Admin` |
 | :--- | :--- | :--- | :---: | :---: |
-| **Administration** | `ADMINISTRATOR` | Grants all permissions and bypasses individual permission checks. (Still subject to hierarchy). | ❌ | ✅ |
-| **Administration** | `MANAGE_ORGANIZATION` | Ability to update organization name, description, slug, icon, and server settings. | ❌ | ✅ (via Admin) |
-| **Administration** | `VIEW_AUDIT_LOG` | Read access to organization audit and moderation logs. | ❌ | ✅ (via Admin) |
-| **Roles** | `MANAGE_ROLES` | Ability to create, update, delete, and reorder roles with lower position than actor. | ❌ | ✅ (via Admin) |
-| **Members** | `MANAGE_MEMBERS` | Ability to edit other members' nicknames and assign roles lower than actor. | ❌ | ✅ (via Admin) |
-| **Moderation** | `KICK_MEMBERS` | Ability to kick members who have a lower hierarchy position. | ❌ | ✅ (via Admin) |
-| **Moderation** | `BAN_MEMBERS` | Ability to ban and unban members who have a lower hierarchy position. | ❌ | ✅ (via Admin) |
-| **Invites** | `CREATE_INVITES` | Ability to generate shareable invite links for the organization. | ✅ | ✅ (via Admin) |
-| **Invites** | `MANAGE_INVITES` | Ability to view all active invite links and revoke existing invites. | ❌ | ✅ (via Admin) |
-| **Content** | `VIEW_ORGANIZATION` | Basic read access to view organization profile, channels, and member lists. | ✅ | ✅ (via Admin) |
-| **Content** | `CREATE_CONTENT` | Create messages, posts, numbers, and org-scoped resources. | ✅ | ✅ (via Admin) |
-| **Content** | `MANAGE_CONTENT` | Edit or delete content created by any user within the organization. | ❌ | ✅ (via Admin) |
+| **Administration** | `ADMINISTRATOR` | Grants all permissions and bypasses individual permission checks. (Still subject to hierarchy). | No | Yes |
+| **Administration** | `MANAGE_ORGANIZATION` | Ability to update organization name, description, slug, icon, and server settings. | No | Yes (via Admin) |
+| **Administration** | `VIEW_AUDIT_LOG` | Read access to organization audit and moderation logs. | No | Yes (via Admin) |
+| **Roles** | `MANAGE_ROLES` | Ability to create, update, delete, and reorder roles with lower position than actor. | No | Yes (via Admin) |
+| **Members** | `MANAGE_MEMBERS` | Ability to edit other members' nicknames and assign roles lower than actor. | No | Yes (via Admin) |
+| **Moderation** | `KICK_MEMBERS` | Ability to kick members who have a lower hierarchy position. | No | Yes (via Admin) |
+| **Moderation** | `BAN_MEMBERS` | Ability to ban and unban members who have a lower hierarchy position. | No | Yes (via Admin) |
+| **Invites** | `CREATE_INVITES` | Ability to generate shareable invite links for the organization. | Yes | Yes (via Admin) |
+| **Invites** | `MANAGE_INVITES` | Ability to view all active invite links and revoke existing invites. | No | Yes (via Admin) |
+| **Content** | `VIEW_ORGANIZATION` | Basic read access to view organization profile, channels, and member lists. | Yes | Yes (via Admin) |
+| **Content** | `CREATE_CONTENT` | Create messages, posts, numbers, and org-scoped resources. | Yes | Yes (via Admin) |
+| **Content** | `MANAGE_CONTENT` | Edit or delete content created by any user within the organization. | No | Yes (via Admin) |
 
 ---
 
@@ -45,10 +45,10 @@ Every role has an integer `position` attribute:
 
 ```mermaid
 graph TD
-    Owner["👑 Organization Owner (Bypasses All)"] --> Admin["⭐ Admin Role (Position 100)"]
-    Admin --> Mod["🛡️ Moderator Role (Position 50)"]
-    Mod --> Member["👤 Member Role (Position 10)"]
-    Member --> Everyone["🌐 @everyone Role (Position 0)"]
+    Owner["Organization Owner (Bypasses All)"] --> Admin["Admin Role (Position 100)"]
+    Admin --> Mod["Moderator Role (Position 50)"]
+    Mod --> Member["Member Role (Position 10)"]
+    Member --> Everyone["@everyone Role (Position 0)"]
 ```
 
 ### Highest Role Position Formula

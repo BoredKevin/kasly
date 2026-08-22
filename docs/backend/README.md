@@ -119,16 +119,16 @@ convex/
 ├── _generated/          # Auto-generated Convex types and API bindings (do not edit)
 ├── auth.config.ts       # Convex Auth configuration & OAuth provider definitions
 ├── auth.ts              # Convex Auth server entry point
-├── authz.ts             # 🛡️ Central RBAC calculation, hierarchy guards & auth helpers
+├── authz.ts             # Central RBAC calculation, hierarchy guards & auth helpers
 ├── http.ts              # HTTP router for auth endpoints and webhooks
-├── invites.ts           # ✉️ Organization invitation management and consumption
-├── members.ts           # 👥 Member profiles, role assignment, kick/ban actions
+├── invites.ts           # Organization invitation management and consumption
+├── members.ts           # Member profiles, role assignment, kick/ban actions
 ├── myFunctions.ts       # Boilerplate / demo functions
-├── numbers.ts           # 🔢 Example org-scoped resource demonstrating RBAC guards
-├── organizations.ts     # 🏛️ Organization lifecycle, settings, and ownership transfer
-├── permissions.ts       # 📜 Permission bitsets, constants, and validators
-├── roles.ts             # 🎭 Role creation, hierarchy position ordering, and permissions
-├── schema.ts            # 🗄️ Database schema definitions and indexes
+├── numbers.ts           # Example org-scoped resource demonstrating RBAC guards
+├── organizations.ts     # Organization lifecycle, settings, and ownership transfer
+├── permissions.ts       # Permission bitsets, constants, and validators
+├── roles.ts             # Role creation, hierarchy position ordering, and permissions
+├── schema.ts            # Database schema definitions and indexes
 └── tsconfig.json        # TypeScript configuration for Convex environment
 ```
 

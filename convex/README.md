@@ -4,19 +4,19 @@ This directory contains the [Convex](https://convex.dev/) backend codebase for K
 
 ---
 
-## 📚 Complete Documentation Suite
+## Complete Documentation Suite
 
 Comprehensive architecture, schema specifications, security matrices, and API references are maintained in the [`docs/backend/`](../docs/backend/) directory:
 
-* 🏛️ **[System Architecture & Design Guide](../docs/backend/README.md)** — Architectural principles, execution model, multi-tenant isolation, and data flow.
-* 🗄️ **[Database Schema & ERD](../docs/backend/schema.md)** — Complete table specifications, field types, compound indexes, and cascade deletion policies.
-* 🛡️ **[RBAC & Security Specification](../docs/backend/rbac-security.md)** — Granular permission catalog, mathematical hierarchy models, and security invariants.
-* 📖 **[API Reference Catalog](../docs/backend/api-reference.md)** — Complete function-by-function catalog of queries, mutations, arguments, returns, and error states.
-* 💻 **[Client Integration Guide](../docs/backend/integration-guide.md)** — Frontend integration with React 19, reactive hooks, error handling, and permission guards.
+* **[System Architecture & Design Guide](../docs/backend/README.md)** — Architectural principles, execution model, multi-tenant isolation, and data flow.
+* **[Database Schema & ERD](../docs/backend/schema.md)** — Complete table specifications, field types, compound indexes, and cascade deletion policies.
+* **[RBAC & Security Specification](../docs/backend/rbac-security.md)** — Granular permission catalog, mathematical hierarchy models, and security invariants.
+* **[API Reference Catalog](../docs/backend/api-reference.md)** — Complete function-by-function catalog of queries, mutations, arguments, returns, and error states.
+* **[Client Integration Guide](../docs/backend/integration-guide.md)** — Frontend integration with React 19, reactive hooks, error handling, and permission guards.
 
 ---
 
-## 🗂️ Codebase File Map
+## Codebase File Map
 
 | File | Purpose |
 | :--- | :--- |
@@ -33,7 +33,7 @@ Comprehensive architecture, schema specifications, security matrices, and API re
 
 ---
 
-## 🛠️ Development & Tooling
+## Development & Tooling
 
 To start the Convex backend dev server:
 
