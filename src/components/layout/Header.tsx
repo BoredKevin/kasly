@@ -1,12 +1,100 @@
+import { Authenticated } from "convex/react";
+import { Link, useLocation } from "wouter";
 import { SignOutButton } from "../../features/auth";
+import { User, Building2, Menu, X } from "lucide-react";
+import { Button } from "@boredkevin/ui";
+import { useNavDrawer } from "./useNavDrawer";
 
-export function Header() {
+export type ActiveNavTab = "profile" | "organization";
+
+interface HeaderProps {
+  activeTab?: ActiveNavTab;
+  onTabChange?: (tab: ActiveNavTab) => void;
+}
+
+export function Header({ activeTab: explicitTab }: HeaderProps = {}) {
+  const { openMainNav, closeMainNav, isMainNavOpen } = useNavDrawer();
+  const [location] = useLocation();
+
+  const isProfileActive =
+    explicitTab === "profile" || location === "/profile" || location === "/";
+  const isOrgActive =
+    explicitTab === "organization" || location.startsWith("/organization");
+
   return (
-    <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md p-4 border-b border-border flex justify-between items-center">
-      <div className="font-semibold text-foreground tracking-tight">
-        Convex + React + Convex Auth
+    <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-xl px-4 sm:px-6 py-3 border-b border-border/80 shadow-md flex justify-between items-center">
+      <div className="flex items-center gap-3 sm:gap-6">
+        {/* Mobile Navigation Trigger Button (Menu / Close) */}
+        <Authenticated>
+          <div className="md:hidden">
+            <Button
+              type="button"
+              variant={isMainNavOpen ? "secondary" : "outline"}
+              size="sm"
+              chamfer="dual"
+              onClick={isMainNavOpen ? closeMainNav : openMainNav}
+              aria-label={isMainNavOpen ? "Close Navigation" : "Open Navigation"}
+              className="h-8 w-8 p-0 flex items-center justify-center cursor-pointer relative overflow-hidden"
+            >
+              <div
+                className={`transition-all duration-300 transform ${
+                  isMainNavOpen ? "rotate-90 scale-100" : "rotate-0 scale-100"
+                }`}
+              >
+                {isMainNavOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+              </div>
+            </Button>
+          </div>
+        </Authenticated>
+
+        {/* Kasly Brand Logo */}
+        <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
+          <div className="p-1.5 bg-primary/10 border border-primary/30 text-primary font-bold font-mono text-xs">
+            K
+          </div>
+          <span className="font-bold text-base tracking-tight text-foreground">
+            Kasly
+          </span>
+        </Link>
+
+        {/* Desktop Navigation Tabs */}
+        <Authenticated>
+          <nav className="hidden md:flex items-center gap-1 bg-muted/30 p-1 border border-border">
+            <Link
+              href="/profile"
+              className={`px-3 py-1 text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
+                isProfileActive
+                  ? "bg-background text-foreground shadow-sm font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <User className="w-3.5 h-3.5" />
+              <span>User Profile</span>
+            </Link>
+
+            <Link
+              href="/organization"
+              className={`px-3 py-1 text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
+                isOrgActive
+                  ? "bg-background text-foreground shadow-sm font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              <span>Organization</span>
+            </Link>
+          </nav>
+        </Authenticated>
       </div>
-      <SignOutButton />
+
+      <div className="flex items-center gap-2 sm:gap-3">
+        <Authenticated>
+          {/* Desktop Sign Out */}
+          <div className="hidden sm:block">
+            <SignOutButton />
+          </div>
+        </Authenticated>
+      </div>
     </header>
   );
 }
