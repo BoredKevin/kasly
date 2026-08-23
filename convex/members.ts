@@ -41,11 +41,17 @@ export const list = query({
     }),
   ),
   handler: async (ctx, args) => {
-    const { organization } = await requirePermission(
-      ctx,
-      args.organizationId,
-      PERMISSIONS.VIEW_ORGANIZATION,
-    );
+    const { user: callerUser, organization, permissions: callerPerms } =
+      await requirePermission(
+        ctx,
+        args.organizationId,
+        PERMISSIONS.VIEW_ORGANIZATION,
+      );
+
+    const canViewEmails =
+      callerPerms.has(PERMISSIONS.ADMINISTRATOR) ||
+      callerPerms.has(PERMISSIONS.VIEW_EMAILS) ||
+      organization.ownerId === callerUser._id;
 
     const members = await ctx.db
       .query("members")
@@ -65,12 +71,14 @@ export const list = query({
         .filter((r): r is NonNullable<typeof r> => r !== null)
         .sort((a, b) => b.position - a.position);
 
+      const shouldExposeEmail = canViewEmails || member.userId === callerUser._id;
+
       results.push({
         _id: member._id,
         _creationTime: member._creationTime,
         organizationId: member.organizationId,
         userId: member.userId,
-        email: user?.email,
+        email: shouldExposeEmail ? user?.email : undefined,
         name: user?.name,
         nickname: member.nickname,
         joinedAt: member.joinedAt,
@@ -120,11 +128,17 @@ export const get = query({
     }),
   ),
   handler: async (ctx, args) => {
-    const { organization } = await requirePermission(
-      ctx,
-      args.organizationId,
-      PERMISSIONS.VIEW_ORGANIZATION,
-    );
+    const { user: callerUser, organization, permissions: callerPerms } =
+      await requirePermission(
+        ctx,
+        args.organizationId,
+        PERMISSIONS.VIEW_ORGANIZATION,
+      );
+
+    const canViewEmails =
+      callerPerms.has(PERMISSIONS.ADMINISTRATOR) ||
+      callerPerms.has(PERMISSIONS.VIEW_EMAILS) ||
+      organization.ownerId === callerUser._id;
 
     const member = await ctx.db
       .query("members")
@@ -147,13 +161,14 @@ export const get = query({
       .sort((a, b) => b.position - a.position);
 
     const perms = await resolveMemberPermissions(ctx, organization, member);
+    const shouldExposeEmail = canViewEmails || member.userId === callerUser._id;
 
     return {
       _id: member._id,
       _creationTime: member._creationTime,
       organizationId: member.organizationId,
       userId: member.userId,
-      email: user?.email,
+      email: shouldExposeEmail ? user?.email : undefined,
       name: user?.name,
       nickname: member.nickname,
       joinedAt: member.joinedAt,

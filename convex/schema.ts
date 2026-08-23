@@ -5,6 +5,20 @@ import { authTables } from "@convex-dev/auth/server";
 export default defineSchema({
   ...authTables,
 
+  // Custom User Profile Extension (includes hashed NISN)
+  users: defineTable({
+    name: v.optional(v.string()),
+    image: v.optional(v.string()),
+    email: v.optional(v.string()),
+    emailVerificationTime: v.optional(v.number()),
+    phone: v.optional(v.string()),
+    phoneVerificationTime: v.optional(v.number()),
+    isAnonymous: v.optional(v.boolean()),
+    nisn: v.optional(v.string()), // Salted cryptographic hash of 10-character NISN
+  })
+    .index("email", ["email"])
+    .index("phone", ["phone"]),
+
   // Organizations (Servers in Discord terminology)
   organizations: defineTable({
     name: v.string(),
@@ -68,10 +82,11 @@ export default defineSchema({
     .index("by_organizationId_and_userId", ["organizationId", "userId"])
     .index("by_organizationId", ["organizationId"]),
 
-  // Example org-scoped resource (with backward compatibility)
-  numbers: defineTable({
-    value: v.number(),
-    organizationId: v.optional(v.id("organizations")),
-    createdBy: v.optional(v.id("users")),
-  }).index("by_organizationId", ["organizationId"]),
+  // Global application settings (database-managed)
+  appSettings: defineTable({
+    key: v.string(), // Configuration key, e.g. "allowOrganizationCreation"
+    value: v.boolean(),
+    description: v.optional(v.string()),
+  }).index("by_key", ["key"]),
 });
+

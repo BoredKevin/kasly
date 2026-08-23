@@ -12,8 +12,9 @@ export const PERMISSIONS = {
   // Role Management
   MANAGE_ROLES: "MANAGE_ROLES", // Create, edit, delete, and reorder roles lower than actor's highest role
 
-  // Member Management
+  // Member Management & Privacy
   MANAGE_MEMBERS: "MANAGE_MEMBERS", // Manage member nicknames and assign roles
+  VIEW_EMAILS: "VIEW_EMAILS", // View member email addresses (PII protection)
   KICK_MEMBERS: "KICK_MEMBERS", // Kick members with a lower role hierarchy position
   BAN_MEMBERS: "BAN_MEMBERS", // Ban and unban members with a lower role hierarchy position
 
@@ -37,6 +38,7 @@ export const permissionValidator = v.union(
   v.literal("VIEW_AUDIT_LOG"),
   v.literal("MANAGE_ROLES"),
   v.literal("MANAGE_MEMBERS"),
+  v.literal("VIEW_EMAILS"),
   v.literal("KICK_MEMBERS"),
   v.literal("BAN_MEMBERS"),
   v.literal("CREATE_INVITES"),

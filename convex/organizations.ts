@@ -25,6 +25,18 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const user = await requireUser(ctx);
 
+    // Verify global app setting for organization creation
+    const orgCreationSetting = await ctx.db
+      .query("appSettings")
+      .withIndex("by_key", (q) => q.eq("key", "allowOrganizationCreation"))
+      .unique();
+
+    if (orgCreationSetting && !orgCreationSetting.value) {
+      throw new Error(
+        "Forbidden: Organization creation is currently disabled by system policy.",
+      );
+    }
+
     const organizationId = await ctx.db.insert("organizations", {
       name: args.name,
       slug: args.slug,
@@ -295,17 +307,6 @@ export const deleteOrganization = mutation({
       .take(1000);
     for (const b of bans) {
       await ctx.db.delete("bans", b._id);
-    }
-
-    // Cascade delete org-scoped numbers
-    const numbers = await ctx.db
-      .query("numbers")
-      .withIndex("by_organizationId", (q) =>
-        q.eq("organizationId", args.organizationId),
-      )
-      .take(1000);
-    for (const num of numbers) {
-      await ctx.db.delete("numbers", num._id);
     }
 
     // Delete organization itself

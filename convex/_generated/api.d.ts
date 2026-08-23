@@ -8,16 +8,17 @@
  * @module
  */
 
+import type * as appSettings from "../appSettings.js";
 import type * as auth from "../auth.js";
 import type * as authz from "../authz.js";
 import type * as http from "../http.js";
 import type * as invites from "../invites.js";
 import type * as members from "../members.js";
-import type * as myFunctions from "../myFunctions.js";
-import type * as numbers from "../numbers.js";
+import type * as nisn from "../nisn.js";
 import type * as organizations from "../organizations.js";
 import type * as permissions from "../permissions.js";
 import type * as roles from "../roles.js";
+import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -26,16 +27,17 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  appSettings: typeof appSettings;
   auth: typeof auth;
   authz: typeof authz;
   http: typeof http;
   invites: typeof invites;
   members: typeof members;
-  myFunctions: typeof myFunctions;
-  numbers: typeof numbers;
+  nisn: typeof nisn;
   organizations: typeof organizations;
   permissions: typeof permissions;
   roles: typeof roles;
+  users: typeof users;
 }>;
 
 /**
