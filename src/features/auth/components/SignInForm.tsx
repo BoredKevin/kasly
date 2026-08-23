@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
+import { useQuery } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
 import {
   Card,
   CardContent,
@@ -14,12 +16,20 @@ export function SignInForm() {
   const [flow, setFlow] = useState<"signIn" | "signUp">("signIn");
   const [error, setError] = useState<string | null>(null);
 
+  const appSettings = useQuery(api.appSettings.get);
+  const allowSignUps = appSettings?.allowSignUps !== false;
+  const effectiveFlow = !allowSignUps ? "signIn" : flow;
+
   return (
-    <div className="flex flex-col gap-8 w-96 mx-auto">
-      <Card telemetry="AUTH.01" cornerLines={true} className="w-full">
+    <div className="flex flex-col gap-8 w-full max-w-sm mx-auto">
+      <Card telemetry="AUTH" cornerLines={true} className="w-full">
         <CardHeader>
           <CardTitle className="text-base font-normal">
-            <p>Log in to see the numbers</p>
+            <p>
+              {effectiveFlow === "signIn"
+                ? "Sign in to your account"
+                : "Create your Kasly account"}
+            </p>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -28,7 +38,7 @@ export function SignInForm() {
             onSubmit={(e) => {
               e.preventDefault();
               const formData = new FormData(e.currentTarget);
-              formData.set("flow", flow);
+              formData.set("flow", effectiveFlow);
               void signIn("password", formData).catch((err: Error) => {
                 setError(err.message);
               });
@@ -52,27 +62,33 @@ export function SignInForm() {
               variant="cyber"
               chamfer="dual"
               type="submit"
-              className="w-full mt-2"
+              className="w-full mt-2 cursor-pointer"
             >
-              {flow === "signIn" ? "Sign in" : "Sign up"}
+              {effectiveFlow === "signIn" ? "Sign in" : "Sign up"}
             </Button>
-            <div className="flex flex-row gap-2 text-sm justify-center">
-              <span className="text-muted-foreground">
-                {flow === "signIn"
-                  ? "Don't have an account?"
-                  : "Already have an account?"}
-              </span>
-              <span
-                className="text-foreground underline hover:no-underline cursor-pointer font-medium"
-                onClick={() => setFlow(flow === "signIn" ? "signUp" : "signIn")}
-              >
-                {flow === "signIn" ? "Sign up instead" : "Sign in instead"}
-              </span>
-            </div>
+            {allowSignUps ? (
+              <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 text-xs sm:text-sm items-center justify-center text-center">
+                <span className="text-muted-foreground">
+                  {effectiveFlow === "signIn"
+                    ? "Don't have an account?"
+                    : "Already have an account?"}
+                </span>
+                <span
+                  className="text-foreground underline hover:no-underline cursor-pointer font-medium"
+                  onClick={() => setFlow(flow === "signIn" ? "signUp" : "signIn")}
+                >
+                  {effectiveFlow === "signIn" ? "Sign up instead" : "Sign in instead"}
+                </span>
+              </div>
+            ) : (
+              <div className="text-center text-xs text-muted-foreground pt-1">
+                New user registrations are currently disabled.
+              </div>
+            )}
             {error && (
               <div className="bg-destructive/20 border border-destructive/50 rounded-none p-3 chamfer-dual">
                 <p className="text-destructive-foreground font-mono text-xs">
-                  Error signing in: {error}
+                  Error: {error}
                 </p>
               </div>
             )}
