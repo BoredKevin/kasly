@@ -23,6 +23,15 @@ erDiagram
     roles ||--o{ members : "assigned to (array)"
     roles ||--o{ invites : "granted on join (optional)"
 
+    users {
+        Id_users _id PK
+        string name "optional"
+        string email "optional"
+        string image "optional"
+        string nisn "optional (CSPRNG salted SHA-256 hash)"
+        number _creationTime
+    }
+
     organizations {
         Id_organizations _id PK
         string name
@@ -91,6 +100,24 @@ erDiagram
 ---
 
 ## 2. Table Specifications
+
+### `users`
+Represents a user account provisioned via Convex Auth, extended with profile and private identification data.
+
+| Field | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `_id` | `Id<"users">` | Yes | Primary document ID |
+| `name` | `string` | No | User display name |
+| `email` | `string` | No | Primary email address |
+| `image` | `string` | No | Optional avatar image URL |
+| `nisn` | `string` | No | Private 10-digit identification number stored as a salted SHA-256 hash (`v1$<saltHex>$<hashHex>`). Immutable by regular users. |
+| `_creationTime` | `number` | Yes | Epoch timestamp (ms) when account was registered |
+
+**Indexes:**
+* `email` on `["email"]` — Unique lookup and email authentication sync.
+* `phone` on `["phone"]` — Phone authentication lookup.
+
+---
 
 ### `organizations`
 Represents a workspace or server (analogous to a Discord Guild).
@@ -205,9 +232,35 @@ Demonstration org-scoped resource showcasing RBAC permission-guarded CRUD.
 
 ---
 
+### `appSettings`
+System-wide application settings managed via database administration.
+
+| Field | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `_id` | `Id<"appSettings">` | Yes | Primary document ID |
+| `key` | `string` | Yes | Unique configuration identifier (`allowOrganizationCreation`, `enableNISN`, `allowProfileNameChange`, `allowSignUps`) |
+| `value` | `boolean` | Yes | Setting boolean value |
+| `description` | `string` | No | Human-readable explanation of setting |
+
+**Indexes:**
+* `by_key` on `["key"]` — Fast $O(1)$ unique lookups for configuration keys.
+
+---
+
 ## 3. Data Lifecycle & Cascade Policies
 
 Convex mutations guarantee atomicity across multi-document updates:
+
+### NISN Provisioning & Verification Lifecycle
+1. **Provisioning**: When an administrator or test runner invokes `internal.nisn.setInternal({ userId, nisn })`:
+   - Validates that `nisn` is strictly a 10-digit number.
+   - Generates a 16-byte CSPRNG salt and calculates a SHA-256 digest: `v1$<saltHex>$<hashHex>`.
+   - Patches `users.nisn` with the one-way hash. The plain text NISN is never stored.
+2. **Verification**: When a user verifies via `nisn.verify({ nisn })`:
+   - Validates that `appSettings.enableNISN` is active.
+   - Checks candidate input format against 10-digit numeric constraint.
+   - Computes candidate salted hash using stored salt and compares digests.
+   - Returns verification result without disclosing plain text or hash.
 
 ### Organization Creation Lifecycle
 When `organizations.create` is executed:

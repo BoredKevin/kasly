@@ -24,6 +24,7 @@ Permissions are declared as constant strings in [convex/permissions.ts](file:///
 | **Administration** | `VIEW_AUDIT_LOG` | Read access to organization audit and moderation logs. | No | Yes (via Admin) |
 | **Roles** | `MANAGE_ROLES` | Ability to create, update, delete, and reorder roles with lower position than actor. | No | Yes (via Admin) |
 | **Members** | `MANAGE_MEMBERS` | Ability to edit other members' nicknames and assign roles lower than actor. | No | Yes (via Admin) |
+| **Members** | `VIEW_EMAILS` | Ability to view members' real email addresses (PII data protection). | No | Yes (via Admin) |
 | **Moderation** | `KICK_MEMBERS` | Ability to kick members who have a lower hierarchy position. | No | Yes (via Admin) |
 | **Moderation** | `BAN_MEMBERS` | Ability to ban and unban members who have a lower hierarchy position. | No | Yes (via Admin) |
 | **Invites** | `CREATE_INVITES` | Ability to generate shareable invite links for the organization. | Yes | Yes (via Admin) |

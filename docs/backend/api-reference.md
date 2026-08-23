@@ -168,8 +168,8 @@ This document is the complete API reference for all public Convex functions in t
 
 ### `members.list`
 * **Type**: `query`
-* **Security**: `VIEW_ORGANIZATION` permission.
-* **Description**: Lists members with resolved user profiles and assigned role badges.
+* **Security**: `VIEW_ORGANIZATION` permission. Email addresses are exposed only if caller holds `VIEW_EMAILS` or `ADMINISTRATOR`, is the organization owner, or is viewing their own record.
+* **Description**: Lists members with resolved user profiles, assigned role badges, and privacy-filtered email addresses.
 * **Arguments**:
   * `organizationId` (`Id<"organizations">`)
   * `limit` (`number`, optional, default: 100)
@@ -179,8 +179,8 @@ This document is the complete API reference for all public Convex functions in t
 
 ### `members.get`
 * **Type**: `query`
-* **Security**: `VIEW_ORGANIZATION` permission.
-* **Description**: Returns detailed member profile including resolved permissions list and highest role position.
+* **Security**: `VIEW_ORGANIZATION` permission. Email address is exposed only if caller holds `VIEW_EMAILS` or `ADMINISTRATOR`, is the organization owner, or is viewing their own record.
+* **Description**: Returns detailed member profile including resolved permissions list, highest role position, and privacy-filtered email address.
 * **Arguments**:
   * `organizationId` (`Id<"organizations">`)
   * `userId` (`Id<"users">`)
@@ -355,3 +355,83 @@ This document is the complete API reference for all public Convex functions in t
 * **Arguments**:
   * `numberId` (`Id<"numbers">`)
 * **Returns**: `null`
+
+---
+
+## 7. App Settings API (`convex/appSettings.ts`)
+
+### `appSettings.get`
+* **Type**: `query`
+* **Security**: Public / Authenticated.
+* **Description**: Returns the global application settings object (e.g. `{ allowOrganizationCreation: boolean, enableNISN: boolean, allowProfileNameChange: boolean, allowSignUps: boolean }`). Defaults to `true` if not explicitly configured in the database.
+* **Arguments**: None
+* **Returns**: `{ allowOrganizationCreation: boolean, enableNISN: boolean, allowProfileNameChange: boolean, allowSignUps: boolean }`
+
+---
+
+### `appSettings.populate`
+* **Type**: `mutation`
+* **Security**: System / Setup execution.
+* **Description**: Populates default system settings (`allowOrganizationCreation`, `enableNISN`, `allowProfileNameChange`, `allowSignUps`) if no records exist in the `appSettings` table. Idempotent; skips if any setting is already present.
+* **Arguments**: None
+* **Returns**: `{ populated: boolean, message: string }`
+
+---
+
+### `appSettings.setInternal`
+* **Type**: `internalMutation`
+* **Security**: Internal / Database administration.
+* **Description**: Inserts or updates an app setting directly in the database.
+* **Arguments**:
+  * `key` (`string`)
+  * `value` (`boolean`)
+  * `description` (`string`, optional)
+* **Returns**: `null`
+
+---
+
+## 8. NISN Identification & Verification API (`convex/nisn.ts`)
+
+### `nisn.getStatus`
+* **Type**: `query`
+* **Security**: Authenticated user (`getCurrentUser`).
+* **Description**: Returns the caller's NISN configuration status and encryption status string. Does not leak raw or hashed values.
+* **Arguments**: None
+* **Returns**: `{ enabled: boolean, isSet: boolean, encryptionStatus: string } | null`
+
+---
+
+### `nisn.verify`
+* **Type**: `mutation`
+* **Security**: Authenticated user (`requireUser`).
+* **Description**: Verifies a candidate 10-digit NISN against the caller's stored cryptographic hash.
+* **Arguments**:
+  * `nisn` (`string`): Exactly 10 numeric digits.
+* **Returns**: `{ verified: boolean, message: string }`
+* **Throws**:
+  * `Error` if NISN feature is disabled in app settings.
+  * `Error` if NISN format is invalid (not 10 digits).
+  * `Error` if user does not have a NISN configured.
+
+---
+
+### `nisn.setInternal`
+* **Type**: `internalMutation`
+* **Security**: Internal / Administrative / Testing.
+* **Description**: Securely hashes a 10-digit NISN with CSPRNG salt (`v1$<saltHex>$<hashHex>`) and patches the specified user document.
+* **Arguments**:
+  * `userId` (`Id<"users">`)
+  * `nisn` (`string`): Exactly 10 numeric digits.
+* **Returns**: `{ success: boolean, userId: Id<"users"> }`
+
+---
+
+### `nisn.clearInternal`
+* **Type**: `internalMutation`
+* **Security**: Internal / Administrative / Testing.
+* **Description**: Clears the NISN field for a specified user document.
+* **Arguments**:
+  * `userId` (`Id<"users">`)
+* **Returns**: `{ success: boolean }`
+
+
