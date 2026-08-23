@@ -18,16 +18,18 @@
     "predev": "convex init && node setup.mjs --once",
     "typecheck": "tsc -b",
     "build": "npm run typecheck && npx vite build",
-    "lint": "npm run typecheck && eslint .  --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint": "npm run typecheck && eslint . --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },
   "dependencies": {
     "@boredkevin/ui": "^0.1.1",
     "@convex-dev/auth": "^0.0.95",
     "convex": "^1.44.0",
+    "convex-passkey-auth": "^1.0.1",
     "lucide-react": "^1.33.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "wouter": "^3.10.0"
   },
   "devDependencies": {
     "@convex-dev/eslint-plugin": "^4.0.0",
