@@ -23,6 +23,8 @@ export const list = query({
       createdBy: v.id("users"),
       isArchived: v.boolean(),
       balance: v.number(),
+      isFrozen: v.boolean(),
+      integrityError: v.optional(v.string()),
     })
   ),
   handler: async (ctx, args) => {
@@ -51,7 +53,18 @@ export const list = query({
 
     const results = [];
     for (const fund of funds) {
-      const balance = await deriveFundBalance(ctx, fund._id);
+      let balance = 0;
+      let isFrozen = false;
+      let integrityError: string | undefined = undefined;
+
+      try {
+        balance = await deriveFundBalance(ctx, fund._id);
+      } catch (err: unknown) {
+        isFrozen = true;
+        integrityError =
+          err instanceof Error ? err.message : "Ledger integrity failure: Ledger is frozen.";
+      }
+
       results.push({
         _id: fund._id,
         _creationTime: fund._creationTime,
@@ -62,6 +75,8 @@ export const list = query({
         createdBy: fund.createdBy,
         isArchived: fund.isArchived,
         balance,
+        isFrozen,
+        integrityError,
       });
     }
 
@@ -88,6 +103,8 @@ export const get = query({
       createdBy: v.id("users"),
       isArchived: v.boolean(),
       balance: v.number(),
+      isFrozen: v.boolean(),
+      integrityError: v.optional(v.string()),
     })
   ),
   handler: async (ctx, args) => {
@@ -102,7 +119,17 @@ export const get = query({
       PERMISSIONS.VIEW_TREASURY
     );
 
-    const balance = await deriveFundBalance(ctx, fund._id);
+    let balance = 0;
+    let isFrozen = false;
+    let integrityError: string | undefined = undefined;
+
+    try {
+      balance = await deriveFundBalance(ctx, fund._id);
+    } catch (err: unknown) {
+      isFrozen = true;
+      integrityError =
+        err instanceof Error ? err.message : "Ledger integrity failure: Ledger is frozen.";
+    }
 
     return {
       _id: fund._id,
@@ -114,6 +141,8 @@ export const get = query({
       createdBy: fund.createdBy,
       isArchived: fund.isArchived,
       balance,
+      isFrozen,
+      integrityError,
     };
   },
 });

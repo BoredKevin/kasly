@@ -236,8 +236,9 @@ export async function deriveFundBalance(
 
   let balance = latestCheckpoint ? latestCheckpoint.balanceAtCheckpoint : 0;
   const startSeq = latestCheckpoint ? latestCheckpoint.sequenceNumber + 1 : 1;
+  let expectedPrevHash = latestCheckpoint ? latestCheckpoint.entryHash : "GENESIS";
 
-  // 2. Fetch and replay all entries strictly after the checkpoint
+  // 2. Fetch and replay all entries strictly after the checkpoint with active cryptographic verification
   const subsequentEntries = await ctx.db
     .query("ledgerEntries")
     .withIndex("by_fundId_and_sequenceNumber", (q) =>
@@ -247,6 +248,38 @@ export async function deriveFundBalance(
     .collect();
 
   for (const entry of subsequentEntries) {
+    // Recompute entry SHA-256 hash to detect unauthorized database tampering
+    const recomputedHash = await computeSha256(
+      canonicalizeEntryPayload({
+        organizationId: entry.organizationId,
+        fundId: entry.fundId,
+        sequenceNumber: entry.sequenceNumber,
+        previousHash: entry.previousHash,
+        timestamp: entry.timestamp,
+        direction: entry.direction as "credit" | "debit",
+        amount: entry.amount,
+        memo: entry.memo,
+        keyId: entry.keyId,
+        signerId: entry.signerId,
+        signature: entry.signature,
+        transferId: entry.transferId,
+      })
+    );
+
+    if (recomputedHash !== entry.entryHash) {
+      throw new Error(
+        `Ledger integrity failure: Tampered entry detected at sequence #${entry.sequenceNumber}. Hash mismatch detected (stored '${entry.entryHash.slice(0, 10)}...' vs calculated '${recomputedHash.slice(0, 10)}...'). Ledger is frozen.`
+      );
+    }
+
+    if (entry.previousHash !== expectedPrevHash) {
+      throw new Error(
+        `Ledger integrity failure: Broken chain link at sequence #${entry.sequenceNumber}. Expected previousHash '${expectedPrevHash.slice(0, 10)}...', but found '${entry.previousHash.slice(0, 10)}...'. Ledger is frozen.`
+      );
+    }
+
+    expectedPrevHash = entry.entryHash;
+
     if (entry.direction === "credit") {
       balance += entry.amount;
     } else if (entry.direction === "debit") {

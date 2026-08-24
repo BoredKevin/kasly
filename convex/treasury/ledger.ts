@@ -60,6 +60,30 @@ export const getLatestEntry = query({
       };
     }
 
+    // Active cryptographic verification of current HEAD
+    const recomputedHeadHash = await computeSha256(
+      canonicalizeEntryPayload({
+        organizationId: latest.organizationId,
+        fundId: latest.fundId,
+        sequenceNumber: latest.sequenceNumber,
+        previousHash: latest.previousHash,
+        timestamp: latest.timestamp,
+        direction: latest.direction as "credit" | "debit",
+        amount: latest.amount,
+        memo: latest.memo,
+        keyId: latest.keyId,
+        signerId: latest.signerId,
+        signature: latest.signature,
+        transferId: latest.transferId,
+      })
+    );
+
+    if (recomputedHeadHash !== latest.entryHash) {
+      throw new Error(
+        `Ledger integrity failure: HEAD entry #${latest.sequenceNumber} hash mismatch detected. The ledger has been tampered with and is frozen.`
+      );
+    }
+
     return {
       fundId: fund._id,
       organizationId: fund.organizationId,
@@ -122,12 +146,37 @@ async function executeCommit(
     throw new Error("Non-repudiation violation: Signing key does not belong to the authenticated user.");
   }
 
-  // 2. Fetch current HEAD entry
+  // 2. Fetch current HEAD entry and verify its cryptographic integrity
   const latest = await ctx.db
     .query("ledgerEntries")
     .withIndex("by_fundId_and_sequenceNumber", (q) => q.eq("fundId", fund._id))
     .order("desc")
     .first();
+
+  if (latest) {
+    const recomputedHeadHash = await computeSha256(
+      canonicalizeEntryPayload({
+        organizationId: latest.organizationId,
+        fundId: latest.fundId,
+        sequenceNumber: latest.sequenceNumber,
+        previousHash: latest.previousHash,
+        timestamp: latest.timestamp,
+        direction: latest.direction as "credit" | "debit",
+        amount: latest.amount,
+        memo: latest.memo,
+        keyId: latest.keyId,
+        signerId: latest.signerId,
+        signature: latest.signature,
+        transferId: latest.transferId,
+      })
+    );
+
+    if (recomputedHeadHash !== latest.entryHash) {
+      throw new Error(
+        `Ledger integrity failure: Prior entry #${latest.sequenceNumber} has been tampered with. Expected hash '${latest.entryHash}', but calculated '${recomputedHeadHash}'. Ledger is frozen.`
+      );
+    }
+  }
 
   const expectedPreviousHash = latest ? latest.entryHash : "GENESIS";
   const expectedSequenceNumber = latest ? latest.sequenceNumber + 1 : 1;
@@ -251,6 +300,61 @@ export const commitEntry = mutation({
     );
 
     return await executeCommit(ctx, user, fund, args);
+  },
+});
+
+/**
+ * Reverts a previous ledger entry by creating and appending a cryptographically signed compensating entry.
+ * In an append-only ledger, entries are never modified or deleted; a compensating entry inverts the direction.
+ */
+export const revertEntry = mutation({
+  args: {
+    targetEntryId: v.id("ledgerEntries"),
+    reason: v.string(),
+    keyId: v.string(),
+    previousHash: v.string(),
+    signature: v.string(),
+  },
+  returns: v.object({
+    entryId: v.id("ledgerEntries"),
+    sequenceNumber: v.number(),
+    entryHash: v.string(),
+    timestamp: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const targetEntry = await ctx.db.get("ledgerEntries", args.targetEntryId);
+    if (!targetEntry) {
+      throw new Error("Target ledger entry not found.");
+    }
+
+    const fund = await ctx.db.get("funds", targetEntry.fundId);
+    if (!fund) {
+      throw new Error("Fund associated with the target entry not found.");
+    }
+
+    const { user } = await requirePermission(
+      ctx,
+      fund.organizationId,
+      PERMISSIONS.SIGN_TREASURY
+    );
+
+    const trimmedReason = args.reason.trim();
+    if (!trimmedReason) {
+      throw new Error("Revert reason cannot be empty.");
+    }
+
+    // Invert the direction: credit -> debit, debit -> credit
+    const compensatingDirection = targetEntry.direction === "credit" ? "debit" : "credit";
+    const memo = `Revert #${targetEntry.sequenceNumber}: ${trimmedReason}`;
+
+    return await executeCommit(ctx, user, fund, {
+      direction: compensatingDirection,
+      amount: targetEntry.amount,
+      memo,
+      keyId: args.keyId,
+      previousHash: args.previousHash,
+      signature: args.signature,
+    });
   },
 });
 
@@ -423,7 +527,12 @@ export const getBalance = query({
   args: {
     fundId: v.id("funds"),
   },
-  returns: v.number(),
+  returns: v.object({
+    fundId: v.id("funds"),
+    balance: v.number(),
+    isFrozen: v.boolean(),
+    integrityError: v.optional(v.string()),
+  }),
   handler: async (ctx, args) => {
     const fund = await ctx.db.get("funds", args.fundId);
     if (!fund) {
@@ -436,7 +545,24 @@ export const getBalance = query({
       PERMISSIONS.VIEW_TREASURY
     );
 
-    return await deriveFundBalance(ctx, args.fundId);
+    let balance = 0;
+    let isFrozen = false;
+    let integrityError: string | undefined = undefined;
+
+    try {
+      balance = await deriveFundBalance(ctx, args.fundId);
+    } catch (err: unknown) {
+      isFrozen = true;
+      integrityError =
+        err instanceof Error ? err.message : "Ledger integrity failure: Ledger is frozen.";
+    }
+
+    return {
+      fundId: fund._id,
+      balance,
+      isFrozen,
+      integrityError,
+    };
   },
 });
 
@@ -454,6 +580,8 @@ export const getBalances = query({
       currency: v.string(),
       balance: v.number(),
       isArchived: v.boolean(),
+      isFrozen: v.boolean(),
+      integrityError: v.optional(v.string()),
     })
   ),
   handler: async (ctx, args) => {
@@ -472,13 +600,26 @@ export const getBalances = query({
 
     const results = [];
     for (const fund of funds) {
-      const balance = await deriveFundBalance(ctx, fund._id);
+      let balance = 0;
+      let isFrozen = false;
+      let integrityError: string | undefined = undefined;
+
+      try {
+        balance = await deriveFundBalance(ctx, fund._id);
+      } catch (err: unknown) {
+        isFrozen = true;
+        integrityError =
+          err instanceof Error ? err.message : "Ledger integrity failure: Ledger is frozen.";
+      }
+
       results.push({
         fundId: fund._id,
         name: fund.name,
         currency: fund.currency,
         balance,
         isArchived: fund.isArchived,
+        isFrozen,
+        integrityError,
       });
     }
 
