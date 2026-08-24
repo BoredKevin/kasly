@@ -88,5 +88,85 @@ export default defineSchema({
     value: v.boolean(),
     description: v.optional(v.string()),
   }).index("by_key", ["key"]),
+
+  // Treasury Funds
+  funds: defineTable({
+    organizationId: v.id("organizations"),
+    name: v.string(),
+    description: v.optional(v.string()),
+    currency: v.string(), // e.g. "IDR", "USD" - locked at creation
+    createdBy: v.id("users"),
+    isArchived: v.boolean(),
+  })
+    .index("by_organizationId", ["organizationId"])
+    .index("by_organizationId_and_isArchived", ["organizationId", "isArchived"]),
+
+  // Zero-trust pending public key registrations
+  pendingKeys: defineTable({
+    organizationId: v.id("organizations"),
+    userId: v.id("users"),
+    publicKeyJwk: v.string(),
+    keyId: v.string(), // SHA-256 fingerprint (first 16 hex chars)
+    label: v.optional(v.string()),
+    requestedAt: v.number(),
+    status: v.string(), // "pending" | "approved" | "rejected"
+    reviewedBy: v.optional(v.id("users")),
+    reviewedAt: v.optional(v.number()),
+  })
+    .index("by_organizationId", ["organizationId"])
+    .index("by_organizationId_and_status", ["organizationId", "status"])
+    .index("by_organizationId_and_keyId", ["organizationId", "keyId"])
+    .index("by_keyId", ["keyId"]),
+
+  // Approved treasurer public keys for cryptographic verification
+  treasurerKeys: defineTable({
+    organizationId: v.id("organizations"),
+    userId: v.id("users"),
+    publicKeyJwk: v.string(),
+    keyId: v.string(), // SHA-256 fingerprint (first 16 hex chars)
+    label: v.optional(v.string()),
+    registeredAt: v.number(),
+    registeredBy: v.id("users"),
+    revokedAt: v.optional(v.number()),
+  })
+    .index("by_organizationId", ["organizationId"])
+    .index("by_organizationId_and_userId", ["organizationId", "userId"])
+    .index("by_organizationId_and_keyId", ["organizationId", "keyId"])
+    .index("by_keyId", ["keyId"]),
+
+  // Append-only cryptographically chained ledger entries
+  ledgerEntries: defineTable({
+    organizationId: v.id("organizations"),
+    fundId: v.id("funds"),
+    sequenceNumber: v.number(), // Monotonically increasing per-fund (1, 2, 3...)
+    previousHash: v.string(), // SHA-256 hash of previous entry (or "GENESIS")
+    entryHash: v.string(), // SHA-256 hash of canonical entry data (including timestamp)
+    timestamp: v.number(), // Server-authoritative timestamp
+    direction: v.string(), // "credit" | "debit"
+    amount: v.number(), // Integer smallest-unit, always positive
+    memo: v.string(),
+    keyId: v.string(), // Fingerprint of the signing key
+    signerId: v.id("users"),
+    signature: v.string(), // Base64url raw ECDSA signature (64 bytes)
+    transferId: v.optional(v.string()), // Paired debit/credit transfer tracking
+  })
+    .index("by_fundId", ["fundId"])
+    .index("by_fundId_and_sequenceNumber", ["fundId", "sequenceNumber"])
+    .index("by_organizationId", ["organizationId"])
+    .index("by_organizationId_and_timestamp", ["organizationId", "timestamp"]),
+
+  // Tamper-evident balance checkpoints for fast balance derivation & auditing
+  ledgerCheckpoints: defineTable({
+    organizationId: v.id("organizations"),
+    fundId: v.id("funds"),
+    sequenceNumber: v.number(),
+    entryHash: v.string(),
+    balanceAtCheckpoint: v.number(), // Balance in smallest units up to sequenceNumber
+    createdAt: v.number(),
+    createdBy: v.id("users"),
+  })
+    .index("by_fundId", ["fundId"])
+    .index("by_fundId_and_sequenceNumber", ["fundId", "sequenceNumber"]),
 });
+
 

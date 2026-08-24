@@ -309,6 +309,19 @@ export const deleteOrganization = mutation({
       await ctx.db.delete("bans", b._id);
     }
 
+    // Cascade-to-archive treasury funds (preserves immutable ledger entries and keys for audit)
+    const funds = await ctx.db
+      .query("funds")
+      .withIndex("by_organizationId", (q) =>
+        q.eq("organizationId", args.organizationId),
+      )
+      .take(1000);
+    for (const f of funds) {
+      if (!f.isArchived) {
+        await ctx.db.patch("funds", f._id, { isArchived: true });
+      }
+    }
+
     // Delete organization itself
     await ctx.db.delete("organizations", args.organizationId);
 

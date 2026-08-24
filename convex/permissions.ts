@@ -26,6 +26,11 @@ export const PERMISSIONS = {
   VIEW_ORGANIZATION: "VIEW_ORGANIZATION", // Basic read access to the organization and member list
   CREATE_CONTENT: "CREATE_CONTENT", // Create organization-scoped items
   MANAGE_CONTENT: "MANAGE_CONTENT", // Edit or delete any content within the organization
+
+  // Treasury & Ledger
+  MANAGE_TREASURY: "MANAGE_TREASURY", // Create/archive funds, manage keys, create checkpoints
+  SIGN_TREASURY: "SIGN_TREASURY", // Sign and commit ledger entries (debit/credit)
+  VIEW_TREASURY: "VIEW_TREASURY", // View fund balances and ledger history
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -46,14 +51,19 @@ export const permissionValidator = v.union(
   v.literal("VIEW_ORGANIZATION"),
   v.literal("CREATE_CONTENT"),
   v.literal("MANAGE_CONTENT"),
+  v.literal("MANAGE_TREASURY"),
+  v.literal("SIGN_TREASURY"),
+  v.literal("VIEW_TREASURY"),
 );
 
 export const DEFAULT_EVERYONE_PERMISSIONS: Permission[] = [
   PERMISSIONS.VIEW_ORGANIZATION,
   PERMISSIONS.CREATE_CONTENT,
   PERMISSIONS.CREATE_INVITES,
+  PERMISSIONS.VIEW_TREASURY,
 ];
 
 export const DEFAULT_ADMIN_PERMISSIONS: Permission[] = [
   PERMISSIONS.ADMINISTRATOR,
 ];
+
