@@ -3,6 +3,7 @@ import { Route, Switch, Redirect } from "wouter";
 import { Layout } from "./components/layout";
 import { SignInForm } from "./features/auth";
 import { UserProfileView, OrganizationView } from "./features/profile";
+import { TreasuryView, TreasuryErrorBoundary } from "./features/treasury";
 
 export default function App() {
   return (
@@ -27,6 +28,26 @@ export default function App() {
           <Route path="/organization/members">
             <OrganizationView />
           </Route>
+          <Route path="/treasury">
+            <TreasuryErrorBoundary>
+              <TreasuryView />
+            </TreasuryErrorBoundary>
+          </Route>
+          <Route path="/treasury/ledger">
+            <TreasuryErrorBoundary>
+              <TreasuryView />
+            </TreasuryErrorBoundary>
+          </Route>
+          <Route path="/treasury/keys">
+            <TreasuryErrorBoundary>
+              <TreasuryView />
+            </TreasuryErrorBoundary>
+          </Route>
+          <Route path="/treasury/admin">
+            <TreasuryErrorBoundary>
+              <TreasuryView />
+            </TreasuryErrorBoundary>
+          </Route>
           <Route>
             <Redirect to="/profile" />
           </Route>
@@ -49,4 +70,5 @@ export default function App() {
     </Layout>
   );
 }
+
 
