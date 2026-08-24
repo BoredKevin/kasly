@@ -2,7 +2,7 @@ export interface PermissionDef {
   key: string;
   name: string;
   description: string;
-  category: "Admin" | "Management" | "Moderation" | "General";
+  category: "Admin" | "Treasury" | "Management" | "Moderation" | "General";
 }
 
 export const PERMISSIONS_LIST: PermissionDef[] = [
@@ -24,6 +24,26 @@ export const PERMISSIONS_LIST: PermissionDef[] = [
     name: "View Audit Log",
     description: "Allows viewing moderation logs and administrative history.",
     category: "Admin",
+  },
+
+  // Treasury & Ledger
+  {
+    key: "MANAGE_TREASURY",
+    name: "Manage Treasury & Funds",
+    description: "Allows creating/archiving funds, approving/revoking signing keys, and managing checkpoints.",
+    category: "Treasury",
+  },
+  {
+    key: "SIGN_TREASURY",
+    name: "Sign Ledger Entries",
+    description: "Allows treasurers to sign and commit debit/credit ledger transactions using browser private keys.",
+    category: "Treasury",
+  },
+  {
+    key: "VIEW_TREASURY",
+    name: "View Treasury & Ledger",
+    description: "Allows viewing organization funds, derived balances, and cryptographic ledger history.",
+    category: "Treasury",
   },
 
   // Management & Privacy

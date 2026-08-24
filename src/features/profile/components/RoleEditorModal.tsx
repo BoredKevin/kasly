@@ -134,7 +134,7 @@ function RoleEditorForm({
     }
   };
 
-  const categories = ["Admin", "Management", "Moderation", "General"] as const;
+  const categories = ["Admin", "Treasury", "Management", "Moderation", "General"] as const;
 
   return (
     <Card telemetry="ORG.ROLE.EDIT" cornerLines className="bg-card border-border shadow-2xl">
@@ -344,6 +344,14 @@ function RoleEditorForm({
                                     className="text-[9px] px-1 py-0 bg-amber-500/15 text-amber-400 font-mono"
                                   >
                                     CRITICAL
+                                  </Badge>
+                                )}
+                                {perm.key === "SIGN_TREASURY" && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-[9px] px-1 py-0 bg-primary/15 text-primary border-primary/30 font-mono"
+                                  >
+                                    ECDSA SIGNER
                                   </Badge>
                                 )}
                               </div>
