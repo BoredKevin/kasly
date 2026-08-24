@@ -1,11 +1,11 @@
 import { Authenticated } from "convex/react";
 import { Link, useLocation } from "wouter";
 import { SignOutButton } from "../../features/auth";
-import { User, Building2, Menu, X } from "lucide-react";
+import { User, Building2, Menu, X, Landmark } from "lucide-react";
 import { Button } from "@boredkevin/ui";
 import { useNavDrawer } from "./useNavDrawer";
 
-export type ActiveNavTab = "profile" | "organization";
+export type ActiveNavTab = "profile" | "organization" | "treasury";
 
 interface HeaderProps {
   activeTab?: ActiveNavTab;
@@ -20,6 +20,8 @@ export function Header({ activeTab: explicitTab }: HeaderProps = {}) {
     explicitTab === "profile" || location === "/profile" || location === "/";
   const isOrgActive =
     explicitTab === "organization" || location.startsWith("/organization");
+  const isTreasuryActive =
+    explicitTab === "treasury" || location.startsWith("/treasury");
 
   return (
     <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-xl px-4 sm:px-6 py-3 border-b border-border/80 shadow-md flex justify-between items-center">
@@ -37,9 +39,8 @@ export function Header({ activeTab: explicitTab }: HeaderProps = {}) {
               className="h-8 w-8 p-0 flex items-center justify-center cursor-pointer relative overflow-hidden"
             >
               <div
-                className={`transition-all duration-300 transform ${
-                  isMainNavOpen ? "rotate-90 scale-100" : "rotate-0 scale-100"
-                }`}
+                className={`transition-all duration-300 transform ${isMainNavOpen ? "rotate-90 scale-100" : "rotate-0 scale-100"
+                  }`}
               >
                 {isMainNavOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
               </div>
@@ -62,11 +63,10 @@ export function Header({ activeTab: explicitTab }: HeaderProps = {}) {
           <nav className="hidden md:flex items-center gap-1 bg-muted/30 p-1 border border-border">
             <Link
               href="/profile"
-              className={`px-3 py-1 text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
-                isProfileActive
-                  ? "bg-background text-foreground shadow-sm font-semibold"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+              className={`px-3 py-1 text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${isProfileActive
+                ? "bg-background text-foreground shadow-sm font-semibold"
+                : "text-muted-foreground hover:text-foreground"
+                }`}
             >
               <User className="w-3.5 h-3.5" />
               <span>User Profile</span>
@@ -74,14 +74,24 @@ export function Header({ activeTab: explicitTab }: HeaderProps = {}) {
 
             <Link
               href="/organization"
-              className={`px-3 py-1 text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${
-                isOrgActive
-                  ? "bg-background text-foreground shadow-sm font-semibold"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+              className={`px-3 py-1 text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${isOrgActive
+                ? "bg-background text-foreground shadow-sm font-semibold"
+                : "text-muted-foreground hover:text-foreground"
+                }`}
             >
               <Building2 className="w-3.5 h-3.5" />
               <span>Organization</span>
+            </Link>
+
+            <Link
+              href="/treasury"
+              className={`px-3 py-1 text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${isTreasuryActive
+                ? "bg-background text-foreground shadow-sm font-semibold"
+                : "text-muted-foreground hover:text-foreground"
+                }`}
+            >
+              <Landmark className="w-3.5 h-3.5" />
+              <span>Treasury</span>
             </Link>
           </nav>
         </Authenticated>

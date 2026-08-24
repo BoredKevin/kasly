@@ -3,6 +3,7 @@ import { useQuery } from "convex/react";
 import { useLocation } from "wouter";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
+import { useActiveWorkspace } from "../../../contexts";
 import { OrganizationSidebar, OrgTab } from "./OrganizationSidebar";
 import { OrganizationProfileCard } from "./OrganizationProfileCard";
 import { OrganizationRolesList } from "./OrganizationRolesList";
@@ -33,8 +34,7 @@ export function OrganizationView({
   const appSettings = useQuery(api.appSettings.get);
   const isOrgCreationDisabled = appSettings?.allowOrganizationCreation === false;
   const orgs = useQuery(api.organizations.listMine);
-
-  const [activeOrgId, setActiveOrgId] = useState<Id<"organizations"> | null>(null);
+  const { activeOrgId, setActiveOrgId } = useActiveWorkspace();
 
   const getTabFromLocation = (loc: string): OrgTab => {
     if (loc === "/organization/roles") return "roles";
