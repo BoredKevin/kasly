@@ -275,8 +275,21 @@ When `organizations.deleteOrganization` is called by the owner:
 2. All `members` indexed by `organizationId` are deleted.
 3. All `invites` indexed by `organizationId` are deleted.
 4. All `bans` indexed by `organizationId` are deleted.
-5. All `numbers` (and associated child resources) are deleted.
+5. All `funds` indexed by `organizationId` are **cascade-archived** (`isArchived: true`), preserving their immutable `ledgerEntries`, `treasurerKeys`, and `ledgerCheckpoints` for historical compliance and auditability.
 6. The `organizations` record itself is removed.
+
+---
+
+## 4. Treasury & Cryptographic Ledger Tables
+
+For exhaustive field specifications, cryptographic algorithms, hash chaining formulas, and signature validation lifecycle, see **[Treasury & Cryptographic Ledger Engine](treasury.md)**.
+
+* `funds` — Organization financial accounts (`name`, `currency`, `createdBy`, `isArchived`).
+* `pendingKeys` — Zero-trust public key registration requests awaiting admin approval (`userId`, `publicKeyJwk`, `keyId`, `status`).
+* `treasurerKeys` — Approved public keys authorized to sign debit/credit ledger entries (`userId`, `publicKeyJwk`, `keyId`, `revokedAt`).
+* `ledgerEntries` — Append-only immutable hash chain (`fundId`, `sequenceNumber`, `previousHash`, `entryHash`, `direction`, `amount`, `memo`, `keyId`, `signerId`, `signature`, `transferId`).
+* `ledgerCheckpoints` — Periodic running balance and entry hash snapshots for $O(1)$ fast balance replay.
+
 
 ### Role Deletion Cleanup
 When `roles.deleteRole` is called:

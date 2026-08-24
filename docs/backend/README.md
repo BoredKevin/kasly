@@ -123,12 +123,16 @@ convex/
 ├── http.ts              # HTTP router for auth endpoints and webhooks
 ├── invites.ts           # Organization invitation management and consumption
 ├── members.ts           # Member profiles, role assignment, kick/ban actions
-├── myFunctions.ts       # Boilerplate / demo functions
-├── numbers.ts           # Example org-scoped resource demonstrating RBAC guards
 ├── organizations.ts     # Organization lifecycle, settings, and ownership transfer
 ├── permissions.ts       # Permission bitsets, constants, and validators
 ├── roles.ts             # Role creation, hierarchy position ordering, and permissions
 ├── schema.ts            # Database schema definitions and indexes
+├── treasury/            # Cryptographic Treasury & Ledger Engine
+│   ├── checkpoints.ts   # Fast balance snapshots and replay verification
+│   ├── funds.ts         # Fund accounts CRUD and derived balances
+│   ├── helpers.ts       # Web Crypto ECDSA, SHA-256 digests & canonical JSON
+│   ├── keys.ts          # Zero-trust key ceremony and public key registry
+│   └── ledger.ts        # Append-only hash chain, signing verification & audit export
 └── tsconfig.json        # TypeScript configuration for Convex environment
 ```
 
@@ -138,7 +142,9 @@ convex/
 
 For in-depth guides and references, consult:
 
+* **[Treasury & Cryptographic Ledger Engine](treasury.md)** — Append-only hash chain, Web Crypto ECDSA signing, zero-trust key ceremony, and balance derivation.
 * **[Database Schema & ERD](schema.md)** — Complete table specifications, relationships, and lifecycle cascade rules.
 * **[RBAC & Security Specification](rbac-security.md)** — Hierarchy calculations, permission sets, and owner superuser rules.
 * **[API Reference Catalog](api-reference.md)** — Complete catalog of queries, mutations, parameters, returns, and error states.
 * **[Client Integration Guide](integration-guide.md)** — React integration, subscription hooks, and client-side error handling.
+

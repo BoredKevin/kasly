@@ -434,4 +434,43 @@ This document is the complete API reference for all public Convex functions in t
   * `userId` (`Id<"users">`)
 * **Returns**: `{ success: boolean }`
 
+---
+
+## 9. Treasury & Cryptographic Ledger API (`convex/treasury/*.ts`)
+
+For the exhaustive cryptographic specifications, payload canonicalization, signature schemes, and verification lifecycles, see **[Treasury & Cryptographic Ledger Engine](treasury.md)**.
+
+### Funds Management (`convex/treasury/funds.ts`)
+* `treasury.funds.list` *(Query)*: Lists non-archived funds with dynamically derived real-time balances. Requires `VIEW_TREASURY`.
+* `treasury.funds.get` *(Query)*: Fetches single fund details with derived balance. Requires `VIEW_TREASURY`.
+* `treasury.funds.create` *(Mutation)*: Provisions a new fund with immutable currency. Requires `MANAGE_TREASURY`.
+* `treasury.funds.update` *(Mutation)*: Updates fund name and description. Requires `MANAGE_TREASURY`.
+* `treasury.funds.archive` *(Mutation)*: Soft-archives a fund, preventing new entries while preserving ledger history. Requires `MANAGE_TREASURY`.
+* `treasury.funds.unarchive` *(Mutation)*: Restores an archived fund. Requires `MANAGE_TREASURY`.
+
+### Keys & Zero-Trust Ceremony (`convex/treasury/keys.ts`)
+* `treasury.keys.requestKeyRegistration` *(Mutation)*: Submits a browser-generated public key JWK for admin approval. Requires `SIGN_TREASURY`.
+* `treasury.keys.listPendingKeys` *(Query)*: Lists pending key requests with user metadata. Requires `MANAGE_TREASURY`.
+* `treasury.keys.approveKey` *(Mutation)*: Approves a pending key and enters it into the trusted registry. Requires `MANAGE_TREASURY`.
+* `treasury.keys.rejectKey` *(Mutation)*: Rejects a pending key registration request. Requires `MANAGE_TREASURY`.
+* `treasury.keys.revokeKey` *(Mutation)*: Revokes an active key. Historical signatures remain verifiable. Requires `MANAGE_TREASURY`.
+* `treasury.keys.listActiveKeys` *(Query)*: Lists all registered keys (both active and revoked). Requires `MANAGE_TREASURY`.
+* `treasury.keys.getMyKeys` *(Query)*: Lists keys registered to the caller. Requires `SIGN_TREASURY`.
+
+### Append-Only Ledger (`convex/treasury/ledger.ts`)
+* `treasury.ledger.getLatestEntry` *(Query)*: Returns current HEAD sequence number and hash for pre-sign payload assembly. Requires `SIGN_TREASURY`.
+* `treasury.ledger.commitEntry` *(Mutation)*: Commits a cryptographically signed debit or credit entry to the append-only chain. Requires `SIGN_TREASURY`.
+* `treasury.ledger.transfer` *(Mutation)*: Atomically executes a paired debit and credit across two funds in a single transaction with a shared `transferId`. Requires `SIGN_TREASURY`.
+* `treasury.ledger.listEntries` *(Query)*: Lists paginated ledger entries in reverse chronological order. Requires `VIEW_TREASURY`.
+* `treasury.ledger.getBalance` *(Query)*: Derives current balance from nearest checkpoint to HEAD. Requires `VIEW_TREASURY`.
+* `treasury.ledger.getBalances` *(Query)*: Derives current balances for all active funds in an organization. Requires `VIEW_TREASURY`.
+* `treasury.ledger.verifyChain` *(Query)*: Mathematically verifies entire hash chain and all ECDSA signatures from genesis to HEAD. Requires `VIEW_TREASURY`.
+* `treasury.ledger.exportLedger` *(Query)*: Exports full verifiable ledger state and keys for offline external compliance audit. Requires `MANAGE_TREASURY`.
+
+### Checkpoints (`convex/treasury/checkpoints.ts`)
+* `treasury.checkpoints.createCheckpoint` *(Mutation)*: Manually creates an administrative balance snapshot at current HEAD. Requires `MANAGE_TREASURY`.
+* `treasury.checkpoints.listCheckpoints` *(Query)*: Lists all snapshots created for a fund. Requires `MANAGE_TREASURY`.
+* `treasury.checkpoints.verifyCheckpoint` *(Query)*: Validates checkpoint balance and hash integrity by replaying from genesis. Requires `VIEW_TREASURY`.
+
+
 

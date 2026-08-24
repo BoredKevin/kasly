@@ -32,6 +32,9 @@ Permissions are declared as constant strings in [convex/permissions.ts](file:///
 | **Content** | `VIEW_ORGANIZATION` | Basic read access to view organization profile,  member list. | Yes | Yes (via Admin) |
 | **Content** | `CREATE_CONTENT` | Create messages, posts, numbers, and org-scoped resources. | Yes | Yes (via Admin) |
 | **Content** | `MANAGE_CONTENT` | Edit or delete content created by any user within the organization. | No | Yes (via Admin) |
+| **Treasury** | `VIEW_TREASURY` | View funds, read derived balances, and inspect audit ledger. | Yes | Yes (via Admin) |
+| **Treasury** | `SIGN_TREASURY` | Request key registration, digitally sign and commit ledger transactions. | No | Yes (via Admin) |
+| **Treasury** | `MANAGE_TREASURY` | Create/archive funds, approve/revoke keys, create checkpoints, export audits. | No | Yes (via Admin) |
 
 ---
 
