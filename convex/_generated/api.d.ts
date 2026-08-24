@@ -18,6 +18,11 @@ import type * as nisn from "../nisn.js";
 import type * as organizations from "../organizations.js";
 import type * as permissions from "../permissions.js";
 import type * as roles from "../roles.js";
+import type * as treasury_checkpoints from "../treasury/checkpoints.js";
+import type * as treasury_funds from "../treasury/funds.js";
+import type * as treasury_helpers from "../treasury/helpers.js";
+import type * as treasury_keys from "../treasury/keys.js";
+import type * as treasury_ledger from "../treasury/ledger.js";
 import type * as users from "../users.js";
 
 import type {
@@ -37,6 +42,11 @@ declare const fullApi: ApiFromModules<{
   organizations: typeof organizations;
   permissions: typeof permissions;
   roles: typeof roles;
+  "treasury/checkpoints": typeof treasury_checkpoints;
+  "treasury/funds": typeof treasury_funds;
+  "treasury/helpers": typeof treasury_helpers;
+  "treasury/keys": typeof treasury_keys;
+  "treasury/ledger": typeof treasury_ledger;
   users: typeof users;
 }>;
 
