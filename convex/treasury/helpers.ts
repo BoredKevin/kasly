@@ -66,12 +66,16 @@ export interface EntryHashPayload {
   signerId: string;
   signature: string;
   transferId?: string;
+  entryType?: string;
+  duesEventId?: string;
 }
 
 export function canonicalizeEntryPayload(payload: EntryHashPayload): string {
   return canonicalizeJson({
     amount: payload.amount,
     direction: payload.direction,
+    duesEventId: payload.duesEventId ?? undefined,
+    entryType: payload.entryType ?? undefined,
     fundId: payload.fundId,
     keyId: payload.keyId,
     memo: payload.memo,
@@ -84,6 +88,7 @@ export function canonicalizeEntryPayload(payload: EntryHashPayload): string {
     transferId: payload.transferId ?? undefined,
   });
 }
+
 
 /**
  * Computes a SHA-256 digest of string data or bytes, returned as a lowercase hex string.
@@ -263,6 +268,8 @@ export async function deriveFundBalance(
         signerId: entry.signerId,
         signature: entry.signature,
         transferId: entry.transferId,
+        entryType: entry.entryType,
+        duesEventId: entry.duesEventId,
       })
     );
 
@@ -289,3 +296,83 @@ export async function deriveFundBalance(
 
   return balance;
 }
+
+/**
+ * Calculates the next trigger timestamp based on schedule type and value.
+ * intervalType: "weekly" | "monthly" | "custom_days"
+ * intervalValue:
+ *   - weekly: 0 (Sunday) to 6 (Saturday)
+ *   - monthly: 1 to 28 (day of month)
+ *   - custom_days: integer >= 1 (every N days)
+ */
+export function computeNextFireTime(
+  intervalType: "weekly" | "monthly" | "custom_days",
+  intervalValue: number,
+  fromDate: Date = new Date()
+): number {
+  const next = new Date(fromDate.getTime());
+
+  if (intervalType === "weekly") {
+    const targetDay = Math.min(Math.max(0, Math.floor(intervalValue)), 6);
+    const currentDay = next.getDay();
+    let daysAhead = (targetDay - currentDay + 7) % 7;
+    if (daysAhead === 0) {
+      daysAhead = 7; // schedule for next week if today
+    }
+    next.setDate(next.getDate() + daysAhead);
+    next.setHours(0, 0, 0, 0);
+  } else if (intervalType === "monthly") {
+    const targetDate = Math.min(Math.max(1, Math.floor(intervalValue)), 28);
+    if (next.getDate() < targetDate) {
+      next.setDate(targetDate);
+    } else {
+      next.setMonth(next.getMonth() + 1);
+      next.setDate(targetDate);
+    }
+    next.setHours(0, 0, 0, 0);
+  } else if (intervalType === "custom_days") {
+    const days = Math.max(1, Math.floor(intervalValue));
+    next.setDate(next.getDate() + days);
+    next.setHours(0, 0, 0, 0);
+  }
+
+  return next.getTime();
+}
+
+/**
+ * Generates a human-friendly period label for a dues cycle given date & interval type.
+ */
+export function generatePeriodLabel(
+  intervalType: "weekly" | "monthly" | "custom_days",
+  date: Date = new Date()
+): string {
+  if (intervalType === "monthly") {
+    return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  } else if (intervalType === "weekly") {
+    const target = new Date(date.valueOf());
+    const dayNr = (date.getDay() + 6) % 7;
+    target.setDate(target.getDate() - dayNr + 3);
+    const firstThursday = target.valueOf();
+    target.setMonth(0, 1);
+    if (target.getDay() !== 4) {
+      target.setMonth(0, 1 + ((4 - target.getDay() + 7) % 7));
+    }
+    const weekNumber = 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
+    return `Week ${weekNumber}, ${date.getFullYear()}`;
+  } else {
+    return `Cycle of ${date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+  }
+}
+
+/**
+ * Computes the date (Thursday / midpoint) corresponding to an ISO week number in a given year.
+ */
+export function getDateFromIsoWeek(year: number, weekNumber: number): Date {
+  const jan4 = new Date(year, 0, 4);
+  const jan4Day = (jan4.getDay() + 6) % 7; // Monday = 0, Sunday = 6
+  const firstMonday = new Date(jan4.getTime() - jan4Day * 86400000);
+  const targetThursday = new Date(firstMonday.getTime() + ((weekNumber - 1) * 7 + 3) * 86400000);
+  targetThursday.setHours(12, 0, 0, 0);
+  return targetThursday;
+}
+

@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation, MutationCtx } from "../_generated/server";
-import { Doc } from "../_generated/dataModel";
+import { Doc, Id } from "../_generated/dataModel";
 import { requirePermission } from "../authz";
 import { PERMISSIONS } from "../permissions";
 import {
@@ -75,8 +75,11 @@ export const getLatestEntry = query({
         signerId: latest.signerId,
         signature: latest.signature,
         transferId: latest.transferId,
+        entryType: latest.entryType,
+        duesEventId: latest.duesEventId,
       })
     );
+
 
     if (recomputedHeadHash !== latest.entryHash) {
       throw new Error(
@@ -97,9 +100,9 @@ export const getLatestEntry = query({
 });
 
 /**
- * Internal helper to commit a single signed ledger entry with full verification.
+ * Helper to commit a single signed ledger entry with full verification.
  */
-async function executeCommit(
+export async function executeCommit(
   ctx: MutationCtx,
   user: Doc<"users">,
   fund: Doc<"funds">,
@@ -111,14 +114,23 @@ async function executeCommit(
     previousHash: string;
     signature: string;
     transferId?: string;
+    entryType?: string;
+    duesEventId?: Id<"duesEvents">;
   }
 ) {
   if (fund.isArchived) {
     throw new Error(`Cannot commit entry: Fund '${fund.name}' is archived.`);
   }
 
-  if (args.amount <= 0 || !Number.isInteger(args.amount)) {
-    throw new Error("Invalid amount: Amount must be a positive integer in smallest currency units.");
+  const isWaiver = args.entryType === "waiver";
+  if (isWaiver) {
+    if (args.amount !== 0) {
+      throw new Error("Invalid amount: Dues waiver entry must have an amount of 0.");
+    }
+  } else {
+    if (args.amount <= 0 || !Number.isInteger(args.amount)) {
+      throw new Error("Invalid amount: Amount must be a positive integer in smallest currency units.");
+    }
   }
 
   const trimmedMemo = args.memo.trim();
@@ -168,6 +180,8 @@ async function executeCommit(
         signerId: latest.signerId,
         signature: latest.signature,
         transferId: latest.transferId,
+        entryType: latest.entryType,
+        duesEventId: latest.duesEventId,
       })
     );
 
@@ -225,6 +239,8 @@ async function executeCommit(
     signerId: user._id,
     signature: args.signature,
     transferId: args.transferId,
+    entryType: args.entryType,
+    duesEventId: args.duesEventId,
   });
 
   const entryHash = await computeSha256(entryPayloadText);
@@ -244,6 +260,8 @@ async function executeCommit(
     signerId: user._id,
     signature: args.signature,
     transferId: args.transferId,
+    entryType: args.entryType,
+    duesEventId: args.duesEventId,
   });
 
   // 7. Auto-checkpointing every 50 entries
@@ -280,6 +298,8 @@ export const commitEntry = mutation({
     keyId: v.string(),
     previousHash: v.string(),
     signature: v.string(),
+    entryType: v.optional(v.string()),
+    duesEventId: v.optional(v.id("duesEvents")),
   },
   returns: v.object({
     entryId: v.id("ledgerEntries"),
@@ -302,6 +322,7 @@ export const commitEntry = mutation({
     return await executeCommit(ctx, user, fund, args);
   },
 });
+
 
 /**
  * Reverts a previous ledger entry by creating and appending a cryptographically signed compensating entry.
@@ -473,6 +494,8 @@ export const listEntries = query({
       signerName: v.optional(v.string()),
       signature: v.string(),
       transferId: v.optional(v.string()),
+      entryType: v.optional(v.string()),
+      duesEventId: v.optional(v.id("duesEvents")),
     })
   ),
   handler: async (ctx, args) => {
@@ -513,12 +536,15 @@ export const listEntries = query({
         signerName: signer?.name,
         signature: entry.signature,
         transferId: entry.transferId,
+        entryType: entry.entryType,
+        duesEventId: entry.duesEventId,
       });
     }
 
     return results;
   },
 });
+
 
 /**
  * Returns the current derived balance for a specific fund.
@@ -713,6 +739,8 @@ export const verifyChain = query({
         signerId: entry.signerId,
         signature: entry.signature,
         transferId: entry.transferId,
+        entryType: entry.entryType,
+        duesEventId: entry.duesEventId,
       });
 
       const recomputedEntryHash = await computeSha256(expectedEntryPayload);
@@ -837,6 +865,8 @@ export const exportLedger = query({
         signerId: v.id("users"),
         signature: v.string(),
         transferId: v.optional(v.string()),
+        entryType: v.optional(v.string()),
+        duesEventId: v.optional(v.id("duesEvents")),
       })
     ),
   }),
@@ -911,7 +941,10 @@ export const exportLedger = query({
         signerId: e.signerId,
         signature: e.signature,
         transferId: e.transferId,
+        entryType: e.entryType,
+        duesEventId: e.duesEventId,
       })),
     };
   },
 });
+

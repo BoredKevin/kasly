@@ -1,6 +1,6 @@
 # Kasly Treasury & Cryptographic Ledger Engine
 
-The **Kasly Treasury System** is a decentralized, cryptographically verifiable, append-only ledger designed for organizational fund management. Built on [Convex](https://convex.dev/) and the W3C [Web Cryptography API](https://www.w3.org/TR/WebCryptoAPI/), it provides non-repudiation, mathematical tamper evidence, and complete auditability inspired by Git's commit history and financial transparency logs.
+The **Kasly Treasury System** is a cryptographically verifiable, append-only ledger designed for organizational fund management. Built on [Convex](https://convex.dev/) and the W3C [Web Cryptography API](https://www.w3.org/TR/WebCryptoAPI/), it provides non-repudiation, mathematical tamper evidence, and complete auditability inspired by Git's commit history and financial transparency logs.
 
 ---
 
@@ -482,3 +482,79 @@ await convex.mutation(api.treasury.ledger.commitEntry, {
   signature,
 });
 ```
+
+---
+
+## 9. Automated Member Dues & Payments System
+
+The **Dues System** provides a recurring, scheduled dues mechanism designed for organizations, classes, and communities. It coordinates automated cycle generation via dynamic scheduling while strictly enforcing the **Cryptographic Ledger Engine** for every financial payment credit. Dues configurations, cycles, and memberships are scoped **per fund**, allowing each fund account (e.g. Kas Kelas, Kas Praktikum, Event Fund) to maintain independent dues schedules, amounts, and spreadsheets.
+
+### A. Architecture & Cryptographic Workflow
+
+```
+┌────────────────────────────────────────────────────────┐
+│                   duesConfig (Per Fund)                │
+│  fundId, organizationId, isEnabled,                    │
+│  intervalType (weekly/monthly/custom_days),            │
+│  intervalValue, amount, nextScheduledAt, jobId         │
+└──────────────────────────┬─────────────────────────────┘
+                           │ Dynamic self-rescheduling cron
+                           │ ctx.scheduler.runAt()
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│                   duesEvents (Per Cycle, Per Fund)     │
+│  fundId, organizationId, periodLabel ("August 2026"),  │
+│  dueDate, amount snapshot, totalMembers, paidCount     │
+└──────────────────────────┬─────────────────────────────┘
+                           │ One row per active member
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│                duesMemberships (Per Member, Per Fund)  │
+│  fundId, duesEventId, userId, hasPaid, paidAt,         │
+│  ledgerEntryId                                         │
+└──────────────────────────┬─────────────────────────────┘
+                           │ Treasurer records payment
+                           │ Browser ECDSA P-256 Signature
+                           ▼
+┌────────────────────────────────────────────────────────┐
+│               ledgerEntries (CLE Append-Only)          │
+│  direction: "credit", amount: (periods × amount),       │
+│  memo: "Dues Payment (2 cycles) - Alice",              │
+│  keyId, previousHash, signature, duesEventId           │
+└────────────────────────────────────────────────────────┘
+```
+
+### B. Dues Database Schemas
+
+#### 1. `duesConfig` Table
+Stores the recurring dues schedule configuration scoped to a specific fund.
+- **Fields**: `organizationId`, `fundId`, `isEnabled`, `intervalType` (`"weekly"` | `"monthly"` | `"custom_days"`), `intervalValue`, `amount`, `nextScheduledAt`, `scheduledJobId`, `createdBy`, `updatedBy`.
+- **Indexes**: `by_fundId`, `by_organizationId`.
+
+#### 2. `duesEvents` Table
+Snapshots a generated dues cycle created by the automated scheduler for a specific fund.
+- **Fields**: `organizationId`, `fundId`, `periodLabel` (e.g. "August 2026"), `dueDate`, `amount` (snapshotted at creation), `totalMembers`, `paidCount`.
+- **Indexes**: `by_fundId`, `by_fundId_and_dueDate`, `by_organizationId`, `by_organizationId_and_dueDate`.
+
+#### 3. `duesMemberships` Table
+Tracks individual member payment and waiver statuses per cycle in a fund.
+- **Fields**: `duesEventId`, `organizationId`, `fundId`, `memberId`, `userId`, `hasPaid`, `isWaived`, `paidAt`, `ledgerEntryId`, `recordedBy`.
+- **Indexes**: `by_duesEventId`, `by_duesEventId_and_memberId`, `by_fundId_and_userId`, `by_fundId_and_hasPaid`, `by_organizationId_and_userId`, `by_organizationId_and_hasPaid`.
+
+### C. Dues API Reference (`convex/treasury/dues.ts`)
+
+| Function | Type | Permission | Description |
+| :--- | :--- | :--- | :--- |
+| `getDuesConfig` | Query | `MANAGE_TREASURY` | Fetches active fund dues configuration (`organizationId`, `fundId`). |
+| `upsertDuesConfig` | Mutation | `MANAGE_TREASURY` | Configures interval, amount, enables/disables, and reschedules the cron job for a fund. |
+| `disableDues` | Mutation | `MANAGE_TREASURY` | Disables automated schedule and cancels pending scheduled jobs for a fund. |
+| `createManualDuesCycle` | Mutation | `MANAGE_TREASURY` | Manually creates a dues cycle for any date (past or present) with custom amount & period label. |
+| `createBatchDuesCycles` | Mutation | `MANAGE_TREASURY` | Batch creates multiple dues cycles across a period range (e.g. Week 20–35) with duplicate guards. |
+| `triggerDuesCycleNow` | Mutation | `MANAGE_TREASURY` | Manually triggers a dues cycle on demand for a fund. |
+| `listDuesEvents` | Query | `VIEW_TREASURY` | Lists all historical and active dues cycles for a fund. |
+| `getDuesSummary` | Query | `VIEW_TREASURY` | Returns aggregated metrics for a fund (unpaid dues, cycle counts, status). |
+| `getDuesSpreadsheet` | Query | `VIEW_TREASURY` | Returns the full Excel-like 2D grid matrix of members × periods for a fund. |
+| `getMemberUnpaidPeriods` | Query | `VIEW_TREASURY` | Returns ordered list of outstanding unpaid periods for a member in a fund. |
+| `markDuesPaid` | Mutation | `SIGN_TREASURY` | Validates ECDSA signature and appends a single CLE credit entry covering N oldest unpaid periods for a fund. |
+| `waiveDues` | Mutation | `SIGN_TREASURY` | Signs and appends a zero-amount `entryType: "waiver"` entry to exempt a member obligation. |
+

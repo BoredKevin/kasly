@@ -143,12 +143,14 @@ export default defineSchema({
     entryHash: v.string(), // SHA-256 hash of canonical entry data (including timestamp)
     timestamp: v.number(), // Server-authoritative timestamp
     direction: v.string(), // "credit" | "debit"
-    amount: v.number(), // Integer smallest-unit, always positive
+    amount: v.number(), // Integer smallest-unit, always positive (or 0 for waiver)
     memo: v.string(),
     keyId: v.string(), // Fingerprint of the signing key
     signerId: v.id("users"),
     signature: v.string(), // Base64url raw ECDSA signature (64 bytes)
     transferId: v.optional(v.string()), // Paired debit/credit transfer tracking
+    entryType: v.optional(v.string()), // "waiver" for zero-amount waiver entries
+    duesEventId: v.optional(v.id("duesEvents")), // Links payment to a dues cycle
   })
     .index("by_fundId", ["fundId"])
     .index("by_fundId_and_sequenceNumber", ["fundId", "sequenceNumber"])
@@ -167,6 +169,62 @@ export default defineSchema({
   })
     .index("by_fundId", ["fundId"])
     .index("by_fundId_and_sequenceNumber", ["fundId", "sequenceNumber"]),
+
+  // Dues schedule configuration (scoped per fund)
+  duesConfig: defineTable({
+    organizationId: v.id("organizations"),
+    fundId: v.id("funds"),
+    isEnabled: v.boolean(),
+    intervalType: v.union(
+      v.literal("weekly"),
+      v.literal("monthly"),
+      v.literal("custom_days")
+    ),
+    intervalValue: v.number(), // day-of-week (0-6) | day-of-month (1-28) | N days
+    amount: v.number(), // Amount in smallest currency units
+    nextScheduledAt: v.optional(v.number()),
+    scheduledJobId: v.optional(v.id("_scheduled_functions")),
+    createdBy: v.id("users"),
+    updatedBy: v.optional(v.id("users")),
+  })
+    .index("by_fundId", ["fundId"])
+    .index("by_organizationId", ["organizationId"]),
+
+  // One record per dues cycle (created by scheduled job, scoped per fund)
+  duesEvents: defineTable({
+    organizationId: v.id("organizations"),
+    fundId: v.id("funds"),
+    periodLabel: v.string(), // e.g. "August 2026", "Week 35 2026", "Cycle #12"
+    dueDate: v.number(), // Trigger timestamp
+    amount: v.number(), // Dues amount snapshotted at creation
+    totalMembers: v.number(), // Snapshot of member count at creation
+    paidCount: v.number(), // Denormalized count of paid members
+  })
+    .index("by_fundId", ["fundId"])
+    .index("by_fundId_and_dueDate", ["fundId", "dueDate"])
+    .index("by_organizationId", ["organizationId"])
+    .index("by_organizationId_and_dueDate", ["organizationId", "dueDate"]),
+
+  // Per-member payment status within a dues event (scoped per fund)
+  duesMemberships: defineTable({
+    duesEventId: v.id("duesEvents"),
+    organizationId: v.id("organizations"),
+    fundId: v.id("funds"),
+    memberId: v.id("members"),
+    userId: v.id("users"),
+    hasPaid: v.boolean(),
+    isWaived: v.optional(v.boolean()),
+    paidAt: v.optional(v.number()),
+    ledgerEntryId: v.optional(v.id("ledgerEntries")), // Payment or waiver ledger entry
+    recordedBy: v.optional(v.id("users")),
+  })
+    .index("by_duesEventId", ["duesEventId"])
+    .index("by_duesEventId_and_memberId", ["duesEventId", "memberId"])
+    .index("by_fundId_and_userId", ["fundId", "userId"])
+    .index("by_fundId_and_hasPaid", ["fundId", "hasPaid"])
+    .index("by_organizationId_and_userId", ["organizationId", "userId"])
+    .index("by_organizationId_and_hasPaid", ["organizationId", "hasPaid"]),
 });
+
 
 
