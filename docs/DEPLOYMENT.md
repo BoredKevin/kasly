@@ -41,9 +41,10 @@ flowchart LR
    - [Method B: Wrangler CLI Deployment](#method-b-wrangler-cli-deployment)
 4. [Step 3: Initializing Database & Production Settings](#step-3-initializing-database--production-settings)
 5. [Step 4: Custom Domain & DNS Setup (Optional)](#step-4-custom-domain--dns-setup-optional)
-6. [Single Page Application (SPA) Routing](#single-page-application-spa-routing)
-7. [Environment Variables Reference](#environment-variables-reference)
-8. [Troubleshooting & FAQ](#troubleshooting--faq)
+6. [Step 5: Updating & Syncing Deployments (Maintenance Workflow)](#step-5-updating--syncing-deployments-maintenance-workflow)
+7. [Single Page Application (SPA) Routing](#single-page-application-spa-routing)
+8. [Environment Variables Reference](#environment-variables-reference)
+9. [Troubleshooting & FAQ](#troubleshooting--faq)
 
 ---
 
@@ -60,7 +61,18 @@ Before starting, ensure you have:
 
 ## Step 1: Deploy & Configure Convex Backend
 
-### 1.1 Authenticate with Convex
+### 1.1 Install Dependencies
+
+If you have just cloned the repository or are setting up on a new machine, install the project dependencies first:
+
+```bash
+npm install
+```
+
+> [!IMPORTANT]
+> `npm install` must be run before deploying so that the Convex compiler can resolve packages like `convex/server` and `@convex-dev/auth`.
+
+### 1.2 Authenticate with Convex
 
 In your local terminal inside the project root:
 
@@ -68,7 +80,7 @@ In your local terminal inside the project root:
 npx convex login
 ```
 
-### 1.2 Deploy to Production
+### 1.3 Deploy to Production
 
 Deploy your schema, server functions, and indexes to your Convex production deployment:
 
@@ -79,7 +91,7 @@ npx convex deploy
 > [!NOTE]
 > If you haven't linked a production deployment yet, the command will prompt you to select an organization and create/link a production deployment project (e.g. `kasly-prod`).
 
-### 1.3 Configure Convex Auth Secret Keys
+### 1.4 Configure Convex Auth Secret Keys
 
 Convex Auth requires a secret key for JWT token signing. Run the auth configuration tool targeting production:
 
@@ -89,7 +101,7 @@ npx @convex-dev/auth --prod
 
 This will automatically generate and set the `JWT_PRIVATE_KEY` / `JWKS` variables on your Convex production backend.
 
-### 1.4 Set Production `SITE_URL` on Convex
+### 1.5 Set Production `SITE_URL` on Convex
 
 Convex Auth requires knowing your production frontend URL for session handling and redirect origins:
 
@@ -99,7 +111,7 @@ npx convex env set SITE_URL https://<your-cloudflare-pages-subdomain>.pages.dev 
 
 *(You can update this later if you attach a custom domain, e.g., `https://kasly.example.com`)*
 
-### 1.5 Note Down Production Convex URLs
+### 1.6 Note Down Production Convex URLs
 
 In the [Convex Dashboard](https://dashboard.convex.dev/), navigate to **Settings** > **URL & Deploy Key** or run:
 
@@ -225,6 +237,99 @@ If you own a custom domain (e.g., `kasly.yourdomain.com`):
 
 ---
 
+## Step 5: Updating & Syncing Deployments (Maintenance Workflow)
+
+Whenever you make changes to your codebase, pull new features from Git, or upgrade packages, follow this section to update your live systems.
+
+### 5.1 Fetching Latest Code Updates
+
+To fetch and apply new changes from the repository:
+
+```bash
+# 1. Fetch latest commits from remote main
+git pull origin main
+
+# 2. Update and install any new dependencies
+npm install
+```
+
+> [!IMPORTANT]
+> Always run `npm install` after pulling updates in case new packages, UI components, or Convex plugins were added to `package.json`.
+
+---
+
+### 5.2 Updating the Convex Backend (Production & Dev)
+
+#### 1. Deploy Changes to Production
+To push updated database schemas, indexes, queries, mutations, actions, and auth rules to your live production Convex deployment:
+
+```bash
+npx convex deploy
+```
+
+Convex performs atomic zero-downtime updates:
+- Database schema changes are validated immediately.
+- New server functions become available instantaneously across all connected clients.
+- Existing reactive subscriptions update in real-time.
+
+#### 2. Apply Any New Database Migrations or Settings
+If a release introduces new global settings or default configurations:
+
+```bash
+npx convex run appSettings:populate --prod
+```
+
+#### 3. Updating Your Local Development Backend
+If you are developing locally after pulling updates:
+
+```bash
+npx convex dev
+```
+*(This syncs the latest backend changes to your personal dev cloud environment)*
+
+---
+
+### 5.3 Updating the Cloudflare Pages Frontend
+
+#### Option A: Automatic Deployment via Git (Recommended)
+If you connected your GitHub repository to Cloudflare Pages (Step 2 Method A):
+1. Simply push your changes to your `main` branch:
+   ```bash
+   git push origin main
+   ```
+2. Cloudflare Pages automatically detects the push, runs `npm run build`, and deploys the new static bundle to the global edge network with zero downtime.
+
+#### Option B: Manual Deployment via Wrangler CLI
+If you deploy directly via the terminal:
+
+```bash
+# 1. Rebuild the frontend bundle
+npm run build
+
+# 2. Deploy the dist directory to Cloudflare Pages
+npx wrangler pages deploy dist --project-name=kasly --branch=main
+```
+
+---
+
+### 5.4 Upgrading Dependencies & Convex Packages
+
+To upgrade Convex, Convex Auth, and frontend libraries to their latest versions:
+
+```bash
+# Upgrade Convex and core packages
+npm update convex @convex-dev/auth @boredkevin/ui
+
+# Verify TypeScript types build cleanly
+npm run typecheck
+
+# Deploy the updated backend and frontend
+npx convex deploy
+git push origin main
+```
+
+---
+
 ## Single Page Application (SPA) Routing
 
 Kasly uses client-side routing via `wouter`. For direct navigation or page refreshes (such as accessing `/treasury/dues` or `/organization/members` directly), the server must serve `index.html`.
@@ -282,10 +387,15 @@ Set via `npx convex env set <KEY> <VALUE> --prod` or Convex Dashboard:
   ```
   Convex validates and executes schema migrations without backend downtime.
 
+### 5. `[ERROR] Could not resolve "convex/server"` on deploy
+* **Cause**: Running `npx convex deploy` or `npx convex dev` in a freshly cloned directory before installing dependencies.
+* **Fix**: Run `npm install` in the project root directory first.
+
 ---
 
 ## Summary Checklist
 
+- [ ] Run `npm install`
 - [ ] Run `npx convex deploy`
 - [ ] Run `npx @convex-dev/auth --prod`
 - [ ] Set `SITE_URL` in Convex (`npx convex env set SITE_URL https://... --prod`)
