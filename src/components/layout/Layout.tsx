@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../../convex/_generated/api";
 import { ConstellationsBackground } from "@boredkevin/ui";
 import { Header } from "./Header";
+import { Footer } from "./Footer";
 import { SwipeDrawer } from "./SwipeDrawer";
 import { NavDrawerProvider } from "./NavDrawerContext";
 import { useNavDrawer } from "./useNavDrawer";
@@ -399,6 +400,8 @@ function LayoutInner({ children }: LayoutProps) {
       <main className="p-4 sm:p-8 flex flex-col gap-8 relative z-10 w-full max-w-6xl mx-auto flex-1">
         {children}
       </main>
+
+      <Footer />
     </div>
   );
 }
