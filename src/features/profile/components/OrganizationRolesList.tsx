@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "convex/react";
+import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import {
   Card,
@@ -29,6 +30,7 @@ interface OrganizationRolesListProps {
 export function OrganizationRolesList({
   organizationId,
 }: OrganizationRolesListProps) {
+  const { t } = useTranslation();
   const roles = useQuery(api.roles.list, { organizationId });
   const myMembership = useQuery(api.members.getMyMembership, { organizationId });
 
@@ -50,7 +52,7 @@ export function OrganizationRolesList({
   if (roles === undefined) {
     return (
       <div className="p-6 text-center text-xs text-muted-foreground animate-pulse">
-        Loading roles definition...
+        {t("common.loading")}
       </div>
     );
   }
@@ -66,7 +68,7 @@ export function OrganizationRolesList({
               </div>
               <div>
                 <CardTitle className="text-lg font-semibold tracking-tight">
-                  Organization Roles
+                  {t("organization.roles")}
                 </CardTitle>
               </div>
             </div>
@@ -88,7 +90,7 @@ export function OrganizationRolesList({
                   className="text-xs flex items-center gap-1.5 h-8"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Create Role</span>
+                  <span>{t("organization.roles")}</span>
                 </Button>
               )}
             </div>

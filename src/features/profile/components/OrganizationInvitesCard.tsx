@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
+import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import {
   Card,
@@ -30,6 +31,7 @@ export function OrganizationInvitesCard({
   organizationId,
   organizationName,
 }: OrganizationInvitesCardProps) {
+  const { t } = useTranslation();
   const [now] = useState(() => Date.now());
   const myMembership = useQuery(api.members.getMyMembership, { organizationId });
 
@@ -92,7 +94,7 @@ export function OrganizationInvitesCard({
               </div>
               <div>
                 <CardTitle className="text-lg font-semibold tracking-tight">
-                  Active Organization Invites
+                  {t("organization.invites")}
                 </CardTitle>
               </div>
             </div>
@@ -113,7 +115,7 @@ export function OrganizationInvitesCard({
                   className="text-xs flex items-center gap-1.5 h-8 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Create Invite</span>
+                  <span>{t("organization.createInvite")}</span>
                 </Button>
               )}
             </div>
@@ -132,12 +134,12 @@ export function OrganizationInvitesCard({
                 className="text-xs cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5 mr-1" />
-                Generate Code
+                {t("organization.createInvite")}
               </Button>
             </div>
           ) : invites === undefined ? (
             <div className="p-6 text-center text-xs text-muted-foreground animate-pulse">
-              Loading active invites...
+              {t("common.loading")}
             </div>
           ) : invites.length === 0 ? (
             <div className="p-6 text-center text-xs text-muted-foreground bg-background/40 border border-dashed border-border/80">

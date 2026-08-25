@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "convex/react";
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import { useActiveWorkspace } from "../../../contexts";
@@ -29,6 +30,7 @@ export function OrganizationView({
   activeTab: controlledTab,
   onTabChange: controlledOnTabChange,
 }: OrganizationViewProps = {}) {
+  const { t } = useTranslation();
   const [location, setLocation] = useLocation();
   const viewer = useQuery(api.users.viewer);
   const appSettings = useQuery(api.appSettings.get);
@@ -83,7 +85,7 @@ export function OrganizationView({
   if (viewer === undefined || orgs === undefined) {
     return (
       <div className="w-full flex items-center justify-center py-20 text-muted-foreground text-sm font-mono animate-pulse">
-        Loading organization workspace...
+        {t("common.loading")}
       </div>
     );
   }
@@ -103,10 +105,10 @@ export function OrganizationView({
       <div className="flex flex-col gap-4">
         <div className="space-y-1">
           <h2 className="text-2xl font-bold tracking-tight text-foreground">
-            Organization Workspace
+            {t("organization.workspaceTitle")}
           </h2>
           <p className="text-xs text-muted-foreground">
-            Manage workspace profile, members, role hierarchy, and invitations
+            {t("organization.workspaceDesc")}
           </p>
         </div>
 
@@ -118,7 +120,7 @@ export function OrganizationView({
                 <Building2 className="w-3.5 h-3.5" />
               </div>
               <span className="text-[10px] font-mono tracking-wider text-muted-foreground uppercase">
-                Workspace
+                {t("organization.title")}
               </span>
             </div>
             {activeOrg?.isOwner && (
@@ -148,7 +150,7 @@ export function OrganizationView({
               </div>
             ) : (
               <div className="text-xs text-muted-foreground italic py-1 font-mono flex-1">
-                No workspaces
+                {t("organization.noOrgs")}
               </div>
             )}
 
@@ -161,7 +163,7 @@ export function OrganizationView({
               className="h-8 text-xs px-2.5 flex items-center gap-1 cursor-pointer shrink-0"
             >
               <LogIn className="w-3.5 h-3.5" />
-              <span>Join</span>
+              <span>{t("organization.joinOrg")}</span>
             </Button>
 
             <Button
@@ -182,7 +184,7 @@ export function OrganizationView({
               }`}
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>New</span>
+              <span>{t("organization.createOrg")}</span>
             </Button>
           </div>
         </div>

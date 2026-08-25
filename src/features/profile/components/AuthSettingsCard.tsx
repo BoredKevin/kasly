@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation, useAction } from "convex/react";
+import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import {
   Card,
@@ -25,6 +26,7 @@ interface AuthSettingsCardProps {
 }
 
 export function AuthSettingsCard({ email }: AuthSettingsCardProps) {
+  const { t } = useTranslation();
   // Email change state
   const [emailInput, setEmailInput] = useState(email ?? "");
   const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
@@ -98,10 +100,10 @@ export function AuthSettingsCard({ email }: AuthSettingsCardProps) {
             </div>
             <div>
               <CardTitle className="text-lg font-semibold tracking-tight">
-                Authentication & Security
+                {t("profile.authSettings.title")}
               </CardTitle>
               <CardDescription className="text-xs text-muted-foreground">
-                Manage your credentials, login email, and account password
+                {t("profile.authSettings.description")}
               </CardDescription>
             </div>
           </div>
@@ -115,7 +117,7 @@ export function AuthSettingsCard({ email }: AuthSettingsCardProps) {
             <div className="flex items-center gap-2">
               <Mail className="w-4 h-4 text-primary" />
               <span className="text-xs font-semibold text-foreground">
-                Account Email
+                {t("profile.authSettings.email")}
               </span>
             </div>
             <Badge variant="secondary" className="text-[10px] font-mono">
@@ -147,7 +149,7 @@ export function AuthSettingsCard({ email }: AuthSettingsCardProps) {
                 disabled={isUpdatingEmail || !emailInput || emailInput === email}
                 className="h-8 px-3 text-xs shrink-0 cursor-pointer"
               >
-                {isUpdatingEmail ? "Saving..." : "Change Email"}
+                {isUpdatingEmail ? t("common.loading") : t("profile.authSettings.changeEmail")}
               </Button>
             </div>
 
@@ -171,7 +173,7 @@ export function AuthSettingsCard({ email }: AuthSettingsCardProps) {
           <div className="flex items-center gap-2">
             <KeyRound className="w-4 h-4 text-primary" />
             <span className="text-xs font-semibold text-foreground">
-              Change Password
+              {t("profile.authSettings.changePassword")}
             </span>
           </div>
 
@@ -185,7 +187,7 @@ export function AuthSettingsCard({ email }: AuthSettingsCardProps) {
               <div className="relative">
                 <Input
                   type="password"
-                  placeholder="Current password"
+                  placeholder={t("profile.authSettings.currentPassword")}
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   chamfer="dual"
@@ -198,7 +200,7 @@ export function AuthSettingsCard({ email }: AuthSettingsCardProps) {
               <div className="relative">
                 <Input
                   type="password"
-                  placeholder="New password (min 8 chars)"
+                  placeholder={t("profile.authSettings.newPassword")}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   chamfer="dual"
@@ -233,7 +235,7 @@ export function AuthSettingsCard({ email }: AuthSettingsCardProps) {
                 disabled={isChangingPassword || !currentPassword || !newPassword}
                 className="h-8 px-3 text-xs shrink-0 self-end sm:self-auto"
               >
-                {isChangingPassword ? "Updating..." : "Change Password"}
+                {isChangingPassword ? t("common.loading") : t("profile.authSettings.changePassword")}
               </Button>
             </div>
           </form>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
+import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import {
   Card,
@@ -24,6 +25,7 @@ export function CreateOrgModal({
   onClose,
   onSuccess,
 }: CreateOrgModalProps) {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
@@ -77,7 +79,7 @@ export function CreateOrgModal({
                 </div>
                 <div>
                   <CardTitle className="text-base font-semibold">
-                    Create Organization
+                    {t("organization.createOrg")}
                   </CardTitle>
                   <CardDescription className="text-xs">
                     Establish a new organization workspace
@@ -119,7 +121,7 @@ export function CreateOrgModal({
             >
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-foreground">
-                  Organization Name *
+                  {t("organization.orgName")} *
                 </label>
                 <Input
                   type="text"
@@ -144,7 +146,7 @@ export function CreateOrgModal({
 
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-foreground">
-                  Organization Slug
+                  {t("organization.orgSlug")}
                 </label>
                 <Input
                   type="text"
@@ -161,7 +163,7 @@ export function CreateOrgModal({
 
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-foreground">
-                  Description
+                  {t("organization.orgDescription")}
                 </label>
                 <Input
                   type="text"
@@ -189,7 +191,7 @@ export function CreateOrgModal({
                   size="sm"
                   className="text-xs cursor-pointer"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   type="submit"
@@ -200,11 +202,11 @@ export function CreateOrgModal({
                   className="text-xs flex items-center gap-1.5 cursor-pointer"
                 >
                   {isSubmitting ? (
-                    <span>Creating...</span>
+                    <span>{t("common.loading")}</span>
                   ) : (
                     <>
                       <Sparkles className="w-3.5 h-3.5" />
-                      <span>Create Workspace</span>
+                      <span>{t("organization.createOrg")}</span>
                     </>
                   )}
                 </Button>

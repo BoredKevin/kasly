@@ -1,5 +1,6 @@
 import { useQuery } from "convex/react";
 import { Link, useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import {
@@ -37,6 +38,7 @@ export function OrganizationSidebar({
   onAfterSelect,
   className = "",
 }: OrganizationSidebarProps) {
+  const { t } = useTranslation();
   const [location] = useLocation();
 
   const getTabFromLocation = (loc: string): OrgTab => {
@@ -96,7 +98,7 @@ export function OrganizationSidebar({
       {/* Workspace Settings Category */}
       <div className="space-y-2">
         <div className="text-[11px] font-mono tracking-wider text-muted-foreground uppercase px-1">
-          WORKSPACE SETTINGS
+          {t("organization.overview")}
         </div>
 
         <div className="space-y-2">
@@ -126,7 +128,7 @@ export function OrganizationSidebar({
               >
                 <Building2 className="w-4 h-4" />
               </div>
-              <span className="text-xs font-medium">Overview</span>
+              <span className="text-xs font-medium">{t("organization.overview")}</span>
             </div>
           </Link>
 
@@ -157,7 +159,7 @@ export function OrganizationSidebar({
                 >
                   <Shield className="w-4 h-4" />
                 </div>
-                <span className="text-xs font-medium">Roles</span>
+                <span className="text-xs font-medium">{t("organization.roles")}</span>
               </div>
               {roles && (
                 <span className="font-mono text-[10px] text-muted-foreground px-1.5 py-0.5 bg-muted/40 border border-border/40">
@@ -194,7 +196,7 @@ export function OrganizationSidebar({
                 >
                   <LinkIcon className="w-4 h-4" />
                 </div>
-                <span className="text-xs font-medium">Invites</span>
+                <span className="text-xs font-medium">{t("organization.invites")}</span>
               </div>
               {canManageInvites && invites && invites.length > 0 && (
                 <span className="font-mono text-[10px] text-muted-foreground px-1.5 py-0.5 bg-muted/40 border border-border/40">
@@ -210,7 +212,7 @@ export function OrganizationSidebar({
       {hasOrgs && (
         <div className="pt-4 border-t border-border/60 space-y-2">
           <div className="text-[11px] font-mono tracking-wider text-muted-foreground uppercase px-1">
-            USER MANAGEMENT
+            {t("organization.members")}
           </div>
 
           <div className="space-y-2">
@@ -240,7 +242,7 @@ export function OrganizationSidebar({
                 >
                   <Users className="w-4 h-4" />
                 </div>
-                <span className="text-xs font-medium">Members</span>
+                <span className="text-xs font-medium">{t("organization.members")}</span>
               </div>
               {members && (
                 <span className="font-mono text-[10px] text-muted-foreground px-1.5 py-0.5 bg-muted/40 border border-border/40">
@@ -255,7 +257,7 @@ export function OrganizationSidebar({
       {/* Workspace Switcher & Actions Section at the bottom */}
       <div className="pt-4 border-t border-border/60 space-y-2">
         <div className="flex items-center justify-between text-[11px] font-mono tracking-wider text-muted-foreground uppercase px-1">
-          <span>WORKSPACE</span>
+          <span>{t("organization.title")}</span>
           {activeOrg?.isOwner && (
             <Badge
               variant="secondary"
@@ -308,7 +310,7 @@ export function OrganizationSidebar({
               className="flex-1 h-7 text-[11px] px-2 flex items-center justify-center gap-1 cursor-pointer"
             >
               <LogIn className="w-3 h-3" />
-              <span>Join</span>
+              <span>{t("organization.joinOrg")}</span>
             </Button>
 
             <Button
@@ -332,7 +334,7 @@ export function OrganizationSidebar({
               }`}
             >
               <Plus className="w-3 h-3" />
-              <span>New Org</span>
+              <span>{t("organization.createOrg")}</span>
             </Button>
           </div>
         </div>

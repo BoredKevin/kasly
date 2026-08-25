@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
+import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import {
   Card,
@@ -36,6 +37,7 @@ export function CreateInviteModal({
   organizationId,
   organizationName,
 }: CreateInviteModalProps) {
+  const { t } = useTranslation();
   const [expiresIn, setExpiresIn] = useState<string>("86400000"); // 1 day
   const [maxUses, setMaxUses] = useState<string>(""); // Unlimited
   const [selectedRoleIds, setSelectedRoleIds] = useState<Id<"roles">[]>([]);
@@ -282,9 +284,9 @@ export function CreateInviteModal({
                     onClick={onClose}
                     disabled={isSubmitting}
                     size="sm"
-                    className="text-xs"
+                    className="text-xs cursor-pointer"
                   >
-                    Cancel
+                    {t("common.cancel")}
                   </Button>
                   <Button
                     type="submit"
@@ -292,10 +294,10 @@ export function CreateInviteModal({
                     chamfer="dual"
                     size="sm"
                     disabled={isSubmitting}
-                    className="text-xs flex items-center gap-1.5"
+                    className="text-xs flex items-center gap-1.5 cursor-pointer"
                   >
                     <Link className="w-3.5 h-3.5" />
-                    <span>{isSubmitting ? "Generating..." : "Generate Code"}</span>
+                    <span>{isSubmitting ? t("common.loading") : t("organization.createInvite")}</span>
                   </Button>
                 </div>
               </form>

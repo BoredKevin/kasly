@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "convex/react";
+import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import {
   Card,
@@ -25,6 +26,7 @@ export function DeleteRoleModal({
   roleId,
   roleName,
 }: DeleteRoleModalProps) {
+  const { t } = useTranslation();
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,7 +62,7 @@ export function DeleteRoleModal({
                 </div>
                 <div>
                   <CardTitle className="text-base font-semibold text-destructive">
-                    Delete Role: {roleName}
+                    {t("organization.deleteRole")}: {roleName}
                   </CardTitle>
                   <CardDescription className="text-xs">
                     This action cannot be undone
@@ -72,7 +74,7 @@ export function DeleteRoleModal({
                 size="sm"
                 chamfer="dual"
                 onClick={onClose}
-                className="h-7 w-7 p-0"
+                className="h-7 w-7 p-0 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </Button>
@@ -100,9 +102,9 @@ export function DeleteRoleModal({
                 onClick={onClose}
                 disabled={isDeleting}
                 size="sm"
-                className="text-xs"
+                className="text-xs cursor-pointer"
               >
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button
                 type="button"
@@ -116,7 +118,7 @@ export function DeleteRoleModal({
                 className="text-xs flex items-center gap-1.5 cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span>{isDeleting ? "Deleting..." : "Delete Role"}</span>
+                <span>{isDeleting ? t("common.deleting") : t("organization.deleteRole")}</span>
               </Button>
             </div>
           </CardContent>

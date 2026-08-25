@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useQuery } from "convex/react";
+import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import {
   Card,
@@ -12,6 +13,7 @@ import {
 } from "@boredkevin/ui";
 
 export function SignInForm() {
+  const { t } = useTranslation();
   const { signIn } = useAuthActions();
   const [flow, setFlow] = useState<"signIn" | "signUp">("signIn");
   const [error, setError] = useState<string | null>(null);
@@ -27,8 +29,8 @@ export function SignInForm() {
           <CardTitle className="text-base font-normal">
             <p>
               {effectiveFlow === "signIn"
-                ? "Sign in to your account"
-                : "Create your Kasly account"}
+                ? t("auth.signInTitle")
+                : t("auth.signUpTitle")}
             </p>
           </CardTitle>
         </CardHeader>
@@ -47,14 +49,14 @@ export function SignInForm() {
             <Input
               type="email"
               name="email"
-              placeholder="Email"
+              placeholder={t("auth.emailPlaceholder")}
               chamfer="dual"
               required
             />
             <Input
               type="password"
               name="password"
-              placeholder="Password"
+              placeholder={t("auth.passwordPlaceholder")}
               chamfer="dual"
               required
             />
@@ -64,31 +66,31 @@ export function SignInForm() {
               type="submit"
               className="w-full mt-2 cursor-pointer"
             >
-              {effectiveFlow === "signIn" ? "Sign in" : "Sign up"}
+              {effectiveFlow === "signIn" ? t("auth.signInBtn") : t("auth.signUpBtn")}
             </Button>
             {allowSignUps ? (
               <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 text-xs sm:text-sm items-center justify-center text-center">
                 <span className="text-muted-foreground">
                   {effectiveFlow === "signIn"
-                    ? "Don't have an account?"
-                    : "Already have an account?"}
+                    ? t("auth.dontHaveAccount")
+                    : t("auth.alreadyHaveAccount")}
                 </span>
                 <span
                   className="text-foreground underline hover:no-underline cursor-pointer font-medium"
                   onClick={() => setFlow(flow === "signIn" ? "signUp" : "signIn")}
                 >
-                  {effectiveFlow === "signIn" ? "Sign up instead" : "Sign in instead"}
+                  {effectiveFlow === "signIn" ? t("auth.signUpInstead") : t("auth.signInInstead")}
                 </span>
               </div>
             ) : (
               <div className="text-center text-xs text-muted-foreground pt-1">
-                New user registrations are currently disabled.
+                {t("auth.registrationsDisabled")}
               </div>
             )}
             {error && (
               <div className="bg-destructive/20 border border-destructive/50 rounded-none p-3 chamfer-dual">
                 <p className="text-destructive-foreground font-mono text-xs">
-                  Error: {error}
+                  {t("common.error")}: {error}
                 </p>
               </div>
             )}

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
+import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import {
   Card,
@@ -39,6 +40,7 @@ interface UserIdentityCardProps {
 }
 
 export function UserIdentityCard({ user }: UserIdentityCardProps) {
+  const { t } = useTranslation();
   const [isEditing, setIsEditing] = useState(false);
   const [nameInput, setNameInput] = useState(user.name ?? "");
   const [isSaving, setIsSaving] = useState(false);
@@ -96,10 +98,10 @@ export function UserIdentityCard({ user }: UserIdentityCardProps) {
             </div>
             <div>
               <CardTitle className="text-lg font-semibold tracking-tight">
-                User Profile
+                {t("profile.userIdentity")}
               </CardTitle>
               <CardDescription className="text-xs text-muted-foreground">
-                Your personal account credentials and identity
+                {t("profile.userIdentityDesc")}
               </CardDescription>
             </div>
           </div>
@@ -127,7 +129,7 @@ export function UserIdentityCard({ user }: UserIdentityCardProps) {
                   type="text"
                   value={nameInput}
                   onChange={(e) => setNameInput(e.target.value)}
-                  placeholder="Enter display name"
+                  placeholder={t("profile.displayName")}
                   chamfer="dual"
                   className="h-8 text-sm"
                   autoFocus
@@ -157,7 +159,7 @@ export function UserIdentityCard({ user }: UserIdentityCardProps) {
             ) : (
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-semibold text-foreground truncate">
-                  {user.name || "No name set"}
+                  {user.name || t("profile.anonymousUser")}
                 </h3>
                 {!isEditing && allowProfileNameChange && (
                   <Button
@@ -171,7 +173,7 @@ export function UserIdentityCard({ user }: UserIdentityCardProps) {
                     className="text-xs flex items-center gap-1.5 h-8 px-2.5 cursor-pointer"
                   >
                     <Edit3 className="w-3.5 h-3.5" />
-                    <span>Edit Name</span>
+                    <span>{t("common.edit")}</span>
                   </Button>
                 )}
               </div>
@@ -179,7 +181,7 @@ export function UserIdentityCard({ user }: UserIdentityCardProps) {
 
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Mail className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">{user.email || "No email linked"}</span>
+              <span className="truncate">{user.email || t("common.none")}</span>
             </div>
           </div>
         </div>
@@ -190,7 +192,7 @@ export function UserIdentityCard({ user }: UserIdentityCardProps) {
             <div className="p-3 bg-muted/20 border border-border/60 flex flex-col gap-1">
               <div className="flex items-center justify-between text-muted-foreground">
                 <span className="flex items-center gap-1">
-                  <Hash className="w-3.5 h-3.5" /> User ID
+                  <Hash className="w-3.5 h-3.5" /> {t("profile.uniqueUserId")}
                 </span>
                 <button
                   type="button"
@@ -198,7 +200,7 @@ export function UserIdentityCard({ user }: UserIdentityCardProps) {
                     void handleCopyId();
                   }}
                   className="hover:text-foreground text-muted-foreground transition-colors cursor-pointer"
-                  title="Copy User ID"
+                  title={t("common.copy")}
                 >
                   {copiedId ? (
                     <CheckCheck className="w-3.5 h-3.5 text-emerald-400" />
@@ -214,7 +216,7 @@ export function UserIdentityCard({ user }: UserIdentityCardProps) {
 
             <div className="p-3 bg-muted/20 border border-border/60 flex flex-col gap-1">
               <span className="flex items-center gap-1 text-muted-foreground">
-                <Calendar className="w-3.5 h-3.5" /> Member Since
+                <Calendar className="w-3.5 h-3.5" /> {t("profile.accountCreated")}
               </span>
               <span className="font-medium text-foreground">
                 {formattedDate}
@@ -234,7 +236,7 @@ export function UserIdentityCard({ user }: UserIdentityCardProps) {
                     nisnStatus?.isSet ? "text-emerald-400" : "text-amber-400/90"
                   }`}
                 >
-                  {nisnStatus?.isSet ? "Verified (Encrypted)" : "Unassigned"}
+                  {nisnStatus?.isSet ? t("profile.nisnVerified") : t("profile.nisnNotVerified")}
                 </span>
               </div>
 
@@ -247,7 +249,7 @@ export function UserIdentityCard({ user }: UserIdentityCardProps) {
                 className="text-xs h-7 px-3 cursor-pointer shrink-0 flex items-center gap-1.5"
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Verify</span>
+                <span>{nisnStatus?.isSet ? t("profile.changeNisn") : t("profile.verifyNisn")}</span>
               </Button>
             </div>
           )}

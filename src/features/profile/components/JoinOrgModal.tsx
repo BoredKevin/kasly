@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
+import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import {
   Card,
@@ -32,6 +33,7 @@ export function JoinOrgModal({
   onClose,
   onSuccess,
 }: JoinOrgModalProps) {
+  const { t } = useTranslation();
   const [code, setCode] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,7 +81,7 @@ export function JoinOrgModal({
                 </div>
                 <div>
                   <CardTitle className="text-base font-semibold">
-                    Join an Organization
+                    {t("organization.joinOrg")}
                   </CardTitle>
                   <CardDescription className="text-xs">
                     Enter an invitation code to join a workspace
@@ -91,7 +93,7 @@ export function JoinOrgModal({
                 size="sm"
                 chamfer="dual"
                 onClick={onClose}
-                className="h-7 w-7 p-0"
+                className="h-7 w-7 p-0 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </Button>
@@ -107,7 +109,7 @@ export function JoinOrgModal({
             >
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-foreground">
-                  Invite Code *
+                  {t("organization.inviteCode")} *
                 </label>
                 <Input
                   type="text"
@@ -172,9 +174,9 @@ export function JoinOrgModal({
                   onClick={onClose}
                   disabled={isSubmitting}
                   size="sm"
-                  className="text-xs"
+                  className="text-xs cursor-pointer"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   type="submit"
@@ -182,10 +184,10 @@ export function JoinOrgModal({
                   chamfer="dual"
                   size="sm"
                   disabled={isSubmitting || !cleanCode}
-                  className="text-xs flex items-center gap-1.5"
+                  className="text-xs flex items-center gap-1.5 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>{isSubmitting ? "Joining..." : "Join Organization"}</span>
+                  <span>{isSubmitting ? t("common.loading") : t("organization.joinOrg")}</span>
                 </Button>
               </div>
             </form>

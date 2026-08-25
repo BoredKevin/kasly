@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "convex/react";
+import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import {
   Card,
@@ -33,6 +34,7 @@ export function OrganizationProfileCard({
   activeOrgId,
   onSelectOrg,
 }: OrganizationProfileCardProps) {
+  const { t } = useTranslation();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
@@ -79,7 +81,7 @@ export function OrganizationProfileCard({
               </div>
               <div>
                 <CardTitle className="text-lg font-semibold tracking-tight">
-                  Organization Profile
+                  {t("organization.overview")}
                 </CardTitle>
               </div>
             </div>
@@ -93,7 +95,7 @@ export function OrganizationProfileCard({
                 className="text-xs flex items-center gap-1.5 h-8 text-primary hover:bg-primary/10 border-primary/40"
               >
                 <UserPlus className="w-3.5 h-3.5" />
-                <span>Invite Members</span>
+                <span>{t("organization.createInvite")}</span>
               </Button>
             )}
           </div>
@@ -102,7 +104,7 @@ export function OrganizationProfileCard({
         <CardContent className="space-y-6">
           {orgs === undefined || (activeOrgId && activeOrg === undefined) ? (
             <div className="p-6 text-center text-xs text-muted-foreground animate-pulse">
-              Loading organization details...
+              {t("common.loading")}
             </div>
           ) : !activeOrg || orgs.length === 0 ? (
             <div className="p-6 sm:p-8 text-center bg-background/40 border border-dashed border-border flex flex-col items-center gap-3">
@@ -111,7 +113,7 @@ export function OrganizationProfileCard({
               </div>
               <div className="space-y-1 max-w-sm">
                 <h4 className="text-sm font-semibold text-foreground">
-                  No Organizations Found
+                  {t("organization.noOrgs")}
                 </h4>
                 <p className="text-xs text-muted-foreground">
                   {isOrgCreationDisabled
@@ -128,7 +130,7 @@ export function OrganizationProfileCard({
                   className="text-xs w-full sm:w-auto cursor-pointer"
                 >
                   <LogIn className="w-3.5 h-3.5 mr-1.5" />
-                  Join via Code
+                  {t("organization.joinOrg")}
                 </Button>
                 {!isOrgCreationDisabled ? (
                   <Button
@@ -139,7 +141,7 @@ export function OrganizationProfileCard({
                     className="text-xs w-full sm:w-auto cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5 mr-1.5" />
-                    Create First Organization
+                    {t("organization.createOrg")}
                   </Button>
                 ) : (
                   <span className="text-[11px] font-mono text-muted-foreground px-2.5 py-1.5 bg-muted/20 border border-border/40 text-center">

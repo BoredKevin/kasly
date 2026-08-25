@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "convex/react";
+import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import {
   Card,
@@ -39,6 +40,7 @@ export function OrganizationMembersCard({
   organizationId,
   currentUserId,
 }: OrganizationMembersCardProps) {
+  const { t } = useTranslation();
   const members = useQuery(api.members.list, { organizationId });
   const myMembership = useQuery(api.members.getMyMembership, { organizationId });
 
@@ -61,7 +63,7 @@ export function OrganizationMembersCard({
   if (members === undefined) {
     return (
       <div className="p-6 text-center text-xs text-muted-foreground animate-pulse">
-        Loading organization members...
+        {t("common.loading")}
       </div>
     );
   }
@@ -118,7 +120,7 @@ export function OrganizationMembersCard({
               </div>
               <div>
                 <CardTitle className="text-lg font-semibold tracking-tight">
-                  Organization Members
+                  {t("organization.members")}
                 </CardTitle>
               </div>
             </div>

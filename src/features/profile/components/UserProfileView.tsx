@@ -1,15 +1,17 @@
 import { useQuery } from "convex/react";
+import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { UserIdentityCard } from "./UserIdentityCard";
 import { AuthSettingsCard } from "./AuthSettingsCard";
 
 export function UserProfileView() {
+  const { t } = useTranslation();
   const viewer = useQuery(api.users.viewer);
 
   if (viewer === undefined) {
     return (
       <div className="w-full flex items-center justify-center py-20 text-muted-foreground text-sm font-mono animate-pulse">
-        Initializing user profile session...
+        {t("profile.loading")}
       </div>
     );
   }
@@ -17,7 +19,7 @@ export function UserProfileView() {
   if (viewer === null) {
     return (
       <div className="w-full text-center py-12 text-sm text-destructive">
-        Session expired or unauthenticated. Please sign in again.
+        {t("profile.unauthenticated")}
       </div>
     );
   }
@@ -26,10 +28,10 @@ export function UserProfileView() {
     <div className="w-full space-y-6">
       <div className="space-y-1">
         <h2 className="text-2xl font-bold tracking-tight text-foreground">
-          Personal Profile
+          {t("profile.title")}
         </h2>
         <p className="text-xs text-muted-foreground">
-          Manage your account credentials, personal identity, and authentication security
+          {t("profile.description")}
         </p>
       </div>
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useMutation } from "convex/react";
+import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import {
   Card,
@@ -34,6 +35,7 @@ export function VerifyNisnModal({
   onClose,
   isConfigured,
 }: VerifyNisnModalProps) {
+  const { t } = useTranslation();
   const [nisnInput, setNisnInput] = useState("");
   const [showNisn, setShowNisn] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -122,10 +124,10 @@ export function VerifyNisnModal({
                 </div>
                 <div>
                   <CardTitle className="text-base font-semibold">
-                    Verify NISN
+                    {t("profile.nisn.verifyTitle")}
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    National Identification Number Verification
+                    {t("profile.nisn.verifyDescription")}
                   </CardDescription>
                 </div>
               </div>
@@ -160,7 +162,7 @@ export function VerifyNisnModal({
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                 <div className="space-y-1">
                   <p className="font-semibold text-[11px]">
-                    NISN Unassigned
+                    {t("profile.nisn.unassigned")}
                   </p>
                   <p className="text-[11px] text-muted-foreground">
                     Your account does not have a NISN assigned yet. Please contact an administrator to provision your identification number.
@@ -178,7 +180,7 @@ export function VerifyNisnModal({
                   <div className="flex items-center justify-between text-xs">
                     <label className="font-medium text-foreground flex items-center gap-1.5">
                       <Hash className="w-3.5 h-3.5 text-primary" />
-                      Enter 10-digit NISN *
+                      {t("profile.nisn.enter10Digit")} *
                     </label>
                     <span className="font-mono text-[10px] text-muted-foreground">
                       {nisnInput.length}/10 DIGITS
@@ -247,7 +249,7 @@ export function VerifyNisnModal({
                     onClick={handleClose}
                     className="text-xs cursor-pointer"
                   >
-                    Close
+                    {t("common.close")}
                   </Button>
                   <Button
                     type="submit"
@@ -258,7 +260,7 @@ export function VerifyNisnModal({
                     className="text-xs flex items-center gap-1.5 cursor-pointer"
                   >
                     <ShieldCheck className="w-3.5 h-3.5" />
-                    <span>{isVerifying ? "Verifying..." : "Verify Identity"}</span>
+                    <span>{isVerifying ? t("common.loading") : t("profile.nisn.verifyButton")}</span>
                   </Button>
                 </div>
               </form>
@@ -274,7 +276,7 @@ export function VerifyNisnModal({
                   onClick={handleClose}
                   className="text-xs cursor-pointer"
                 >
-                  Close
+                  {t("common.close")}
                 </Button>
               </div>
             )}
