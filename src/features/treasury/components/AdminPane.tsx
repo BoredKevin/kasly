@@ -26,8 +26,10 @@ import {
   Clock,
   Laptop,
   CalendarPlus,
+  Users,
 } from "lucide-react";
 import { CreateManualDuesModal } from "./CreateManualDuesModal";
+import { PreRegistrationAdminModal } from "./PreRegistrationAdminModal";
 
 interface AdminPaneProps {
   organizationId: Id<"organizations">;
@@ -39,6 +41,7 @@ export function AdminPane({ organizationId, activeFundId, onOpenCreateFund }: Ad
   const { t } = useTranslation();
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isPreRegModalOpen, setIsPreRegModalOpen] = useState(false);
 
   const pendingKeys = useQuery(api.treasury.keys.listPendingKeys, { organizationId });
   const activeKeys = useQuery(api.treasury.keys.listActiveKeys, { organizationId });
@@ -482,6 +485,46 @@ export function AdminPane({ organizationId, activeFundId, onOpenCreateFund }: Ad
         organizationId={organizationId}
         funds={funds}
         initialFundId={activeFundId}
+      />
+
+      {/* Section 5: Pre-Registered Student Roster & Settings */}
+      <Card telemetry="TREASURY.PRE_REG" cornerLines className="bg-card border-border shadow-lg">
+        <CardHeader className="pb-4 border-b border-border/80">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 bg-primary/10 border border-primary/20 text-primary">
+                <Users className="w-5 h-5" />
+              </div>
+              <div>
+                <CardTitle className="text-base font-semibold">
+                  {t("treasury.preReg.title")}
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {t("treasury.preReg.description")}
+                </CardDescription>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              variant="cyber"
+              size="sm"
+              chamfer="dual"
+              onClick={() => setIsPreRegModalOpen(true)}
+              className="text-xs flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>{t("treasury.preReg.openModalBtn")}</span>
+            </Button>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Pre-Registration Admin Modal */}
+      <PreRegistrationAdminModal
+        organizationId={organizationId}
+        isOpen={isPreRegModalOpen}
+        onClose={() => setIsPreRegModalOpen(false)}
       />
     </div>
   );

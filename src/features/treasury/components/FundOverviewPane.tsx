@@ -46,6 +46,13 @@ export function FundOverviewPane({
     organizationId ? { organizationId } : "skip"
   );
 
+  const myUnpaidPeriods = useQuery(
+    api.treasury.dues.getMemberUnpaidPeriods,
+    organizationId && fundId && myMembership?.userId
+      ? { organizationId, fundId, userId: myMembership.userId }
+      : "skip"
+  );
+
   const canSign = Boolean(
     myMembership?.isOwner ||
     myMembership?.permissions.includes("ADMINISTRATOR") ||
@@ -194,7 +201,7 @@ export function FundOverviewPane({
           </div>
 
           {/* Fund Details Strip */}
-          <div className="grid grid-cols-2 sm:grid-cols-2 gap-3 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
             <div className="p-3 bg-muted/20 border border-border/50 space-y-1">
               <span className="text-[10px] font-mono uppercase text-muted-foreground">
                 {t("common.status")}
@@ -211,6 +218,37 @@ export function FundOverviewPane({
                 </p>
               )}
             </div>
+
+            <div className="p-3 bg-muted/20 border border-border/50 space-y-1">
+              <span className="text-[10px] font-mono uppercase text-muted-foreground">
+                {t("treasury.overview.yourDues")}
+              </span>
+              {myUnpaidPeriods === undefined ? (
+                <p className="font-mono font-semibold text-muted-foreground animate-pulse">
+                  ---
+                </p>
+              ) : myUnpaidPeriods.length === 0 ? (
+                <p className="font-mono font-semibold text-emerald-400 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span>{t("treasury.overview.allPaid")}</span>
+                </p>
+              ) : (
+                <div className="space-y-0.5">
+                  <p className="font-mono font-bold text-amber-400">
+                    {fund?.currency ?? "IDR"}{" "}
+                    {myUnpaidPeriods
+                      .reduce((sum, p) => sum + p.amount, 0)
+                      .toLocaleString()}
+                  </p>
+                  <p className="text-[10px] font-mono text-muted-foreground">
+                    {t("treasury.overview.unpaidDues", {
+                      count: myUnpaidPeriods.length,
+                    })}
+                  </p>
+                </div>
+              )}
+            </div>
+
             <div className="p-3 bg-muted/20 border border-border/50 space-y-1">
               <span className="text-[10px] font-mono uppercase text-muted-foreground">
                 {t("treasury.keys.registeredAt")}
