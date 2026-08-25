@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import {
@@ -413,9 +414,9 @@ function RoleEditorForm({
 }
 
 export function RoleEditorModal(props: RoleEditorModalProps) {
-  if (!props.isOpen) return null;
+  if (!props.isOpen || typeof document === "undefined") return null;
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
       <div className="w-full max-w-xl my-8">
         <RoleEditorForm
@@ -428,4 +429,6 @@ export function RoleEditorModal(props: RoleEditorModalProps) {
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useMutation } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
@@ -32,7 +33,7 @@ export function DeleteRoleModal({
 
   const deleteRole = useMutation(api.roles.deleteRole);
 
-  if (!isOpen || !roleId) return null;
+  if (!isOpen || !roleId || typeof document === "undefined") return null;
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -50,7 +51,7 @@ export function DeleteRoleModal({
     }
   };
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-200">
       <div className="w-full max-w-md">
         <Card telemetry="ORG.ROLE.DELETE" cornerLines className="bg-card border-destructive/40 shadow-2xl">
@@ -126,4 +127,6 @@ export function DeleteRoleModal({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

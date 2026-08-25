@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import {
@@ -588,9 +589,9 @@ function MemberActionModalInner({
 }
 
 export function MemberActionModal(props: MemberActionModalProps) {
-  if (!props.isOpen || !props.targetMember) return null;
+  if (!props.isOpen || !props.targetMember || typeof document === "undefined") return null;
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-200">
       <div className="w-full max-w-lg">
         <MemberActionModalInner
@@ -603,4 +604,6 @@ export function MemberActionModal(props: MemberActionModalProps) {
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import {
@@ -33,7 +34,7 @@ export function BannedMembersModal({
   const [unbanningUserId, setUnbanningUserId] = useState<Id<"users"> | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === "undefined") return null;
 
   const handleUnban = async (userId: Id<"users">) => {
     setUnbanningUserId(userId);
@@ -50,7 +51,7 @@ export function BannedMembersModal({
     }
   };
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-200">
       <div className="w-full max-w-lg">
         <Card telemetry="ORG.BANS" cornerLines className="bg-card border-border shadow-2xl">
@@ -184,4 +185,6 @@ export function BannedMembersModal({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

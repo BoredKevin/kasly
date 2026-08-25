@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useMutation, useQuery } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
@@ -46,7 +47,7 @@ export function JoinOrgModal({
 
   const acceptInvite = useMutation(api.invites.accept);
 
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === "undefined") return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,7 +70,7 @@ export function JoinOrgModal({
     }
   };
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-200">
       <div className="w-full max-w-md">
         <Card telemetry="ORG.INVITE.JOIN" cornerLines className="bg-card border-border shadow-2xl">
@@ -196,4 +197,6 @@ export function JoinOrgModal({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }
