@@ -7,12 +7,15 @@ import { useActiveWorkspace } from "../../../contexts";
 import { TreasurySidebar, TreasuryTab } from "./TreasurySidebar";
 import { FundOverviewPane } from "./FundOverviewPane";
 import { LedgerPane } from "./LedgerPane";
+import { DuesSpreadsheetPane } from "./DuesSpreadsheetPane";
 import { MyKeysPane } from "./MyKeysPane";
 import { AdminPane } from "./AdminPane";
 import { RecordPaymentModal } from "./RecordPaymentModal";
 import { CreateDueEventModal } from "./CreateDueEventModal";
+import { CreateManualDuesModal } from "./CreateManualDuesModal";
 import { GenerateKeyModal } from "./GenerateKeyModal";
 import { CreateFundModal } from "./CreateFundModal";
+import { EntryDetailsModal, LedgerEntryItem } from "./EntryDetailsModal";
 import {
   Landmark,
   ChevronDown,
@@ -62,8 +65,14 @@ export function TreasuryView({
 
   const activeFund = funds?.find((f) => f._id === activeFundId);
 
+  const entries = useQuery(
+    api.treasury.ledger.listEntries,
+    activeFundId ? { fundId: activeFundId, limit: 100 } : "skip"
+  );
+
   const getTabFromLocation = (loc: string): TreasuryTab => {
     if (loc === "/treasury/ledger") return "ledger";
+    if (loc === "/treasury/dues") return "dues";
     if (loc === "/treasury/keys") return "keys";
     if (loc === "/treasury/admin") return "admin";
     return "overview";
@@ -90,9 +99,45 @@ export function TreasuryView({
 
   // Modals state
   const [isRecordPaymentOpen, setIsRecordPaymentOpen] = useState(false);
+  const [recordPaymentPrefill, setRecordPaymentPrefill] = useState<{
+    initialMode?: "manual" | "dues";
+    userId?: Id<"users"> | null;
+    duesEventId?: Id<"duesEvents"> | null;
+    periodCount?: number;
+  } | null>(null);
+
   const [isDueEventOpen, setIsDueEventOpen] = useState(false);
+  const [isCreateDuesModalOpen, setIsCreateDuesModalOpen] = useState(false);
   const [isKeyGenOpen, setIsKeyGenOpen] = useState(false);
   const [isCreateFundOpen, setIsCreateFundOpen] = useState(false);
+  const [inspectingEntry, setInspectingEntry] = useState<LedgerEntryItem | null>(null);
+
+  const handleOpenRecordPayment = (prefill?: {
+    userId?: Id<"users">;
+    duesEventId?: Id<"duesEvents">;
+    periodCount?: number;
+  }) => {
+    if (prefill) {
+      setRecordPaymentPrefill({
+        initialMode: "dues",
+        userId: prefill.userId,
+        duesEventId: prefill.duesEventId,
+        periodCount: prefill.periodCount ?? 1,
+      });
+    } else {
+      setRecordPaymentPrefill({
+        initialMode: "manual",
+      });
+    }
+    setIsRecordPaymentOpen(true);
+  };
+
+  const handleInspectEntryById = (entryId: Id<"ledgerEntries">) => {
+    const found = entries?.find((e) => e._id === entryId);
+    if (found) {
+      setInspectingEntry(found);
+    }
+  };
 
   if (orgs === undefined || (effectiveOrgId && funds === undefined)) {
     return (
@@ -125,7 +170,7 @@ export function TreasuryView({
         : currentTab;
 
   return (
-    <div className="w-full space-y-6 animate-in fade-in duration-300">
+    <div className="w-full space-y-6">
       {/* Treasury Header & Mobile Fund Switcher */}
       <div className="flex flex-col gap-4">
         <div className="space-y-1">
@@ -133,7 +178,7 @@ export function TreasuryView({
             Treasury & Ledger
           </h2>
           <p className="text-xs text-muted-foreground">
-            Append-only cryptographically chained ledger, balance reconciliation, and key management
+            Secure chained ledger, automated member dues, and treasury information
           </p>
         </div>
 
@@ -188,7 +233,7 @@ export function TreasuryView({
                 variant="outline"
                 size="sm"
                 chamfer="dual"
-                onClick={() => setIsRecordPaymentOpen(true)}
+                onClick={() => handleOpenRecordPayment()}
                 className="h-8 text-xs px-2.5 flex items-center gap-1 cursor-pointer shrink-0"
               >
                 <PenLine className="w-3.5 h-3.5" />
@@ -223,7 +268,7 @@ export function TreasuryView({
             activeOrgId={effectiveOrgId}
             activeFundId={activeFundId}
             onSelectFund={setSelectedFundId}
-            onOpenRecordPayment={() => setIsRecordPaymentOpen(true)}
+            onOpenRecordPayment={handleOpenRecordPayment}
             onOpenDueEvent={() => setIsDueEventOpen(true)}
             onOpenCreateFund={() => setIsCreateFundOpen(true)}
           />
@@ -233,30 +278,45 @@ export function TreasuryView({
         <div className="min-w-0 w-full space-y-6">
           <TreasuryErrorBoundary>
             {safeCurrentTab === "overview" && (
-              <div className="animate-in fade-in duration-200">
+              <div>
                 <FundOverviewPane
                   fundId={activeFundId}
                   organizationId={effectiveOrgId}
                   onNavigateToLedger={() => setLocation("/treasury/ledger")}
-                  onOpenRecordPayment={() => setIsRecordPaymentOpen(true)}
+                  onOpenRecordPayment={() => handleOpenRecordPayment()}
                   onOpenKeyGen={() => setIsKeyGenOpen(true)}
                 />
               </div>
             )}
 
             {safeCurrentTab === "ledger" && (
-              <div className="animate-in fade-in duration-200">
+              <div>
                 <LedgerPane
                   fundId={activeFundId}
                   organizationId={effectiveOrgId}
-                  onOpenRecordPayment={() => setIsRecordPaymentOpen(true)}
+                  onOpenRecordPayment={() => handleOpenRecordPayment()}
                   onOpenKeyGen={() => setIsKeyGenOpen(true)}
                 />
               </div>
             )}
 
+            {safeCurrentTab === "dues" && (
+              <div>
+                <DuesSpreadsheetPane
+                  organizationId={effectiveOrgId}
+                  fundId={activeFundId}
+                  fundName={activeFund?.name}
+                  currency={activeFund?.currency}
+                  onOpenRecordPayment={handleOpenRecordPayment}
+                  onOpenEntryDetails={handleInspectEntryById}
+                  onOpenAdminTab={() => setLocation("/treasury/admin")}
+                  onOpenCreateDues={() => setIsCreateDuesModalOpen(true)}
+                />
+              </div>
+            )}
+
             {safeCurrentTab === "keys" && canSign && (
-              <div className="animate-in fade-in duration-200">
+              <div>
                 <MyKeysPane
                   organizationId={effectiveOrgId}
                   onOpenKeyGen={() => setIsKeyGenOpen(true)}
@@ -265,9 +325,10 @@ export function TreasuryView({
             )}
 
             {safeCurrentTab === "admin" && canAdmin && (
-              <div className="animate-in fade-in duration-200">
+              <div>
                 <AdminPane
                   organizationId={effectiveOrgId}
+                  activeFundId={activeFundId}
                   onOpenCreateFund={() => setIsCreateFundOpen(true)}
                 />
               </div>
@@ -281,15 +342,25 @@ export function TreasuryView({
         <>
           <RecordPaymentModal
             isOpen={isRecordPaymentOpen}
-            onClose={() => setIsRecordPaymentOpen(false)}
+            onClose={() => {
+              setIsRecordPaymentOpen(false);
+              setRecordPaymentPrefill(null);
+            }}
             organizationId={effectiveOrgId}
             defaultFundId={activeFundId}
+            initialMode={recordPaymentPrefill?.initialMode ?? "manual"}
+            prefillUserId={recordPaymentPrefill?.userId}
+            prefillDuesEventId={recordPaymentPrefill?.duesEventId}
+            prefillPeriodCount={recordPaymentPrefill?.periodCount ?? 1}
             onOpenKeyGen={() => setIsKeyGenOpen(true)}
           />
 
           <CreateDueEventModal
             isOpen={isDueEventOpen}
             onClose={() => setIsDueEventOpen(false)}
+            organizationId={effectiveOrgId}
+            fundId={activeFundId}
+            onOpenDuesTab={() => setLocation("/treasury/dues")}
           />
 
           <GenerateKeyModal
@@ -301,15 +372,34 @@ export function TreasuryView({
       )}
 
       {canAdmin && (
-        <CreateFundModal
-          isOpen={isCreateFundOpen}
-          onClose={() => setIsCreateFundOpen(false)}
-          organizationId={effectiveOrgId}
-          onSuccess={(newFundId) => {
-            setSelectedFundId(newFundId);
-          }}
-        />
+        <>
+          <CreateFundModal
+            isOpen={isCreateFundOpen}
+            onClose={() => setIsCreateFundOpen(false)}
+            organizationId={effectiveOrgId}
+            onSuccess={(newFundId) => {
+              setSelectedFundId(newFundId);
+            }}
+          />
+
+          <CreateManualDuesModal
+            isOpen={isCreateDuesModalOpen}
+            onClose={() => setIsCreateDuesModalOpen(false)}
+            organizationId={effectiveOrgId}
+            defaultFundId={activeFundId}
+          />
+        </>
       )}
+
+      {/* Entry Details Inspection Modal */}
+      <EntryDetailsModal
+        isOpen={Boolean(inspectingEntry)}
+        onClose={() => setInspectingEntry(null)}
+        entry={inspectingEntry}
+        currency={activeFund?.currency ?? "IDR"}
+        fundName={activeFund?.name ?? "Fund"}
+      />
     </div>
   );
 }
+

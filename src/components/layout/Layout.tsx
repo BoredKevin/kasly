@@ -21,10 +21,11 @@ import {
   ScrollText,
   KeyRound,
   ShieldCheck,
+  CalendarDays,
 } from "lucide-react";
 
 export type OrgTab = "overview" | "roles" | "invites" | "members";
-export type TreasuryTab = "overview" | "ledger" | "keys" | "admin";
+export type TreasuryTab = "overview" | "ledger" | "dues" | "keys" | "admin";
 
 interface LayoutProps {
   children: ReactNode;
@@ -38,20 +39,21 @@ function AuthenticatedDrawerContent({ onClose }: { onClose: () => void }) {
 
   const myMembership = useQuery(
     api.members.getMyMembership,
-    effectiveOrgId ? { organizationId: effectiveOrgId } : "skip",
+    effectiveOrgId ? { organizationId: effectiveOrgId } : "skip"
   );
 
-  const canManageInvites = Boolean(
+  const canManageRoles = Boolean(
     myMembership?.isOwner ||
     myMembership?.permissions.includes("ADMINISTRATOR") ||
+    myMembership?.permissions.includes("MANAGE_ROLES")
+  );
+
+  const canViewInvites = Boolean(
+    myMembership?.isOwner ||
+    myMembership?.permissions.includes("ADMINISTRATOR") ||
+    myMembership?.permissions.includes("CREATE_INVITES") ||
     myMembership?.permissions.includes("MANAGE_INVITES")
   );
-
-  const canCreateInvites = Boolean(
-    canManageInvites || myMembership?.permissions.includes("CREATE_INVITES")
-  );
-
-  const canViewInvites = canManageInvites || canCreateInvites;
 
   const canViewTreasury = Boolean(
     myMembership?.isOwner ||
@@ -71,12 +73,14 @@ function AuthenticatedDrawerContent({ onClose }: { onClose: () => void }) {
     myMembership?.permissions.includes("MANAGE_TREASURY")
   );
 
-  const hasOrgs = Boolean(orgs && orgs.length > 0);
+  const hasOrgs = orgs && orgs.length > 0;
 
-  const orgSubTabs: { tab: OrgTab; label: string; href: string; icon: typeof Building2 }[] = hasOrgs
+  const orgSubTabs = hasOrgs
     ? [
         { tab: "overview", label: "Overview", href: "/organization", icon: Building2 },
-        { tab: "roles", label: "Roles", href: "/organization/roles", icon: Shield },
+        ...(canManageRoles
+          ? [{ tab: "roles" as OrgTab, label: "Roles", href: "/organization/roles", icon: Shield }]
+          : []),
         ...(canViewInvites
           ? [{ tab: "invites" as OrgTab, label: "Invites", href: "/organization/invites", icon: LinkIcon }]
           : []),
@@ -88,6 +92,7 @@ function AuthenticatedDrawerContent({ onClose }: { onClose: () => void }) {
     ? [
         { tab: "overview", label: "Overview", href: "/treasury", icon: Landmark },
         { tab: "ledger", label: "Ledger", href: "/treasury/ledger", icon: ScrollText },
+        { tab: "dues", label: "Dues & Payments", href: "/treasury/dues", icon: CalendarDays },
         ...(canSignTreasury
           ? [{ tab: "keys" as TreasuryTab, label: "My Keys", href: "/treasury/keys", icon: KeyRound }]
           : []),

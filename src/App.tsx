@@ -38,7 +38,13 @@ export default function App() {
               <TreasuryView />
             </TreasuryErrorBoundary>
           </Route>
+          <Route path="/treasury/dues">
+            <TreasuryErrorBoundary>
+              <TreasuryView />
+            </TreasuryErrorBoundary>
+          </Route>
           <Route path="/treasury/keys">
+
             <TreasuryErrorBoundary>
               <TreasuryView />
             </TreasuryErrorBoundary>
@@ -70,5 +76,3 @@ export default function App() {
     </Layout>
   );
 }
-
-

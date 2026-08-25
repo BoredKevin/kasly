@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { Button, Badge } from "@boredkevin/ui";
 
-export type TreasuryTab = "overview" | "ledger" | "keys" | "admin";
+export type TreasuryTab = "overview" | "ledger" | "dues" | "keys" | "admin";
 
 interface TreasurySidebarProps {
   activeTab?: TreasuryTab;
@@ -22,7 +22,7 @@ interface TreasurySidebarProps {
   activeOrgId: Id<"organizations"> | null;
   activeFundId: Id<"funds"> | null;
   onSelectFund: (id: Id<"funds">) => void;
-  onOpenRecordPayment: () => void;
+  onOpenRecordPayment: (prefill?: any) => void;
   onOpenDueEvent: () => void;
   onOpenCreateFund: () => void;
   onAfterSelect?: () => void;
@@ -45,6 +45,7 @@ export function TreasurySidebar({
 
   const getTabFromLocation = (loc: string): TreasuryTab => {
     if (loc === "/treasury/ledger") return "ledger";
+    if (loc === "/treasury/dues") return "dues";
     if (loc === "/treasury/keys") return "keys";
     if (loc === "/treasury/admin") return "admin";
     return "overview";
@@ -60,6 +61,11 @@ export function TreasurySidebar({
   const funds = useQuery(
     api.treasury.funds.list,
     activeOrgId ? { organizationId: activeOrgId } : "skip"
+  );
+
+  const duesSummary = useQuery(
+    api.treasury.dues.getDuesSummary,
+    activeOrgId && activeFundId ? { organizationId: activeOrgId, fundId: activeFundId } : "skip"
   );
 
   const activeFund = funds?.find((f) => f._id === activeFundId);
@@ -150,8 +156,43 @@ export function TreasurySidebar({
               <span className="text-xs font-medium">Ledger</span>
             </div>
           </Link>
+
+          {/* Dues & Payments Link */}
+          <Link
+            href="/treasury/dues"
+            onClick={() => handleTabClick("dues")}
+            style={{
+              backgroundColor:
+                currentActiveTab === "dues"
+                  ? "rgba(255, 255, 255, 0.08)"
+                  : "rgba(255, 255, 255, 0.03)",
+            }}
+            className={`w-full p-3 flex items-center justify-between border transition-all text-left cursor-pointer ${currentActiveTab === "dues"
+              ? "border-primary/60 text-foreground font-semibold shadow-md"
+              : "border-border/70 text-muted-foreground hover:text-foreground hover:border-border hover:bg-white/5"
+              }`}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className={`p-2 border ${currentActiveTab === "dues"
+                  ? "bg-primary/20 border-primary/40 text-primary"
+                  : "bg-muted/40 border-border/60 text-muted-foreground"
+                  }`}
+              >
+                <CalendarDays className="w-4 h-4" />
+              </div>
+              <span className="text-xs font-medium">Dues & Payments</span>
+            </div>
+
+            {duesSummary && duesSummary.totalUnpaidMemberships > 0 && (
+              <span className="font-mono text-[10px] text-amber-400 px-1.5 py-0.5 bg-amber-500/15 border border-amber-500/30 font-bold animate-pulse">
+                {duesSummary.totalUnpaidMemberships} DUE
+              </span>
+            )}
+          </Link>
         </div>
       </div>
+
 
       {/* Treasurer Category */}
       {canSign && (
