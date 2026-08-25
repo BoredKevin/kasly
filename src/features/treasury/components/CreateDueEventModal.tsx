@@ -1,4 +1,5 @@
 import { useQuery } from "convex/react";
+import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import {
@@ -11,7 +12,6 @@ import {
   Badge,
 } from "@boredkevin/ui";
 import { CalendarDays, X, Clock, ArrowRight } from "lucide-react";
-
 
 interface CreateDueEventModalProps {
   isOpen: boolean;
@@ -28,6 +28,7 @@ export function CreateDueEventModal({
   fundId,
   onOpenDuesTab,
 }: CreateDueEventModalProps) {
+  const { t } = useTranslation();
   const duesSummary = useQuery(
     api.treasury.dues.getDuesSummary,
     organizationId && fundId ? { organizationId, fundId } : "skip"
@@ -47,10 +48,10 @@ export function CreateDueEventModal({
                 </div>
                 <div>
                   <CardTitle className="text-base font-semibold">
-                    Scheduled Member Dues
+                    {t("treasury.dues.title")}
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    Recurring automated dues system & ledger tracking
+                    {t("treasury.dues.description")}
                   </CardDescription>
                 </div>
               </div>
@@ -71,7 +72,7 @@ export function CreateDueEventModal({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-primary" />
-                  <span className="text-xs font-bold text-foreground">Schedule Status</span>
+                  <span className="text-xs font-bold text-foreground">{t("treasury.dues.scheduleConfig")}</span>
                 </div>
                 {duesSummary?.config?.isEnabled ? (
                   <Badge
@@ -133,7 +134,7 @@ export function CreateDueEventModal({
                 onClick={onClose}
                 className="text-xs cursor-pointer"
               >
-                Close
+                {t("common.close")}
               </Button>
 
               {onOpenDuesTab && (

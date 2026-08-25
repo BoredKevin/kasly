@@ -1,5 +1,6 @@
 import { useQuery } from "convex/react";
 import { Link, useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import {
@@ -41,6 +42,7 @@ export function TreasurySidebar({
   onAfterSelect,
   className = "",
 }: TreasurySidebarProps) {
+  const { t } = useTranslation();
   const [location] = useLocation();
 
   const getTabFromLocation = (loc: string): TreasuryTab => {
@@ -97,7 +99,7 @@ export function TreasurySidebar({
       {/* Treasury Category */}
       <div className="space-y-2">
         <div className="text-[11px] font-mono tracking-wider text-muted-foreground uppercase px-1">
-          TREASURY
+          {t("treasury.sidebar.treasuryCategory")}
         </div>
 
         <div className="space-y-2">
@@ -125,7 +127,7 @@ export function TreasurySidebar({
               >
                 <Landmark className="w-4 h-4" />
               </div>
-              <span className="text-xs font-medium">Overview</span>
+              <span className="text-xs font-medium">{t("nav.overview")}</span>
             </div>
           </Link>
 
@@ -153,7 +155,7 @@ export function TreasurySidebar({
               >
                 <ScrollText className="w-4 h-4" />
               </div>
-              <span className="text-xs font-medium">Ledger</span>
+              <span className="text-xs font-medium">{t("nav.ledger")}</span>
             </div>
           </Link>
 
@@ -181,12 +183,12 @@ export function TreasurySidebar({
               >
                 <CalendarDays className="w-4 h-4" />
               </div>
-              <span className="text-xs font-medium">Dues & Payments</span>
+              <span className="text-xs font-medium">{t("nav.duesAndPayments")}</span>
             </div>
 
             {duesSummary && duesSummary.totalUnpaidMemberships > 0 && (
               <span className="font-mono text-[10px] text-amber-400 px-1.5 py-0.5 bg-amber-500/15 border border-amber-500/30 font-bold animate-pulse">
-                {duesSummary.totalUnpaidMemberships} DUE
+                {duesSummary.totalUnpaidMemberships} {t("treasury.sidebar.dueBadge")}
               </span>
             )}
           </Link>
@@ -198,7 +200,7 @@ export function TreasurySidebar({
       {canSign && (
         <div className="pt-4 border-t border-border/60 space-y-2">
           <div className="text-[11px] font-mono tracking-wider text-muted-foreground uppercase px-1">
-            TREASURER
+            {t("treasury.sidebar.treasurerCategory")}
           </div>
 
           <div className="space-y-2">
@@ -216,7 +218,7 @@ export function TreasurySidebar({
                 <div className="p-2 border bg-muted/40 border-border/60 text-muted-foreground group-hover:text-primary group-hover:bg-primary/20 group-hover:border-primary/40 transition-colors">
                   <PenLine className="w-4 h-4" />
                 </div>
-                <span className="text-xs font-medium">Record Payment</span>
+                <span className="text-xs font-medium">{t("nav.recordPayment")}</span>
               </div>
             </button>
 
@@ -244,7 +246,7 @@ export function TreasurySidebar({
                 >
                   <KeyRound className="w-4 h-4" />
                 </div>
-                <span className="text-xs font-medium">My Keys</span>
+                <span className="text-xs font-medium">{t("nav.myKeys")}</span>
               </div>
             </Link>
 
@@ -262,7 +264,7 @@ export function TreasurySidebar({
                 <div className="p-2 border bg-muted/40 border-border/60 text-muted-foreground group-hover:text-primary group-hover:bg-primary/20 group-hover:border-primary/40 transition-colors">
                   <CalendarDays className="w-4 h-4" />
                 </div>
-                <span className="text-xs font-medium">Due Adjustment</span>
+                <span className="text-xs font-medium">{t("nav.dueAdjustment")}</span>
               </div>
             </button>
           </div>
@@ -273,7 +275,7 @@ export function TreasurySidebar({
       {canAdmin && (
         <div className="pt-4 border-t border-border/60 space-y-2">
           <div className="text-[11px] font-mono tracking-wider text-muted-foreground uppercase px-1">
-            ADMINISTRATION
+            {t("treasury.sidebar.adminCategory")}
           </div>
 
           <div className="space-y-2">
@@ -301,7 +303,7 @@ export function TreasurySidebar({
                 >
                   <ShieldCheck className="w-4 h-4" />
                 </div>
-                <span className="text-xs font-medium">Admin Panel</span>
+                <span className="text-xs font-medium">{t("nav.adminPanel")}</span>
               </div>
               {pendingKeys && pendingKeys.length > 0 && (
                 <span className="font-mono text-[10px] text-amber-400 px-1.5 py-0.5 bg-amber-500/15 border border-amber-500/30 font-bold animate-pulse">
@@ -316,7 +318,7 @@ export function TreasurySidebar({
       {/* Fund Switcher Section at bottom */}
       <div className="pt-4 border-t border-border/60 space-y-2">
         <div className="flex items-center justify-between text-[11px] font-mono tracking-wider text-muted-foreground uppercase px-1">
-          <span>ACTIVE FUND</span>
+          <span>{t("treasury.sidebar.activeFund")}</span>
           {activeFund && (
             <Badge
               variant="secondary"
@@ -325,7 +327,7 @@ export function TreasurySidebar({
                 : "bg-primary/15 text-primary border-primary/30"
                 }`}
             >
-              {activeFund.isFrozen ? "FROZEN" : activeFund.currency}
+              {activeFund.isFrozen ? t("treasury.sidebar.frozenBadge") : activeFund.currency}
             </Badge>
           )}
         </div>
@@ -354,7 +356,7 @@ export function TreasurySidebar({
             </div>
           ) : (
             <div className="text-xs text-muted-foreground italic py-1">
-              No treasury funds found
+              {t("treasury.sidebar.noFundsFound")}
             </div>
           )}
 
@@ -371,7 +373,7 @@ export function TreasurySidebar({
               className="w-full h-7 text-[11px] px-2 flex items-center justify-center gap-1 cursor-pointer"
             >
               <Plus className="w-3 h-3" />
-              <span>New Fund</span>
+              <span>{t("nav.newFund")}</span>
             </Button>
           )}
         </div>

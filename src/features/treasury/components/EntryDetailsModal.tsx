@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Id } from "../../../../convex/_generated/dataModel";
 import {
   Card,
@@ -57,6 +58,7 @@ export function EntryDetailsModal({
   currency = "---",
   fundName = "Fund",
 }: EntryDetailsModalProps) {
+  const { t } = useTranslation();
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   if (!isOpen || !entry) return null;
@@ -81,7 +83,7 @@ export function EntryDetailsModal({
                 </div>
                 <div>
                   <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <span>Entry #{entry.sequenceNumber}</span>
+                    <span>{t("treasury.ledger.entryNumber", { seq: entry.sequenceNumber })}</span>
                     <Badge
                       variant="outline"
                       className={`text-[10px] font-mono font-bold px-1.5 py-0.5 border flex items-center gap-1 ${isCredit
@@ -94,11 +96,11 @@ export function EntryDetailsModal({
                       ) : (
                         <ArrowUpRight className="w-3 h-3" />
                       )}
-                      <span>{isCredit ? "CREDIT" : "DEBIT"}</span>
+                      <span>{isCredit ? t("treasury.ledger.credit") : t("treasury.ledger.debit")}</span>
                     </Badge>
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    Cryptographic ledger proof in {fundName}
+                    {t("treasury.ledger.proofInFund", { fundName })}
                   </CardDescription>
                 </div>
               </div>
@@ -119,7 +121,7 @@ export function EntryDetailsModal({
             <div className="p-3.5 bg-background/60 border border-border/70 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                  Transaction Amount
+                  {t("treasury.ledger.transactionAmount")}
                 </span>
                 <span className="text-base font-bold text-foreground">
                   {currency} {entry.amount.toLocaleString()}
@@ -127,7 +129,7 @@ export function EntryDetailsModal({
               </div>
               <div className="pt-2 border-t border-border/40 space-y-1">
                 <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                  Memo
+                  {t("treasury.ledger.memo")}
                 </span>
                 <p className="text-foreground font-sans font-medium text-xs leading-relaxed break-words [overflow-wrap:anywhere]">
                   {entry.memo}
@@ -138,14 +140,14 @@ export function EntryDetailsModal({
             {/* Cryptographic SHA-256 Hashes */}
             <div className="space-y-2.5">
               <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
-                Chain Hashes & Continuity
+                {t("treasury.ledger.hashes")}
               </span>
 
               {/* Entry Hash */}
               <div className="p-3 bg-muted/20 border border-border/60 space-y-1.5">
                 <div className="flex items-center justify-between text-[11px]">
                   <span className="text-foreground font-semibold flex items-center gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5 text-primary" /> Entry Hash (SHA-256)
+                    <ShieldCheck className="w-3.5 h-3.5 text-primary" /> {t("treasury.ledger.entryHash")}
                   </span>
                   <Button
                     type="button"
@@ -158,12 +160,12 @@ export function EntryDetailsModal({
                     {copiedKey === "entryHash" ? (
                       <>
                         <Check className="w-3 h-3 text-emerald-400" />
-                        <span>Copied</span>
+                        <span>{t("treasury.ledger.copied")}</span>
                       </>
                     ) : (
                       <>
                         <Copy className="w-3 h-3" />
-                        <span>Copy Hash</span>
+                        <span>{t("treasury.ledger.copyHash")}</span>
                       </>
                     )}
                   </Button>
@@ -177,7 +179,7 @@ export function EntryDetailsModal({
               <div className="p-3 bg-muted/20 border border-border/60 space-y-1.5">
                 <div className="flex items-center justify-between text-[11px]">
                   <span className="text-foreground font-semibold flex items-center gap-1">
-                    <Lock className="w-3.5 h-3.5 text-muted-foreground" /> Previous Hash (Parent Link)
+                    <Lock className="w-3.5 h-3.5 text-muted-foreground" /> {t("treasury.ledger.prevHash")}
                   </span>
                   <Button
                     type="button"
@@ -190,12 +192,12 @@ export function EntryDetailsModal({
                     {copiedKey === "prevHash" ? (
                       <>
                         <Check className="w-3 h-3 text-emerald-400" />
-                        <span>Copied</span>
+                        <span>{t("treasury.ledger.copied")}</span>
                       </>
                     ) : (
                       <>
                         <Copy className="w-3 h-3" />
-                        <span>Copy Hash</span>
+                        <span>{t("treasury.ledger.copyHash")}</span>
                       </>
                     )}
                   </Button>
@@ -209,13 +211,13 @@ export function EntryDetailsModal({
             {/* Signer & Non-Repudiation Metadata */}
             <div className="space-y-2.5">
               <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
-                Signer & Digital Signature
+                {t("treasury.keys.title")}
               </span>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
                 <div className="p-2.5 bg-muted/20 border border-border/50 space-y-1">
                   <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                    <User className="w-3 h-3" /> Signer Name
+                    <User className="w-3 h-3" /> {t("treasury.ledger.signer")}
                   </span>
                   <p className="text-foreground font-semibold">
                     {entry.signerName || "Authorized Treasurer"}
@@ -224,7 +226,7 @@ export function EntryDetailsModal({
 
                 <div className="p-2.5 bg-muted/20 border border-border/50 space-y-1">
                   <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                    <KeyRound className="w-3 h-3 text-primary" /> Key Fingerprint
+                    <KeyRound className="w-3 h-3 text-primary" /> {t("treasury.ledger.keyFingerprint")}
                   </span>
                   <p className="text-foreground font-semibold truncate" title={entry.keyId}>
                     {entry.keyId}
@@ -233,7 +235,7 @@ export function EntryDetailsModal({
 
                 <div className="p-2.5 bg-muted/20 border border-border/50 space-y-1">
                   <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                    <Clock className="w-3 h-3" /> Timestamp
+                    <Clock className="w-3 h-3" /> {t("treasury.ledger.timestamp")}
                   </span>
                   <p className="text-foreground">
                     {new Date(entry.timestamp).toLocaleString()}
@@ -242,7 +244,7 @@ export function EntryDetailsModal({
 
                 <div className="p-2.5 bg-muted/20 border border-border/50 space-y-1">
                   <span className="text-[10px] text-muted-foreground">
-                    Algorithm
+                    {t("treasury.ledger.algorithm")}
                   </span>
                   <p className="text-foreground">
                     ECDSA P-256 SHA-256
@@ -254,7 +256,7 @@ export function EntryDetailsModal({
               <div className="p-3 bg-muted/20 border border-border/60 space-y-1.5">
                 <div className="flex items-center justify-between text-[11px]">
                   <span className="text-foreground font-semibold">
-                    Raw ECDSA Signature (IEEE P1363)
+                    {t("treasury.ledger.signature")}
                   </span>
                   <Button
                     type="button"
@@ -267,12 +269,12 @@ export function EntryDetailsModal({
                     {copiedKey === "sig" ? (
                       <>
                         <Check className="w-3 h-3 text-emerald-400" />
-                        <span>Copied</span>
+                        <span>{t("treasury.ledger.copied")}</span>
                       </>
                     ) : (
                       <>
                         <Copy className="w-3 h-3" />
-                        <span>Copy Signature</span>
+                        <span>{t("treasury.ledger.copySig")}</span>
                       </>
                     )}
                   </Button>

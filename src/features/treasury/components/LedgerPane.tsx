@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useConvex } from "convex/react";
+import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import {
@@ -33,6 +34,7 @@ export function LedgerPane({
   onOpenRecordPayment,
   onOpenKeyGen,
 }: LedgerPaneProps) {
+  const { t } = useTranslation();
   const convex = useConvex();
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState<{
@@ -67,9 +69,9 @@ export function LedgerPane({
             <ScrollText className="w-6 h-6" />
           </div>
           <div className="space-y-1">
-            <p className="font-semibold text-sm text-foreground">No Fund Selected</p>
+            <p className="font-semibold text-sm text-foreground">{t("treasury.sidebar.noFundsFound")}</p>
             <p className="text-xs text-muted-foreground">
-              Please select a fund from the sidebar to inspect its cryptographic ledger.
+              {t("treasury.ledger.description")}
             </p>
           </div>
         </CardContent>
@@ -139,10 +141,10 @@ export function LedgerPane({
               </div>
               <div>
                 <CardTitle className="text-base font-semibold">
-                  Ledger Chain {fund?.name ?? "Fund"}
+                  {t("treasury.ledger.title")} {fund?.name ?? "Fund"}
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Secure chained cryptographically signed ledger entries
+                  {t("treasury.ledger.description")}
                 </CardDescription>
               </div>
             </div>
@@ -183,7 +185,7 @@ export function LedgerPane({
                   className="text-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   <Lock className="w-3.5 h-3.5" />
-                  <span>{isFrozen ? "Ledger Frozen" : "Record Entry"}</span>
+                  <span>{isFrozen ? "Ledger Frozen" : t("nav.recordPayment")}</span>
                 </Button>
               )}
             </div>

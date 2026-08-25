@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
+import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import {
@@ -35,6 +36,7 @@ interface AdminPaneProps {
 }
 
 export function AdminPane({ organizationId, activeFundId, onOpenCreateFund }: AdminPaneProps) {
+  const { t } = useTranslation();
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -126,10 +128,10 @@ export function AdminPane({ organizationId, activeFundId, onOpenCreateFund }: Ad
               </div>
               <div>
                 <CardTitle className="text-base font-semibold">
-                  Pending Key Approvals
+                  {t("treasury.admin.pendingKeyReviews")}
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Zero-trust authorization: Review and verify treasurer signing keys
+                  {t("treasury.admin.description")}
                 </CardDescription>
               </div>
             </div>
@@ -139,7 +141,7 @@ export function AdminPane({ organizationId, activeFundId, onOpenCreateFund }: Ad
                 variant="secondary"
                 className="font-mono text-xs px-2 py-0.5 border-amber-500/40 text-amber-300 bg-amber-500/15 font-bold animate-pulse"
               >
-                {pendingKeys.length} PENDING
+                {pendingKeys.length} {t("treasury.keys.pending").toUpperCase()}
               </Badge>
             )}
           </div>
@@ -148,13 +150,13 @@ export function AdminPane({ organizationId, activeFundId, onOpenCreateFund }: Ad
         <CardContent className="pt-6 pb-6">
           {pendingKeys === undefined ? (
             <div className="py-8 text-center text-xs font-mono text-muted-foreground animate-pulse">
-              Loading pending requests...
+              {t("common.loading")}
             </div>
           ) : pendingKeys.length === 0 ? (
             <div className="py-6 text-center space-y-1.5">
               <Check className="w-6 h-6 text-emerald-400 mx-auto opacity-70" />
               <p className="text-xs font-mono text-muted-foreground">
-                No pending key registration requests. All keys are up to date.
+                {t("treasury.keys.pendingApproval")}: 0
               </p>
             </div>
           ) : (
@@ -516,7 +518,6 @@ function DuesScheduleSection({
   );
   const upsertDuesConfig = useMutation(api.treasury.dues.upsertDuesConfig);
   const disableDues = useMutation(api.treasury.dues.disableDues);
-  const triggerDuesNow = useMutation(api.treasury.dues.triggerDuesCycleNow);
 
   const [isEditing, setIsEditing] = useState(false);
   const [isCreateDuesModalOpen, setIsCreateDuesModalOpen] = useState(false);
@@ -525,7 +526,6 @@ function DuesScheduleSection({
   const [intervalValue, setIntervalValue] = useState<number>(1);
   const [amount, setAmount] = useState<string>("20000");
   const [isSaving, setIsSaving] = useState(false);
-  const [isTriggering, setIsTriggering] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -604,21 +604,6 @@ function DuesScheduleSection({
     } else {
       handleStartEdit();
       setIsEnabled(true);
-    }
-  };
-
-  const handleTriggerNow = async () => {
-    if (!selectedFundId) return;
-    setIsTriggering(true);
-    setErrorMessage(null);
-    setStatusMessage(null);
-    try {
-      await triggerDuesNow({ organizationId, fundId: selectedFundId });
-      setStatusMessage(`New dues cycle triggered for ${currentFund?.name || "fund"}! Check the Dues & Payments view.`);
-    } catch (err: unknown) {
-      setErrorMessage(err instanceof Error ? err.message : "Failed to trigger dues cycle.");
-    } finally {
-      setIsTriggering(false);
     }
   };
 

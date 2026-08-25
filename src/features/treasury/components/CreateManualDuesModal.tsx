@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
+import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import {
@@ -22,10 +23,8 @@ import {
   Coins,
   CalendarDays,
   CalendarRange,
-  AlertCircle,
   Check,
   Layers,
-  ChevronRight,
   Minus,
   Plus,
   Info,
@@ -109,6 +108,7 @@ export function CreateManualDuesModal({
   defaultFundId,
   onSuccess,
 }: CreateManualDuesModalProps) {
+  const { t } = useTranslation();
   const funds = useQuery(api.treasury.funds.list, { organizationId });
   const members = useQuery(api.members.list, { organizationId });
 
@@ -1087,7 +1087,7 @@ export function CreateManualDuesModal({
                   size="sm"
                   className="text-xs cursor-pointer"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   type="submit"

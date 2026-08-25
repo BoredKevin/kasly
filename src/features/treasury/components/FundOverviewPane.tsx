@@ -1,4 +1,5 @@
 import { useQuery } from "convex/react";
+import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import {
@@ -34,6 +35,7 @@ export function FundOverviewPane({
   onOpenRecordPayment,
   onOpenKeyGen,
 }: FundOverviewPaneProps) {
+  const { t } = useTranslation();
   const fund = useQuery(
     api.treasury.funds.get,
     fundId ? { fundId } : "skip"
@@ -58,9 +60,9 @@ export function FundOverviewPane({
             <Wallet className="w-6 h-6" />
           </div>
           <div className="space-y-1">
-            <p className="font-semibold text-sm text-foreground">No Fund Selected</p>
+            <p className="font-semibold text-sm text-foreground">{t("treasury.sidebar.noFundsFound")}</p>
             <p className="text-xs text-muted-foreground">
-              Please select or create an organization fund from the sidebar.
+              {t("treasury.overview.description")}
             </p>
           </div>
         </CardContent>
@@ -114,10 +116,10 @@ export function FundOverviewPane({
               </div>
               <div>
                 <CardTitle className="text-base font-semibold">
-                  {fund?.name ?? "Fund Overview"}
+                  {fund?.name ?? t("treasury.overview.title")}
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  {fund?.description || "Treasury Balance"}
+                  {fund?.description || t("treasury.overview.totalBalance")}
                 </CardDescription>
               </div>
             </div>
@@ -154,7 +156,7 @@ export function FundOverviewPane({
           <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 p-5 bg-background/50 border border-border/70">
             <div className="space-y-1">
               <span className="text-[10px] font-mono tracking-wider uppercase text-muted-foreground">
-                BALANCE
+                {t("treasury.overview.totalBalance")}
               </span>
               <div className="flex items-baseline gap-2">
                 <span className="text-xs font-mono text-muted-foreground font-semibold">
@@ -186,7 +188,7 @@ export function FundOverviewPane({
                 className="text-xs flex items-center gap-1.5 cursor-pointer shrink-0 disabled:opacity-50"
               >
                 <PenLine className="w-3.5 h-3.5" />
-                <span>{isFrozen ? "Ledger Frozen" : "Record Payment"}</span>
+                <span>{isFrozen ? "Ledger Frozen" : t("nav.recordPayment")}</span>
               </Button>
             )}
           </div>
@@ -195,7 +197,7 @@ export function FundOverviewPane({
           <div className="grid grid-cols-2 sm:grid-cols-2 gap-3 text-xs">
             <div className="p-3 bg-muted/20 border border-border/50 space-y-1">
               <span className="text-[10px] font-mono uppercase text-muted-foreground">
-                Ledger Status
+                {t("common.status")}
               </span>
               {isFrozen ? (
                 <p className="font-mono font-semibold text-red-400 flex items-center gap-1">
@@ -211,7 +213,7 @@ export function FundOverviewPane({
             </div>
             <div className="p-3 bg-muted/20 border border-border/50 space-y-1">
               <span className="text-[10px] font-mono uppercase text-muted-foreground">
-                Created
+                {t("treasury.keys.registeredAt")}
               </span>
               <p className="font-mono font-semibold text-foreground">
                 {fund ? new Date(fund._creationTime).toLocaleDateString() : "---"}
@@ -230,7 +232,7 @@ export function FundOverviewPane({
                 <ScrollText className="w-4 h-4" />
               </div>
               <CardTitle className="text-sm font-semibold">
-                Recent Ledger Activity
+                {t("treasury.overview.recentActivity")}
               </CardTitle>
             </div>
             <Button
@@ -241,7 +243,7 @@ export function FundOverviewPane({
               onClick={onNavigateToLedger}
               className="h-7 text-xs text-primary hover:underline flex items-center gap-1 cursor-pointer font-mono px-2"
             >
-              <span>View full ledger</span>
+              <span>{t("common.view")}</span>
               <ArrowRight className="w-3 h-3" />
             </Button>
           </div>

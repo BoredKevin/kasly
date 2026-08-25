@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Id } from "../../../../convex/_generated/dataModel";
-import { Search, ChevronDown, Check, X, User, Crown, Shield } from "lucide-react";
+import { Search, ChevronDown, Check, X, Crown, Shield } from "lucide-react";
 
 export interface MemberItem {
   _id: Id<"members">;
@@ -45,7 +46,7 @@ function levenshteinDistance(a: string, b: string): number {
         matrix[i][j] = Math.min(
           matrix[i - 1][j - 1] + 1, // substitution
           matrix[i][j - 1] + 1,     // insertion
-          matrix[i - 1] + 1         // deletion
+          matrix[i - 1][j] + 1      // deletion
         );
       }
     }
@@ -129,9 +130,10 @@ export function MemberSearchSelect({
   value,
   onChange,
   disabled = false,
-  placeholder = "Search member by name or email...",
+  placeholder,
   className = "",
 }: MemberSearchSelectProps) {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [highlightedIndex, setHighlightedIndex] = useState(0);
@@ -177,10 +179,18 @@ export function MemberSearchSelect({
     return scored.map((item) => item.member);
   }, [members, searchQuery]);
 
-  // Handle outside clicks to close dropdown
+  // Reset highlight on query change
+  useEffect(() => {
+    setHighlightedIndex(0);
+  }, [searchQuery]);
+
+  // Close when clicked outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
     }
@@ -190,44 +200,10 @@ export function MemberSearchSelect({
     };
   }, []);
 
-  // When dropdown opens/closes, reset query or highlighted index
-  useEffect(() => {
-    if (isOpen) {
-      setHighlightedIndex(0);
-    } else {
-      setSearchQuery("");
-    }
-  }, [isOpen]);
-
-  // Auto scroll highlighted item into view
-  useEffect(() => {
-    if (isOpen && listRef.current) {
-      const items = listRef.current.querySelectorAll("[data-member-item]");
-      const currentItem = items[highlightedIndex] as HTMLElement | undefined;
-      if (currentItem) {
-        currentItem.scrollIntoView({ block: "nearest" });
-      }
-    }
-  }, [highlightedIndex, isOpen]);
-
-  const handleSelect = (member: MemberItem) => {
-    onChange(member.userId);
-    setIsOpen(false);
-    setSearchQuery("");
-  };
-
-  const handleClear = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onChange("");
-    setSearchQuery("");
-    setIsOpen(false);
-  };
-
+  // Keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (disabled) return;
-
     if (!isOpen) {
-      if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter") {
+      if (e.key === "ArrowDown" || e.key === "Enter") {
         e.preventDefault();
         setIsOpen(true);
       }
@@ -270,14 +246,29 @@ export function MemberSearchSelect({
     }
   };
 
+  const handleSelect = (member: MemberItem) => {
+    onChange(member.userId);
+    setSearchQuery("");
+    setIsOpen(false);
+  };
+
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange("");
+    setSearchQuery("");
+    setIsOpen(false);
+  };
+
   if (!members) {
     return (
       <div className="w-full h-9 px-3 bg-background border border-border text-xs text-muted-foreground font-mono flex items-center gap-2">
         <Search className="w-3.5 h-3.5 animate-pulse text-muted-foreground" />
-        <span>Loading organization members...</span>
+        <span>{t("common.loading")}</span>
       </div>
     );
   }
+
+  const effectivePlaceholder = placeholder || t("organization.searchMembers");
 
   return (
     <div ref={containerRef} className={`relative w-full ${className}`}>
@@ -312,7 +303,7 @@ export function MemberSearchSelect({
             if (!disabled) setIsOpen(true);
           }}
           onKeyDown={handleKeyDown}
-          placeholder={selectedMember ? getMemberLabel(selectedMember) : placeholder}
+          placeholder={selectedMember ? getMemberLabel(selectedMember) : effectivePlaceholder}
           className="w-full h-full bg-transparent text-xs font-mono text-foreground placeholder:text-muted-foreground placeholder:font-mono focus:outline-none cursor-text truncate"
         />
 

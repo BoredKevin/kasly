@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useConvex } from "convex/react";
+import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import {
@@ -56,6 +57,7 @@ export function RevertEntryModal({
   onSuccess,
   onOpenKeyGen,
 }: RevertEntryModalProps) {
+  const { t } = useTranslation();
   const convex = useConvex();
   const myKeys = useQuery(api.treasury.keys.getMyKeys, { organizationId });
 
@@ -204,7 +206,7 @@ export function RevertEntryModal({
                 </div>
                 <div>
                   <CardTitle className="text-base font-semibold">
-                    Revert Ledger Entry #{entry.sequenceNumber}
+                    {t("treasury.ledger.revertEntry")} #{entry.sequenceNumber}
                   </CardTitle>
                   <CardDescription className="text-xs">
                     Append an offsetting compensating transaction to HEAD
@@ -370,7 +372,7 @@ export function RevertEntryModal({
                     onClick={onClose}
                     className="cursor-pointer text-xs"
                   >
-                    Cancel
+                    {t("common.cancel")}
                   </Button>
                   <Button
                     type="button"

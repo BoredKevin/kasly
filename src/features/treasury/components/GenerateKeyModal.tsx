@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "convex/react";
+import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import {
@@ -32,6 +33,7 @@ export function GenerateKeyModal({
   organizationId,
   onSuccess,
 }: GenerateKeyModalProps) {
+  const { t } = useTranslation();
   const [step, setStep] = useState<1 | 2>(1);
   const [label, setLabel] = useState("");
   const [generatedKeyId, setGeneratedKeyId] = useState<string | null>(null);
@@ -120,11 +122,11 @@ export function GenerateKeyModal({
                 </div>
                 <div>
                   <CardTitle className="text-base font-semibold">
-                    {step === 1 ? "Generate Signing Key" : "Submit Key For Approval"}
+                    {step === 1 ? t("treasury.generateKey.title") : "Submit Key For Approval"}
                   </CardTitle>
                   <CardDescription className="text-xs">
                     {step === 1
-                      ? "Step 1 of 2: Create a secure browser-bound keypair"
+                      ? t("treasury.generateKey.description")
                       : "Step 2 of 2: Request administrator authorization"}
                   </CardDescription>
                 </div>
@@ -163,7 +165,7 @@ export function GenerateKeyModal({
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-foreground">
-                    Device / Key Label (Optional)
+                    {t("treasury.generateKey.label")}
                   </label>
                   <Input
                     type="text"
@@ -194,7 +196,7 @@ export function GenerateKeyModal({
                     size="sm"
                     className="text-xs cursor-pointer"
                   >
-                    Cancel
+                    {t("common.cancel")}
                   </Button>
                   <Button
                     type="submit"
@@ -205,11 +207,11 @@ export function GenerateKeyModal({
                     className="text-xs flex items-center gap-1.5 cursor-pointer"
                   >
                     {isProcessing ? (
-                      <span>Generating...</span>
+                      <span>{t("common.loading")}</span>
                     ) : (
                       <>
                         <Sparkles className="w-3.5 h-3.5" />
-                        <span>Generate Keypair</span>
+                        <span>{t("treasury.generateKey.submit")}</span>
                       </>
                     )}
                   </Button>

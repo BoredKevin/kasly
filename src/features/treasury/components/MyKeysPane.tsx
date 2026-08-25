@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "convex/react";
+import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import {
@@ -29,6 +30,7 @@ interface MyKeysPaneProps {
 }
 
 export function MyKeysPane({ organizationId, onOpenKeyGen }: MyKeysPaneProps) {
+  const { t } = useTranslation();
   const [localKeyIds, setLocalKeyIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
@@ -77,10 +79,10 @@ export function MyKeysPane({ organizationId, onOpenKeyGen }: MyKeysPaneProps) {
               </div>
               <div>
                 <CardTitle className="text-base font-semibold">
-                  Personal Signing Keys
+                  {t("treasury.keys.title")}
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Manage your browser-bound ECDSA P-256 cryptographic credentials
+                  {t("treasury.keys.description")}
                 </CardDescription>
               </div>
             </div>
@@ -94,7 +96,7 @@ export function MyKeysPane({ organizationId, onOpenKeyGen }: MyKeysPaneProps) {
               className="text-xs flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Generate New Key</span>
+              <span>{t("treasury.keys.generateNewKey")}</span>
             </Button>
           </div>
         </CardHeader>
@@ -116,7 +118,7 @@ export function MyKeysPane({ organizationId, onOpenKeyGen }: MyKeysPaneProps) {
           {/* Key Cards Grid */}
           {myKeys === undefined ? (
             <div className="py-12 text-center text-xs font-mono text-muted-foreground animate-pulse">
-              Loading registered keys...
+              {t("common.loading")}
             </div>
           ) : myKeys.length === 0 ? (
             <div className="py-12 text-center space-y-3">
@@ -136,7 +138,7 @@ export function MyKeysPane({ organizationId, onOpenKeyGen }: MyKeysPaneProps) {
                 className="text-xs inline-flex items-center gap-1.5 cursor-pointer mt-2"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Generate Keypair</span>
+                <span>{t("treasury.keys.generateNewKey")}</span>
               </Button>
             </div>
           ) : (
@@ -162,7 +164,7 @@ export function MyKeysPane({ organizationId, onOpenKeyGen }: MyKeysPaneProps) {
                           <Laptop className="w-3.5 h-3.5" />
                         </div>
                         <span className="text-xs font-bold text-foreground">
-                          {k.label || "Unnamed Device"}
+                          {k.label || t("treasury.keys.keyLabel")}
                         </span>
                       </div>
 
@@ -172,7 +174,7 @@ export function MyKeysPane({ organizationId, onOpenKeyGen }: MyKeysPaneProps) {
                             variant="secondary"
                             className="text-[10px] font-mono px-1.5 py-0.5 bg-emerald-500/15 text-emerald-300 border-emerald-500/30 font-bold"
                           >
-                            ACTIVE & TRUSTED
+                            {t("treasury.keys.approved").toUpperCase()}
                           </Badge>
                         )}
                         {isRevoked && (
@@ -180,7 +182,7 @@ export function MyKeysPane({ organizationId, onOpenKeyGen }: MyKeysPaneProps) {
                             variant="secondary"
                             className="text-[10px] font-mono px-1.5 py-0.5 bg-destructive/15 text-destructive-foreground border-destructive/30 font-bold"
                           >
-                            REVOKED
+                            {t("treasury.keys.rejected").toUpperCase()}
                           </Badge>
                         )}
                       </div>
@@ -189,7 +191,7 @@ export function MyKeysPane({ organizationId, onOpenKeyGen }: MyKeysPaneProps) {
                     {/* Fingerprint */}
                     <div className="p-2 bg-background border border-border/70 space-y-0.5">
                       <span className="text-[9px] font-mono uppercase text-muted-foreground">
-                        Fingerprint (keyId)
+                        {t("treasury.keys.keyFingerprint")} (keyId)
                       </span>
                       <div className="font-mono text-xs font-bold text-primary tracking-wider truncate select-all">
                         {k.keyId}
@@ -224,14 +226,14 @@ export function MyKeysPane({ organizationId, onOpenKeyGen }: MyKeysPaneProps) {
                           title="Remove private key from this browser's IndexedDB"
                         >
                           <Trash2 className="w-3 h-3 mr-1" />
-                          <span>Remove</span>
+                          <span>{t("common.delete")}</span>
                         </Button>
                       )}
                     </div>
 
                     {/* Metadata Footer */}
                     <div className="pt-2 border-t border-border/40 text-[10px] font-mono text-muted-foreground flex items-center justify-between">
-                      <span>Registered: {new Date(k.registeredAt).toLocaleDateString()}</span>
+                      <span>{t("treasury.keys.registeredAt")}: {new Date(k.registeredAt).toLocaleDateString()}</span>
                       <span className="flex items-center gap-1">
                         <Lock className="w-2.5 h-2.5 text-primary" />
                         <span>P-256</span>

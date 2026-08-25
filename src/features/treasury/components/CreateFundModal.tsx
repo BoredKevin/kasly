@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "convex/react";
+import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import {
@@ -26,6 +27,7 @@ export function CreateFundModal({
   organizationId,
   onSuccess,
 }: CreateFundModalProps) {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [currency, setCurrency] = useState("IDR");
   const [description, setDescription] = useState("");
@@ -75,10 +77,10 @@ export function CreateFundModal({
                 </div>
                 <div>
                   <CardTitle className="text-base font-semibold">
-                    Create Treasury Fund
+                    {t("treasury.createFund.title")}
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    Establish a new fund account with isolated cryptographic ledger
+                    {t("treasury.createFund.description")}
                   </CardDescription>
                 </div>
               </div>
@@ -103,7 +105,7 @@ export function CreateFundModal({
             >
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-foreground">
-                  Fund Name *
+                  {t("treasury.createFund.fundName")} *
                 </label>
                 <Input
                   type="text"
@@ -118,7 +120,7 @@ export function CreateFundModal({
 
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-foreground">
-                  Currency Code (Immutable) *
+                  {t("treasury.createFund.currency")} *
                 </label>
                 <Input
                   type="text"
@@ -137,7 +139,7 @@ export function CreateFundModal({
 
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-foreground">
-                  Description
+                  {t("treasury.createFund.fundDescription")}
                 </label>
                 <Input
                   type="text"
@@ -165,7 +167,7 @@ export function CreateFundModal({
                   size="sm"
                   className="text-xs cursor-pointer"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
                 <Button
                   type="submit"
@@ -176,11 +178,11 @@ export function CreateFundModal({
                   className="text-xs flex items-center gap-1.5 cursor-pointer"
                 >
                   {isSubmitting ? (
-                    <span>Creating...</span>
+                    <span>{t("common.loading")}</span>
                   ) : (
                     <>
                       <Sparkles className="w-3.5 h-3.5" />
-                      <span>Create Fund</span>
+                      <span>{t("treasury.createFund.submit")}</span>
                     </>
                   )}
                 </Button>

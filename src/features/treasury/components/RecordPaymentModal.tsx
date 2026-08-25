@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useMutation, useQuery, useConvex } from "convex/react";
+import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import {
@@ -64,7 +65,7 @@ export function RecordPaymentModal({
   onSuccess,
   onOpenKeyGen,
 }: RecordPaymentModalProps) {
-
+  const { t } = useTranslation();
   const convex = useConvex();
   const funds = useQuery(api.treasury.funds.list, { organizationId });
   const myKeys = useQuery(api.treasury.keys.getMyKeys, { organizationId });
@@ -326,7 +327,7 @@ export function RecordPaymentModal({
                 </div>
                 <div>
                   <CardTitle className="text-base font-semibold">
-                    {paymentMode === "dues" ? "Record Member Dues Payment" : "Record Ledger Payment"}
+                    {paymentMode === "dues" ? t("treasury.dues.recordPayment") : t("treasury.ledger.recordEntry")}
                   </CardTitle>
                   <CardDescription className="text-xs">
                     {paymentMode === "dues"
@@ -719,7 +720,7 @@ export function RecordPaymentModal({
                       size="sm"
                       className="text-xs cursor-pointer"
                     >
-                      Cancel
+                      {t("common.cancel")}
                     </Button>
                     <Button
                       type="button"
