@@ -85,7 +85,7 @@ export function FundOverviewPane({
               </div>
               <div>
                 <CardTitle className="text-sm font-bold text-red-400">
-                  🚨 CRITICAL: Ledger Tamper Detected — Chain Frozen
+                  Ledger Tamper Detected
                 </CardTitle>
                 <CardDescription className="text-xs text-red-300/80">
                   Cryptographic verification failed during ledger replay. Balance updates and new entries are locked.
@@ -117,7 +117,7 @@ export function FundOverviewPane({
                   {fund?.name ?? "Fund Overview"}
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  {fund?.description || "Append-only cryptographically chained treasury balance"}
+                  {fund?.description || "Treasury Balance"}
                 </CardDescription>
               </div>
             </div>
@@ -233,14 +233,17 @@ export function FundOverviewPane({
                 Recent Ledger Activity
               </CardTitle>
             </div>
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
+              chamfer="dual"
               onClick={onNavigateToLedger}
-              className="text-xs text-primary hover:underline flex items-center gap-1 cursor-pointer font-mono"
+              className="h-7 text-xs text-primary hover:underline flex items-center gap-1 cursor-pointer font-mono px-2"
             >
               <span>View full ledger</span>
               <ArrowRight className="w-3 h-3" />
-            </button>
+            </Button>
           </div>
         </CardHeader>
 

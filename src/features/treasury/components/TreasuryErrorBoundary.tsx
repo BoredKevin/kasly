@@ -61,7 +61,7 @@ export class TreasuryErrorBoundary extends Component<Props, State> {
               <div>
                 <CardTitle className="text-base font-bold text-red-400">
                   {isTampered
-                    ? "🚨 CRITICAL: Ledger Tamper Detected — Chain Frozen"
+                    ? "Ledger Tamper Detected"
                     : this.props.fallbackTitle || "Treasury Operation Error"}
                 </CardTitle>
                 <CardDescription className="text-xs text-red-300/80">

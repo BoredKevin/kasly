@@ -111,7 +111,7 @@ export function LedgerPane({
               </div>
               <div>
                 <CardTitle className="text-sm font-bold text-red-400">
-                  🚨 CRITICAL: Ledger Tamper Detected — Chain Frozen
+                  Ledger Tamper Detected
                 </CardTitle>
                 <CardDescription className="text-xs text-red-300/80">
                   Cryptographic verification failed during ledger replay. Access to commit new transactions is locked.
@@ -139,10 +139,10 @@ export function LedgerPane({
               </div>
               <div>
                 <CardTitle className="text-base font-semibold">
-                  Ledger Chain — {fund?.name ?? "Fund"}
+                  Ledger Chain {fund?.name ?? "Fund"}
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Cryptographically chained hash tree with browser-signed non-repudiation
+                  Secure chained cryptographically signed ledger entries
                 </CardDescription>
               </div>
             </div>

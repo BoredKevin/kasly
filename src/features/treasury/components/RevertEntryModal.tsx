@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useConvex } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
@@ -60,28 +60,51 @@ export function RevertEntryModal({
   const myKeys = useQuery(api.treasury.keys.getMyKeys, { organizationId });
 
   const [reason, setReason] = useState<string>("");
-  const [selectedKeyId, setSelectedKeyId] = useState<string>("");
+  const [selectedKeyIdState, setSelectedKeyIdState] = useState<string>("");
   const [isSigning, setIsSigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // 5-second hold to commit state
+  const HOLD_DURATION_MS = 5000;
+  const [holdProgress, setHoldProgress] = useState<number>(0);
+  const [isHolding, setIsHolding] = useState<boolean>(false);
+  const holdTimerRef = useRef<number | null>(null);
+  const holdStartTimeRef = useRef<number | null>(null);
 
   const revertEntryMutation = useMutation(api.treasury.ledger.revertEntry);
 
   // Active (non-revoked) keys belonging to current user
   const activeKeys = myKeys?.filter((k) => !k.revokedAt) ?? [];
+  const selectedKeyId = selectedKeyIdState || activeKeys[0]?.keyId || "";
 
-  // Automatically select first active key if none is selected
-  if (activeKeys.length > 0 && !selectedKeyId) {
-    setSelectedKeyId(activeKeys[0].keyId);
-  }
+  // Clean up animation frame timer on unmount
+  useEffect(() => {
+    return () => {
+      if (holdTimerRef.current !== null) {
+        cancelAnimationFrame(holdTimerRef.current);
+      }
+    };
+  }, []);
 
   if (!isOpen || !entry) return null;
 
   const compensatingDirection = entry.direction === "credit" ? "debit" : "credit";
   const isTargetCredit = entry.direction === "credit";
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!reason.trim() || !selectedKeyId) return;
+  const isSubmitDisabled = Boolean(isSigning || activeKeys.length === 0 || !reason.trim() || !selectedKeyId);
+
+  const stopHold = () => {
+    setIsHolding(false);
+    setHoldProgress(0);
+    holdStartTimeRef.current = null;
+    if (holdTimerRef.current !== null) {
+      cancelAnimationFrame(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+  };
+
+  const executeRevert = async () => {
+    if (!reason.trim() || !selectedKeyId || isSubmitDisabled) return;
 
     setIsSigning(true);
     setError(null);
@@ -140,6 +163,34 @@ export function RevertEntryModal({
       setIsSigning(false);
     }
   };
+
+  const startHold = (e: React.SyntheticEvent) => {
+    if (isSubmitDisabled) return;
+    e.preventDefault();
+
+    setIsHolding(true);
+    holdStartTimeRef.current = null;
+
+    const update = (now: DOMHighResTimeStamp) => {
+      if (holdStartTimeRef.current === null) {
+        holdStartTimeRef.current = now;
+      }
+      const elapsed = now - holdStartTimeRef.current;
+      const progress = Math.min(1, elapsed / HOLD_DURATION_MS);
+      setHoldProgress(progress);
+
+      if (progress >= 1) {
+        stopHold();
+        void executeRevert();
+      } else {
+        holdTimerRef.current = requestAnimationFrame(update);
+      }
+    };
+
+    holdTimerRef.current = requestAnimationFrame(update);
+  };
+
+
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
@@ -225,7 +276,7 @@ export function RevertEntryModal({
 
             <form
               onSubmit={(e) => {
-                void handleSubmit(e);
+                e.preventDefault();
               }}
               className="space-y-4 pt-1"
             >
@@ -253,20 +304,23 @@ export function RevertEntryModal({
                     <span>Signing Key *</span>
                   </label>
                   {onOpenKeyGen && (
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="sm"
+                      chamfer="dual"
                       onClick={onOpenKeyGen}
-                      className="text-[10px] text-primary hover:underline font-mono cursor-pointer"
+                      className="h-5 text-[10px] text-primary hover:underline font-mono cursor-pointer px-1"
                     >
                       + Generate Key
-                    </button>
+                    </Button>
                   )}
                 </div>
 
                 {activeKeys.length > 0 ? (
                   <select
                     value={selectedKeyId}
-                    onChange={(e) => setSelectedKeyId(e.target.value)}
+                    onChange={(e) => setSelectedKeyIdState(e.target.value)}
                     disabled={isSigning}
                     className="w-full h-9 px-2.5 bg-background border border-border text-xs text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
                     required
@@ -305,38 +359,71 @@ export function RevertEntryModal({
               </div>
 
               {/* Form Action Buttons */}
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  chamfer="dual"
-                  disabled={isSigning}
-                  onClick={onClose}
-                  className="cursor-pointer"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  variant="cyber"
-                  size="sm"
-                  chamfer="dual"
-                  disabled={isSigning || activeKeys.length === 0 || !reason.trim()}
-                  className="flex items-center gap-1.5 cursor-pointer"
-                >
-                  {isSigning ? (
-                    <>
-                      <Sparkles className="w-3.5 h-3.5 animate-spin" />
-                      <span>Signing & Committing...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Lock className="w-3.5 h-3.5" />
-                      <span>Sign & Commit Reversal</span>
-                    </>
-                  )}
-                </Button>
+              <div className="pt-3 border-t border-border space-y-1.5">
+                <div className="flex items-center justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    chamfer="dual"
+                    disabled={isSigning || isHolding}
+                    onClick={onClose}
+                    className="cursor-pointer text-xs"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="cyber"
+                    size="sm"
+                    chamfer="dual"
+                    disabled={isSubmitDisabled}
+                    onPointerDown={startHold}
+                    onPointerUp={stopHold}
+                    onPointerLeave={stopHold}
+                    onPointerCancel={stopHold}
+                    onContextMenu={(e) => e.preventDefault()}
+                    className={`relative overflow-hidden text-xs flex items-center justify-center gap-1.5 cursor-pointer select-none px-4 py-2 min-w-[220px] transition-all ${
+                      isHolding ? "border-amber-400/80 shadow-[0_0_15px_rgba(245,158,11,0.3)]" : ""
+                    }`}
+                  >
+                    {/* 5-second Hold Progress Fill */}
+                    {isHolding && (
+                      <div
+                        className="absolute inset-0 bg-amber-500/35 pointer-events-none transition-none"
+                        style={{
+                          width: `${Math.min(100, holdProgress * 100)}%`,
+                        }}
+                      />
+                    )}
+
+                    <span className="relative z-10 flex items-center gap-1.5 font-mono">
+                      {isSigning ? (
+                        <>
+                          <Sparkles className="w-3.5 h-3.5 animate-spin text-amber-400" />
+                          <span>Signing & Committing...</span>
+                        </>
+                      ) : isHolding ? (
+                        <>
+                          <Lock className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                          <span>
+                            Hold to Sign: {((HOLD_DURATION_MS * (1 - holdProgress)) / 1000).toFixed(1)}s
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Lock className="w-3.5 h-3.5" />
+                          <span>Hold 5s to Sign Reversal</span>
+                        </>
+                      )}
+                    </span>
+                  </Button>
+                </div>
+                {!isSubmitDisabled && !isSigning && (
+                  <p className="text-[10px] font-mono text-muted-foreground text-right">
+                    🔒 Hold button for 5 seconds to authorize reversal
+                  </p>
+                )}
               </div>
             </form>
           </CardContent>
