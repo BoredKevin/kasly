@@ -36,7 +36,7 @@ function LicenseCard({ entry }: { entry: LicenseEntry }) {
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
     void navigator.clipboard.writeText(
-      `${entry.name} (${entry.version})\nLicense: ${entry.license}\n${entry.repository ? `Repository: ${entry.repository}\n` : ""}\n${entry.licenseText}`
+      `${entry.name}\nLicense: ${entry.license}\n${entry.repository ? `Repository: ${entry.repository}\n` : ""}\n${entry.licenseText}`
     );
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
@@ -61,12 +61,6 @@ function LicenseCard({ entry }: { entry: LicenseEntry }) {
               )}
               {entry.name}
             </span>
-            <Badge
-              variant={entry.isPrimary ? "default" : "secondary"}
-              className="text-[10px] font-mono"
-            >
-              {entry.version}
-            </Badge>
             <Badge
               variant="outline"
               className="text-[10px] font-mono border-border/80 text-muted-foreground"

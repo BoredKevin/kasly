@@ -1,6 +1,5 @@
 export interface LicenseEntry {
   name: string;
-  version: string;
   license: string;
   author?: string;
   description?: string;
@@ -9,11 +8,8 @@ export interface LicenseEntry {
   isPrimary?: boolean;
 }
 
-export const APP_VERSION = "1.1.2";
-
 export const APP_LICENSE: LicenseEntry = {
   name: "kasly",
-  version: APP_VERSION,
   license: "GNU Affero General Public License v3.0 (AGPL-3.0)",
   author: "BoredKevin",
   description: "A secure, transparent, and cryptographically verifiable workspace treasury management platform.",
@@ -57,7 +53,6 @@ https://www.gnu.org/licenses/agpl-3.0.html`,
 export const THIRD_PARTY_LICENSES: LicenseEntry[] = [
   {
     name: "@boredkevin/ui",
-    version: "^0.1.1",
     license: "MIT",
     author: "BoredKevin",
     description: "Cyberpunk & Brutalist inspired React component library with glassmorphic styling.",
@@ -86,7 +81,6 @@ SOFTWARE.`,
   },
   {
     name: "react",
-    version: "^19.2.8",
     license: "MIT",
     author: "Meta Platforms, Inc.",
     description: "The library for web and native user interfaces.",
@@ -115,7 +109,6 @@ SOFTWARE.`,
   },
   {
     name: "react-dom",
-    version: "^19.2.8",
     license: "MIT",
     author: "Meta Platforms, Inc.",
     description: "React package for working with the DOM.",
@@ -144,7 +137,6 @@ SOFTWARE.`,
   },
   {
     name: "convex",
-    version: "^1.44.0",
     license: "Apache-2.0",
     author: "Convex, Inc.",
     description: "Reactive backend platform with real-time sync, database, server functions, and file storage.",
@@ -167,7 +159,6 @@ limitations under the License.`,
   },
   {
     name: "@convex-dev/auth",
-    version: "^0.0.95",
     license: "Apache-2.0",
     author: "Convex, Inc.",
     description: "Authentication library for Convex applications.",
@@ -190,7 +181,6 @@ limitations under the License.`,
   },
   {
     name: "convex-passkey-auth",
-    version: "^1.0.1",
     license: "MIT",
     author: "Convex Community",
     description: "Passwordless WebAuthn passkey authentication for Convex.",
@@ -219,7 +209,6 @@ SOFTWARE.`,
   },
   {
     name: "lucide-react",
-    version: "^1.33.0",
     license: "ISC",
     author: "Lucide Contributors",
     description: "Beautiful & consistent icons made by the community.",
@@ -242,7 +231,6 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.`,
   },
   {
     name: "wouter",
-    version: "^3.10.0",
     license: "MIT",
     author: "Alexey Taktarov",
     description: "A minimalist router for React and Preact with zero dependencies.",
@@ -271,7 +259,6 @@ SOFTWARE.`,
   },
   {
     name: "i18next",
-    version: "^26.4.0",
     license: "MIT",
     author: "i18next Team",
     description: "Internationalization framework for JavaScript.",
@@ -300,7 +287,6 @@ SOFTWARE.`,
   },
   {
     name: "react-i18next",
-    version: "^17.0.12",
     license: "MIT",
     author: "i18next Team",
     description: "Internationalization for React done right.",
@@ -329,7 +315,6 @@ SOFTWARE.`,
   },
   {
     name: "tailwindcss",
-    version: "^4.3.3",
     license: "MIT",
     author: "Tailwind Labs, Inc.",
     description: "A utility-first CSS framework for rapid UI development.",
@@ -358,7 +343,6 @@ SOFTWARE.`,
   },
   {
     name: "vite",
-    version: "^8.2.0",
     license: "MIT",
     author: "Evan You & Vite Contributors",
     description: "Next Generation Frontend Tooling.",

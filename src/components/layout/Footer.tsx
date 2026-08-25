@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { APP_VERSION } from "../../data/licensesData";
+import packageJson from "../../../package.json";
 import { LicensesModal } from "./LicensesModal";
 
 export function Footer() {
@@ -20,7 +20,7 @@ export function Footer() {
             >
               boredkevin/kasly
             </a>
-            <span>v{APP_VERSION}</span>
+            <span>v{packageJson.version}</span>
             <span className="text-muted-foreground/60 select-none">•</span>
             <span className="text-muted-foreground bg-primary/10 py-0.5 rounded-none">
               {__BUILD_HASH__}
