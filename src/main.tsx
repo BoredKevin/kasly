@@ -4,6 +4,7 @@ import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
 import { ThemeProvider } from "@boredkevin/ui";
 import "./index.css";
+import "./i18n";
 import App from "./App.tsx";
 
 declare global {

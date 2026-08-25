@@ -1,6 +1,7 @@
 import { ReactNode, useState } from "react";
 import { Authenticated, useQuery } from "convex/react";
 import { Link, useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import { api } from "../../../convex/_generated/api";
 import { ConstellationsBackground } from "@boredkevin/ui";
 import { Header } from "./Header";
@@ -9,6 +10,7 @@ import { NavDrawerProvider } from "./NavDrawerContext";
 import { useNavDrawer } from "./useNavDrawer";
 import { ActiveWorkspaceProvider, useActiveWorkspace } from "../../contexts";
 import { SignOutButton } from "../../features/auth";
+import { LanguageToggle } from "../common";
 import {
   User,
   Building2,
@@ -32,6 +34,7 @@ interface LayoutProps {
 }
 
 function AuthenticatedDrawerContent({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
   const [location] = useLocation();
   const orgs = useQuery(api.organizations.listMine);
   const { activeOrgId } = useActiveWorkspace();
@@ -77,27 +80,27 @@ function AuthenticatedDrawerContent({ onClose }: { onClose: () => void }) {
 
   const orgSubTabs = hasOrgs
     ? [
-        { tab: "overview", label: "Overview", href: "/organization", icon: Building2 },
+        { tab: "overview", label: t("nav.overview"), href: "/organization", icon: Building2 },
         ...(canManageRoles
-          ? [{ tab: "roles" as OrgTab, label: "Roles", href: "/organization/roles", icon: Shield }]
+          ? [{ tab: "roles" as OrgTab, label: t("nav.roles"), href: "/organization/roles", icon: Shield }]
           : []),
         ...(canViewInvites
-          ? [{ tab: "invites" as OrgTab, label: "Invites", href: "/organization/invites", icon: LinkIcon }]
+          ? [{ tab: "invites" as OrgTab, label: t("nav.invites"), href: "/organization/invites", icon: LinkIcon }]
           : []),
-        { tab: "members", label: "Members", href: "/organization/members", icon: Users },
+        { tab: "members", label: t("nav.members"), href: "/organization/members", icon: Users },
       ]
     : [];
 
   const treasurySubTabs: { tab: TreasuryTab; label: string; href: string; icon: typeof Landmark }[] = hasOrgs && canViewTreasury
     ? [
-        { tab: "overview", label: "Overview", href: "/treasury", icon: Landmark },
-        { tab: "ledger", label: "Ledger", href: "/treasury/ledger", icon: ScrollText },
-        { tab: "dues", label: "Dues & Payments", href: "/treasury/dues", icon: CalendarDays },
+        { tab: "overview", label: t("nav.overview"), href: "/treasury", icon: Landmark },
+        { tab: "ledger", label: t("nav.ledger"), href: "/treasury/ledger", icon: ScrollText },
+        { tab: "dues", label: t("nav.duesAndPayments"), href: "/treasury/dues", icon: CalendarDays },
         ...(canSignTreasury
-          ? [{ tab: "keys" as TreasuryTab, label: "My Keys", href: "/treasury/keys", icon: KeyRound }]
+          ? [{ tab: "keys" as TreasuryTab, label: t("nav.myKeys"), href: "/treasury/keys", icon: KeyRound }]
           : []),
         ...(canManageTreasury
-          ? [{ tab: "admin" as TreasuryTab, label: "Admin Panel", href: "/treasury/admin", icon: ShieldCheck }]
+          ? [{ tab: "admin" as TreasuryTab, label: t("nav.adminPanel"), href: "/treasury/admin", icon: ShieldCheck }]
           : []),
       ]
     : [];
@@ -181,7 +184,7 @@ function AuthenticatedDrawerContent({ onClose }: { onClose: () => void }) {
               >
                 <User className="w-4 h-4" />
               </div>
-              <span className="text-xs font-medium">User Profile</span>
+              <span className="text-xs font-medium">{t("nav.userProfile")}</span>
             </div>
           </Link>
 
@@ -218,7 +221,7 @@ function AuthenticatedDrawerContent({ onClose }: { onClose: () => void }) {
                 >
                   <Building2 className="w-4 h-4" />
                 </div>
-                <span className="text-xs font-medium">Organization</span>
+                <span className="text-xs font-medium">{t("nav.organization")}</span>
               </Link>
 
               {hasOrgs && (
@@ -300,7 +303,7 @@ function AuthenticatedDrawerContent({ onClose }: { onClose: () => void }) {
                   >
                     <Landmark className="w-4 h-4" />
                   </div>
-                  <span className="text-xs font-medium">Treasury</span>
+                  <span className="text-xs font-medium">{t("nav.treasury")}</span>
                 </Link>
 
                 {treasurySubTabs.length > 0 && (
@@ -353,10 +356,13 @@ function AuthenticatedDrawerContent({ onClose }: { onClose: () => void }) {
         </div>
       </div>
 
-      {/* Session Control Section */}
+      {/* Session & Language Control Section */}
       <div className="pt-4 border-t border-border/60 space-y-3">
-        <div className="text-[11px] font-mono tracking-wider text-muted-foreground uppercase px-1">
-          Session
+        <div className="flex items-center justify-between px-1">
+          <span className="text-[11px] font-mono tracking-wider text-muted-foreground uppercase">
+            Language
+          </span>
+          <LanguageToggle />
         </div>
         <div
           style={{ backgroundColor: "rgba(255, 255, 255, 0.03)" }}

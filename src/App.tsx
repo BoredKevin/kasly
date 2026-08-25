@@ -1,11 +1,14 @@
 import { Authenticated, Unauthenticated } from "convex/react";
 import { Route, Switch, Redirect } from "wouter";
+import { useTranslation } from "react-i18next";
 import { Layout } from "./components/layout";
 import { SignInForm } from "./features/auth";
 import { UserProfileView, OrganizationView } from "./features/profile";
 import { TreasuryView, TreasuryErrorBoundary } from "./features/treasury";
 
 export default function App() {
+  const { t } = useTranslation();
+
   return (
     <Layout>
       <Authenticated>
@@ -44,7 +47,6 @@ export default function App() {
             </TreasuryErrorBoundary>
           </Route>
           <Route path="/treasury/keys">
-
             <TreasuryErrorBoundary>
               <TreasuryView />
             </TreasuryErrorBoundary>
@@ -64,10 +66,10 @@ export default function App() {
         <div className="space-y-8 max-w-sm mx-auto w-full">
           <div className="text-center space-y-2">
             <h1 className="text-3xl font-bold tracking-tight text-foreground">
-              Kasly Platform
+              {t("auth.welcomeTitle")}
             </h1>
             <p className="text-xs text-muted-foreground">
-              RBAC & Organization Management Platform
+              {t("auth.welcomeSubtitle")}
             </p>
           </div>
           <SignInForm />
