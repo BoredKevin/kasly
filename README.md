@@ -55,6 +55,13 @@ A modern full-stack web application built with:
 
 ---
 
+## Documentation & Guides
+
+- **[Deployment Guide (Cloudflare Pages + Convex)](./docs/DEPLOYMENT.md)** — Production setup, environment variables, SPA routing, and CI/CD.
+- **[Backend Architecture & Guides](./docs/backend/README.md)** — RBAC, zero-trust cryptographic treasury ledger, schema, and API reference.
+
+---
+
 ## License
 
 This project is licensed under the **GNU Affero General Public License v3.0 or later** ([AGPL-3.0](LICENSE)).  
