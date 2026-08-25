@@ -6,7 +6,21 @@ import { ThemeProvider } from "@boredkevin/ui";
 import "./index.css";
 import App from "./App.tsx";
 
+declare global {
+  interface Window {
+    __updateAppProgress?: (percent?: number, text?: string) => void;
+  }
+}
+
+if (typeof window !== "undefined" && window.__updateAppProgress) {
+  window.__updateAppProgress(70, "Connecting to backend...");
+}
+
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
+
+if (typeof window !== "undefined" && window.__updateAppProgress) {
+  window.__updateAppProgress(90, "Loading workspace...");
+}
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -17,3 +31,7 @@ createRoot(document.getElementById("root")!).render(
     </ConvexAuthProvider>
   </StrictMode>,
 );
+
+if (typeof window !== "undefined" && window.__updateAppProgress) {
+  window.__updateAppProgress(100, "Ready");
+}

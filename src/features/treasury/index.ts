@@ -12,6 +12,12 @@ export * from "./components/TreasuryErrorBoundary";
 export * from "./components/RevertEntryModal";
 export * from "./components/EntryDetailsModal";
 export * from "./components/LedgerTimeline";
+export * from "./components/DuesSpreadsheetPane";
+export * from "./components/CreateManualDuesModal";
+
+if (typeof window !== "undefined" && window.__updateAppProgress) {
+  window.__updateAppProgress(65, "Loading treasury & ledger...");
+}
 
 
 

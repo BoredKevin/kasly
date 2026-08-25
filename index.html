@@ -1,20 +1,92 @@
 <!doctype html>
 <html lang="en" class="dark">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/convex.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="/src/index.css" />
-    <title>kasly</title>
-  </head>
-  <body class="bg-background text-foreground antialiased min-h-screen">
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/convex.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="/src/index.css" />
+  <title>kasly</title>
+</head>
+
+<body class="bg-background text-foreground antialiased min-h-screen"
+  style="background-color: hsl(0 0% 3.9%); color: hsl(0 0% 98%); margin: 0;">
+  <div id="root"></div>
+
+  <!-- Loading Overlay -->
+  <div id="app-loader"
+    style="position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; background-color: hsl(0 0% 3.9%); font-family: 'JetBrains Mono', monospace, Inter, system-ui, sans-serif; transition: opacity 0.35s ease; pointer-events: auto;">
+    <div style="width: 280px; max-width: 90vw; padding: 16px 20px;">
+      <!-- Progress Bar with Transparent Background -->
+      <div
+        style="width: 100%; height: 4px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 999px; overflow: hidden; margin-bottom: 10px; box-sizing: border-box;">
+        <div id="loader-progress-bar"
+          style="width: 20%; height: 100%; background: #ffffff; border-radius: 999px; transition: width 0.35s ease;">
+        </div>
+      </div>
+      <!-- Dynamic Status Text & Percent -->
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+        <span id="loader-status-text"
+          style="font-size: 11px; color: rgba(255, 255, 255, 0.35); letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 210px;">
+          Loading modules...
+        </span>
+        <span id="loader-percent"
+          style="font-size: 11px; color: rgba(255, 255, 255, 0.5); font-variant-numeric: tabular-nums; flex-shrink: 0;">
+          20%
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    window.__dismissAppLoader = function () {
+      var loader = document.getElementById('app-loader');
+      if (loader && !loader.__isFading) {
+        loader.__isFading = true;
+        loader.style.opacity = '0';
+        loader.style.pointerEvents = 'none';
+        setTimeout(function () {
+          if (loader && loader.parentNode) loader.parentNode.removeChild(loader);
+        }, 380);
+      }
+    };
+
+    window.__updateAppProgress = function (percent, text) {
+      var bar = document.getElementById('loader-progress-bar');
+      var status = document.getElementById('loader-status-text');
+      var pct = document.getElementById('loader-percent');
+      if (bar && percent !== undefined) bar.style.width = percent + '%';
+      if (status && text) status.textContent = text;
+      if (pct && percent !== undefined) pct.textContent = Math.round(percent) + '%';
+      if (percent >= 100) setTimeout(window.__dismissAppLoader, 150);
+    };
+
+    if (typeof PerformanceObserver !== 'undefined') {
+      var count = 0;
+      try {
+        var obs = new PerformanceObserver(function (list) {
+          var entries = list.getEntries();
+          for (var i = 0; i < entries.length; i++) {
+            var name = entries[i].name || '';
+            if (name.indexOf('.tsx') !== -1 || name.indexOf('.ts') !== -1) {
+              var clean = name.split('/').pop().split('?')[0];
+              if (clean && clean.indexOf('main.tsx') === -1) {
+                count++;
+                window.__updateAppProgress(Math.min(92, 15 + count * 3.5), 'Loading ' + clean + '...');
+              }
+            }
+          }
+        });
+        obs.observe({ entryTypes: ['resource'] });
+      } catch (e) { }
+    }
+  </script>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>

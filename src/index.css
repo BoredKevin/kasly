@@ -5,6 +5,7 @@
   :root {
     --color-light: #ffffff;
     --color-dark: #0a0a0c;
+    --tw-enter-translate-y: 0px !important;
   }
 
   body {

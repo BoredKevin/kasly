@@ -17,3 +17,7 @@ export { MemberActionModal } from "./components/MemberActionModal";
 export { BannedMembersModal } from "./components/BannedMembersModal";
 export { PERMISSIONS_LIST, PRESET_ROLE_COLORS } from "./data/permissionsMetadata";
 export type { OrgTab } from "./components/OrganizationSidebar";
+
+if (typeof window !== "undefined" && window.__updateAppProgress) {
+  window.__updateAppProgress(45, "Loading profile & organization...");
+}
