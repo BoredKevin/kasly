@@ -1,6 +1,5 @@
 # kasly
 
-**Version:** 0.1.0  
 **Author:** [BoredKevin](https://github.com/boredkevin)  
 **License:** AGPL-3.0
 **Repository:** [https://github.com/boredkevin/kasly](https://github.com/boredkevin/kasly)
