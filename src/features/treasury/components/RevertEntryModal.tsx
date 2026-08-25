@@ -68,7 +68,7 @@ export function RevertEntryModal({
   const [error, setError] = useState<string | null>(null);
 
   // 5-second hold to commit state
-  const HOLD_DURATION_MS = 5000;
+  const HOLD_DURATION_MS = 3000;
   const [holdProgress, setHoldProgress] = useState<number>(0);
   const [isHolding, setIsHolding] = useState<boolean>(false);
   const holdTimerRef = useRef<number | null>(null);
@@ -384,9 +384,8 @@ export function RevertEntryModal({
                     onPointerLeave={stopHold}
                     onPointerCancel={stopHold}
                     onContextMenu={(e) => e.preventDefault()}
-                    className={`relative overflow-hidden text-xs flex items-center justify-center gap-1.5 cursor-pointer select-none px-4 py-2 min-w-[220px] transition-all ${
-                      isHolding ? "border-amber-400/80 shadow-[0_0_15px_rgba(245,158,11,0.3)]" : ""
-                    }`}
+                    className={`relative overflow-hidden text-xs flex items-center justify-center gap-1.5 cursor-pointer select-none px-4 py-2 min-w-[220px] transition-all ${isHolding ? "border-amber-400/80 shadow-[0_0_15px_rgba(245,158,11,0.3)]" : ""
+                      }`}
                   >
                     {/* 5-second Hold Progress Fill */}
                     {isHolding && (
@@ -414,7 +413,7 @@ export function RevertEntryModal({
                       ) : (
                         <>
                           <Lock className="w-3.5 h-3.5" />
-                          <span>Hold 5s to Sign Reversal</span>
+                          <span>Hold to Sign Reversal</span>
                         </>
                       )}
                     </span>
@@ -422,7 +421,7 @@ export function RevertEntryModal({
                 </div>
                 {!isSubmitDisabled && !isSigning && (
                   <p className="text-[10px] font-mono text-muted-foreground text-right">
-                    🔒 Hold button for 5 seconds to authorize reversal
+                    You cannot undo this action!
                   </p>
                 )}
               </div>

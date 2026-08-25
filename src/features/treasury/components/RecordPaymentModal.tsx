@@ -43,7 +43,7 @@ interface RecordPaymentModalProps {
   onOpenKeyGen?: () => void;
 }
 
-const HOLD_DURATION_MS = 5000;
+const HOLD_DURATION_MS = 3000;
 
 function formatPeriodsRange(periods: Array<{ periodLabel: string }>): string {
   if (periods.length === 0) return "";
@@ -765,8 +765,8 @@ export function RecordPaymentModal({
                             <Lock className="w-3.5 h-3.5" />
                             <span>
                               {paymentMode === "dues"
-                                ? `Hold 5s to Sign (${currentFund?.currency ?? "IDR"} ${duesCalculatedAmount.toLocaleString("id-ID")})`
-                                : "Hold 5s to Sign & Commit"}
+                                ? `Hold to Sign (${currentFund?.currency ?? "IDR"} ${duesCalculatedAmount.toLocaleString("id-ID")})`
+                                : "Hold to Sign & Commit"}
                             </span>
                           </>
                         )}
