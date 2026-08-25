@@ -23,7 +23,7 @@ export function UserProfileView() {
   }
 
   return (
-    <div className="w-full space-y-6 animate-in fade-in duration-300">
+    <div className="w-full space-y-6">
       <div className="space-y-1">
         <h2 className="text-2xl font-bold tracking-tight text-foreground">
           Personal Profile

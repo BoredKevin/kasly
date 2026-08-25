@@ -98,7 +98,7 @@ export function OrganizationView({
       : currentTab;
 
   return (
-    <div className="w-full space-y-6 animate-in fade-in duration-300">
+    <div className="w-full space-y-6">
       {/* Workspace Header & Mobile Workspace Switcher */}
       <div className="flex flex-col gap-4">
         <div className="space-y-1">
@@ -205,7 +205,7 @@ export function OrganizationView({
         {/* Active Container Pane (Takes full width on mobile) */}
         <div className="min-w-0 w-full space-y-6">
           {safeCurrentTab === "overview" && (
-            <div className="animate-in fade-in duration-200">
+            <div>
               <OrganizationProfileCard
                 activeOrgId={activeOrgId}
                 onSelectOrg={setActiveOrgId}
@@ -214,13 +214,13 @@ export function OrganizationView({
           )}
 
           {safeCurrentTab === "roles" && activeOrgId && (
-            <div className="animate-in fade-in duration-200">
+            <div>
               <OrganizationRolesList organizationId={activeOrgId} />
             </div>
           )}
 
           {safeCurrentTab === "invites" && activeOrgId && activeOrg && canViewInvites && (
-            <div className="animate-in fade-in duration-200">
+            <div>
               <OrganizationInvitesCard
                 organizationId={activeOrgId}
                 organizationName={activeOrg.name}
@@ -229,7 +229,7 @@ export function OrganizationView({
           )}
 
           {safeCurrentTab === "members" && activeOrgId && (
-            <div className="animate-in fade-in duration-200">
+            <div>
               <OrganizationMembersCard
                 organizationId={activeOrgId}
                 currentUserId={viewer?._id}
