@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useMutation } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
@@ -389,9 +390,9 @@ export function CreateManualDuesModal({
     "July", "August", "September", "October", "November", "December",
   ];
 
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === "undefined") return null;
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-200">
       <div className="w-full max-w-xl max-h-[90vh] flex flex-col">
         <Card telemetry="TREASURY.CREATE_PAST_DUES_MODAL" cornerLines className="bg-card border-border shadow-2xl flex flex-col overflow-hidden">
@@ -1126,4 +1127,6 @@ export function CreateManualDuesModal({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

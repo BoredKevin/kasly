@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { Id } from "../../../../convex/_generated/dataModel";
 import {
@@ -61,7 +62,7 @@ export function EntryDetailsModal({
   const { t } = useTranslation();
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  if (!isOpen || !entry) return null;
+  if (!isOpen || !entry || typeof document === "undefined") return null;
 
   const isCredit = entry.direction === "credit";
 
@@ -71,8 +72,8 @@ export function EntryDetailsModal({
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+  const modalContent = (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-200">
       <div className="w-full max-w-xl">
         <Card telemetry="TREASURY.ENTRY_DETAILS" cornerLines className="bg-card border-border shadow-2xl">
           <CardHeader className="pb-3 border-b border-border/80">
@@ -289,4 +290,6 @@ export function EntryDetailsModal({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useMutation } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
@@ -36,7 +37,7 @@ export function CreateFundModal({
 
   const createFund = useMutation(api.treasury.funds.create);
 
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === "undefined") return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,7 +66,7 @@ export function CreateFundModal({
     }
   };
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-200">
       <div className="w-full max-w-md">
         <Card telemetry="TREASURY.CREATE_FUND" cornerLines className="bg-card border-border shadow-2xl">
@@ -193,4 +194,6 @@ export function CreateFundModal({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

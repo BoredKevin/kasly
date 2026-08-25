@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useMutation, useQuery, useConvex } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
@@ -307,11 +308,11 @@ export function RecordPaymentModal({
     holdTimerRef.current = requestAnimationFrame(update);
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === "undefined") return null;
 
   const currentFund = funds?.find((f) => f._id === selectedFundId);
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-200">
       <div className="w-full max-w-lg">
         <Card telemetry="TREASURY.RECORD" cornerLines className="bg-card border-border shadow-2xl">
@@ -785,4 +786,6 @@ export function RecordPaymentModal({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

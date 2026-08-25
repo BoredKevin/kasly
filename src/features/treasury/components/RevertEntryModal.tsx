@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useMutation, useConvex } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
@@ -88,7 +89,7 @@ export function RevertEntryModal({
     };
   }, []);
 
-  if (!isOpen || !entry) return null;
+  if (!isOpen || !entry || typeof document === "undefined") return null;
 
   const compensatingDirection = entry.direction === "credit" ? "debit" : "credit";
   const isTargetCredit = entry.direction === "credit";
@@ -192,10 +193,8 @@ export function RevertEntryModal({
     holdTimerRef.current = requestAnimationFrame(update);
   };
 
-
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+  const modalContent = (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-200">
       <div className="w-full max-w-lg">
         <Card telemetry="TREASURY.REVERT_ENTRY" cornerLines className="bg-card border-border shadow-2xl">
           <CardHeader className="pb-4 border-b border-border/80">
@@ -433,4 +432,6 @@ export function RevertEntryModal({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { useQuery } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
@@ -34,9 +35,9 @@ export function CreateDueEventModal({
     organizationId && fundId ? { organizationId, fundId } : "skip"
   );
 
-  if (!isOpen) return null;
+  if (!isOpen || typeof document === "undefined") return null;
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-200">
       <div className="w-full max-w-md">
         <Card telemetry="TREASURY.DUE_EVENT_MODAL" cornerLines className="bg-card border-border shadow-2xl">
@@ -159,4 +160,6 @@ export function CreateDueEventModal({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }
