@@ -13,6 +13,7 @@ export const get = query({
     enableNISN: v.boolean(),
     allowProfileNameChange: v.boolean(),
     allowSignUps: v.boolean(),
+    enablePreRegistration: v.boolean(),
   }),
   handler: async (ctx) => {
     const orgCreationSetting = await ctx.db
@@ -35,6 +36,11 @@ export const get = query({
       .withIndex("by_key", (q) => q.eq("key", "allowSignUps"))
       .unique();
 
+    const preRegSetting = await ctx.db
+      .query("appSettings")
+      .withIndex("by_key", (q) => q.eq("key", "enablePreRegistration"))
+      .unique();
+
     return {
       allowOrganizationCreation:
         orgCreationSetting !== null ? orgCreationSetting.value : true,
@@ -44,6 +50,8 @@ export const get = query({
         nameChangeSetting !== null ? nameChangeSetting.value : true,
       allowSignUps:
         signUpsSetting !== null ? signUpsSetting.value : true,
+      enablePreRegistration:
+        preRegSetting !== null ? preRegSetting.value : false,
     };
   },
 });
@@ -94,6 +102,13 @@ export const populate = mutation({
       value: true,
       description:
         "Controls whether new user registrations and sign ups are permitted on the platform.",
+    });
+
+    await ctx.db.insert("appSettings", {
+      key: "enablePreRegistration",
+      value: false,
+      description:
+        "Controls whether user registration requires claiming a pre-registered identity.",
     });
 
     return {

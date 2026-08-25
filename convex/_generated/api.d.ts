@@ -17,6 +17,7 @@ import type * as members from "../members.js";
 import type * as nisn from "../nisn.js";
 import type * as organizations from "../organizations.js";
 import type * as permissions from "../permissions.js";
+import type * as preRegistration from "../preRegistration.js";
 import type * as roles from "../roles.js";
 import type * as treasury_checkpoints from "../treasury/checkpoints.js";
 import type * as treasury_dues from "../treasury/dues.js";
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   nisn: typeof nisn;
   organizations: typeof organizations;
   permissions: typeof permissions;
+  preRegistration: typeof preRegistration;
   roles: typeof roles;
   "treasury/checkpoints": typeof treasury_checkpoints;
   "treasury/dues": typeof treasury_dues;

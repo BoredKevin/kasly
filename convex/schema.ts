@@ -15,9 +15,22 @@ export default defineSchema({
     phoneVerificationTime: v.optional(v.number()),
     isAnonymous: v.optional(v.boolean()),
     nisn: v.optional(v.string()), // Salted cryptographic hash of 10-character NISN
+    isClaimed: v.optional(v.boolean()), // False for pre-registered placeholder accounts, true/undefined for claimed
+    birthYearHash: v.optional(v.string()), // Salted cryptographic hash of 4-digit birth year
+    phoneHash: v.optional(v.string()), // Salted cryptographic hash of normalized phone number
   })
     .index("email", ["email"])
-    .index("phone", ["phone"]),
+    .index("phone", ["phone"])
+    .index("by_nisn", ["nisn"])
+    .index("by_nisn_and_isClaimed", ["nisn", "isClaimed"]),
+
+  // Single-use claim tokens bridging identity verification and account creation
+  claimTokens: defineTable({
+    token: v.string(),
+    userId: v.id("users"),
+    expiresAt: v.number(),
+    isUsed: v.boolean(),
+  }).index("by_token", ["token"]),
 
   // Organizations (Servers in Discord terminology)
   organizations: defineTable({
