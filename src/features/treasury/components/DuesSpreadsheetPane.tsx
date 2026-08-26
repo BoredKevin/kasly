@@ -28,10 +28,16 @@ import {
   Minimize2,
   ZoomIn,
   ZoomOut,
+  Download,
+  FileSpreadsheet,
+  FileText,
+  ChevronDown,
 } from "lucide-react";
+import { ExportDuesModal } from "./ExportDuesModal";
 
 interface DuesSpreadsheetPaneProps {
   organizationId: Id<"organizations">;
+  organizationName?: string;
   fundId: Id<"funds"> | null;
   fundName?: string;
   currency?: string;
@@ -49,6 +55,7 @@ const WEEKS_PER_PAGE = 4;
 
 export function DuesSpreadsheetPane({
   organizationId,
+  organizationName,
   fundId,
   fundName,
   currency = "IDR",
@@ -64,7 +71,11 @@ export function DuesSpreadsheetPane({
   const [isMemberColMinimized, setIsMemberColMinimized] = useState<boolean>(false);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [zoomPercent, setZoomPercent] = useState<number>(100);
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exportModalInitialFormat, setExportModalInitialFormat] = useState<"pdf" | "excel">("pdf");
   const containerRef = useRef<HTMLDivElement>(null);
+  const exportDropdownRef = useRef<HTMLDivElement>(null);
 
   const spreadsheet = useQuery(
     api.treasury.dues.getDuesSpreadsheet,
@@ -72,7 +83,7 @@ export function DuesSpreadsheetPane({
       ? {
         organizationId,
         fundId,
-        limitEvents: 30,
+        limitEvents: 60,
       }
       : "skip"
   );
@@ -122,6 +133,17 @@ export function DuesSpreadsheetPane({
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
     };
   }, [isFullscreen]);
+
+  // Click outside listener for export dropdown
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (exportDropdownRef.current && !exportDropdownRef.current.contains(e.target as Node)) {
+        setIsExportMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const toggleFullscreen = () => {
     if (!isFullscreen) {
@@ -415,6 +437,66 @@ export function DuesSpreadsheetPane({
                 >
                   <ZoomIn className="w-3.5 h-3.5" />
                 </button>
+              </div>
+
+              {/* Export Dropdown Button */}
+              <div className="relative" ref={exportDropdownRef}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  chamfer="dual"
+                  size="sm"
+                  onClick={() => setIsExportMenuOpen((prev) => !prev)}
+                  disabled={spreadsheet.events.length === 0}
+                  className="h-8 text-xs flex items-center gap-1.5 cursor-pointer px-2.5 shadow-sm"
+                  title={t("treasury.dues.export") || "Export"}
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">
+                    {t("treasury.dues.export") || "Export"}
+                  </span>
+                  <ChevronDown className="w-3 h-3 text-muted-foreground ml-0.5" />
+                </Button>
+
+                {isExportMenuOpen && (
+                  <div className="absolute right-0 mt-1.5 w-52 bg-card/95 backdrop-blur-md border border-border rounded shadow-2xl z-50 py-1 divide-y divide-border/60 animate-in fade-in zoom-in-95 duration-100">
+                    <div className="px-3 py-1.5 text-[10px] font-mono uppercase text-muted-foreground tracking-wider">
+                      {t("treasury.dues.export") || "Export Options"}
+                    </div>
+                    <div className="py-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsExportMenuOpen(false);
+                          setExportModalInitialFormat("pdf");
+                          setIsExportModalOpen(true);
+                        }}
+                        className="w-full px-3 py-2 text-xs flex items-center gap-2 text-foreground hover:bg-muted/40 hover:text-rose-400 transition-colors text-left cursor-pointer"
+                      >
+                        <FileText className="w-4 h-4 text-rose-400 shrink-0" />
+                        <div className="flex flex-col">
+                          <span className="font-medium">{t("treasury.dues.exportPdf") || "PDF Report (.pdf)"}</span>
+                          <span className="text-[10px] text-muted-foreground font-mono">Custom cycle range & layout</span>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsExportMenuOpen(false);
+                          setExportModalInitialFormat("excel");
+                          setIsExportModalOpen(true);
+                        }}
+                        className="w-full px-3 py-2 text-xs flex items-center gap-2 text-foreground hover:bg-muted/40 hover:text-emerald-400 transition-colors text-left cursor-pointer"
+                      >
+                        <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <div className="flex flex-col">
+                          <span className="font-medium">{t("treasury.dues.exportExcel") || "Excel (.xlsx)"}</span>
+                          <span className="text-[10px] text-muted-foreground font-mono">Full matrix & raw grid</span>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Fullscreen Toggle Button */}
@@ -812,6 +894,32 @@ export function DuesSpreadsheetPane({
           </div>
         </CardContent>
       </Card>
+
+      {/* Export Dues Modal */}
+      {fundName && (
+        <ExportDuesModal
+          isOpen={isExportModalOpen}
+          onClose={() => setIsExportModalOpen(false)}
+          fundName={fundName}
+          organizationName={organizationName}
+          currency={currency}
+          events={spreadsheet.events}
+          members={filteredMembers.length > 0 ? filteredMembers : spreadsheet.members}
+          cellMap={cellMap}
+          summary={
+            duesSummary
+              ? {
+                  totalUnpaidMemberships: duesSummary.totalUnpaidMemberships,
+                  totalEvents: duesSummary.totalEvents,
+                  config: duesSummary.config,
+                }
+              : undefined
+          }
+          initialFormat={exportModalInitialFormat}
+          currentPageIndex={safePageIndex}
+          weeksPerPage={WEEKS_PER_PAGE}
+        />
+      )}
     </div>
   );
 }
