@@ -1,6 +1,7 @@
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import packageJson from "../../package.json";
 
 export interface DuesExportEvent {
   _id: string;
@@ -520,13 +521,17 @@ export async function exportDuesToPdf(payload: DuesExportPayload): Promise<void>
     didDrawPage: (data) => {
       // Add Footer on every page
       const pageCount = doc.getNumberOfPages();
+      const currentYear = new Date().getFullYear();
+      const buildHash = typeof __BUILD_HASH__ !== "undefined" ? __BUILD_HASH__ : "dev";
+      const footerText = `© ${currentYear} boredkevin/kasly v${packageJson.version} • ${buildHash} • kasly.bkev.in`;
+
       doc.setFont(fontName, "normal");
       doc.setFontSize(7.5);
       doc.setTextColor(148, 163, 184); // slate-400
 
       const footerY = doc.internal.pageSize.getHeight() - 20;
-      doc.text("Kasly Organization & Treasury Management • Copyright 2026 boredkevin/kasly - kasly.bkev.in", 40, footerY);
-      doc.text(`Page ${data.pageNumber} of ${pageCount}`, pageWidth - 90, footerY);
+      doc.text(footerText, 40, footerY);
+      doc.text(`Page ${data.pageNumber} of ${pageCount}`, pageWidth - 40, footerY, { align: "right" });
     },
   });
 
