@@ -28,7 +28,12 @@
     "none": "Tidak ada",
     "yes": "Ya",
     "no": "Tidak",
-    "na": "N/A"
+    "na": "N/A",
+    "fullscreen": "Layar Penuh",
+    "exitFullscreen": "Keluar Layar Penuh",
+    "zoomIn": "Perbesar",
+    "zoomOut": "Perkecil",
+    "resetZoom": "Atur Ulang Zoom"
   },
   "nav": {
     "userProfile": "Profil Pengguna",
@@ -256,7 +261,11 @@
       "autoSchedule": "Jadwal Otomatis",
       "selectMember": "Pilih Anggota",
       "periodsToPay": "Periode yang Dibayar",
-      "signingKey": "Kunci Penandatangan"
+      "signingKey": "Kunci Penandatangan",
+      "minimizeMembers": "Kecilkan Kolom Anggota",
+      "expandMembers": "Perluas Kolom Anggota",
+      "compactView": "Ringkas",
+      "expandedView": "Diperluas"
     },
     "keys": {
       "title": "Kunci Kriptografis Bendahara",

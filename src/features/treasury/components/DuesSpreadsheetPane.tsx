@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
@@ -21,6 +21,13 @@ import {
   ChevronRight,
   Landmark,
   CalendarPlus,
+  Users,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Maximize2,
+  Minimize2,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 
 interface DuesSpreadsheetPaneProps {
@@ -54,6 +61,10 @@ export function DuesSpreadsheetPane({
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "has_unpaid" | "fully_paid">("all");
   const [pageIndex, setPageIndex] = useState<number>(0);
+  const [isMemberColMinimized, setIsMemberColMinimized] = useState<boolean>(false);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [zoomPercent, setZoomPercent] = useState<number>(100);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const spreadsheet = useQuery(
     api.treasury.dues.getDuesSpreadsheet,
@@ -91,6 +102,52 @@ export function DuesSpreadsheetPane({
     myMembership?.permissions.includes("ADMINISTRATOR") ||
     myMembership?.permissions.includes("SIGN_TREASURY")
   );
+
+  // Sync fullscreen change & Escape key listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, [isFullscreen]);
+
+  const toggleFullscreen = () => {
+    if (!isFullscreen) {
+      setIsFullscreen(true);
+      if (containerRef.current?.requestFullscreen && !document.fullscreenElement) {
+        containerRef.current.requestFullscreen().catch(() => {});
+      }
+    } else {
+      setIsFullscreen(false);
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+  };
+
+  const handleZoomIn = () => {
+    setZoomPercent((prev) => Math.min(130, prev + 10));
+  };
+
+  const handleZoomOut = () => {
+    setZoomPercent((prev) => Math.max(70, prev - 10));
+  };
+
+  const handleResetZoom = () => {
+    setZoomPercent(100);
+  };
 
   // Fast lookup map for cells: `${memberId}_${duesEventId}` -> cell
   const cellMap = useMemo(() => {
@@ -202,57 +259,68 @@ export function DuesSpreadsheetPane({
 
   return (
     <div className="space-y-6">
-      {/* Top Metrics Banner */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Card telemetry="TREASURY.DUES_SCHEDULE_STATUS" cornerLines className="bg-card/90 border-border shadow-sm">
-          <CardContent className="p-4 space-y-1.5">
-            <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-[11px] font-mono uppercase tracking-wider">{t("treasury.dues.scheduleConfig")}</span>
-              <Clock className="w-4 h-4 text-primary" />
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-lg font-bold text-foreground capitalize">
-                {duesSummary.config?.isEnabled
-                  ? duesSummary.config.intervalType === "weekly"
-                    ? "Weekly Dues"
-                    : duesSummary.config.intervalType === "monthly"
-                      ? "Monthly Dues"
-                      : `Every ${duesSummary.config.intervalValue}d`
-                  : "Schedule Paused"}
-              </span>
-              {duesSummary.config?.isEnabled && (
-                <span className="text-xs font-mono text-emerald-400 font-semibold">● Active</span>
-              )}
-            </div>
-            <p className="text-[11px] text-muted-foreground font-mono">
-              {duesSummary.config
-                ? `${formatAmount(duesSummary.config.amount)} / member`
-                : "No recurring schedule"}
-            </p>
-          </CardContent>
-        </Card>
+      {/* Top Metrics Banner (hidden when in fullscreen mode) */}
+      {!isFullscreen && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Card telemetry="TREASURY.DUES_SCHEDULE_STATUS" cornerLines className="bg-card/90 border-border shadow-sm">
+            <CardContent className="p-4 space-y-1.5">
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span className="text-[11px] font-mono uppercase tracking-wider">{t("treasury.dues.scheduleConfig")}</span>
+                <Clock className="w-4 h-4 text-primary" />
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-lg font-bold text-foreground capitalize">
+                  {duesSummary.config?.isEnabled
+                    ? duesSummary.config.intervalType === "weekly"
+                      ? "Weekly Dues"
+                      : duesSummary.config.intervalType === "monthly"
+                        ? "Monthly Dues"
+                        : `Every ${duesSummary.config.intervalValue}d`
+                    : "Schedule Paused"}
+                </span>
+                {duesSummary.config?.isEnabled && (
+                  <span className="text-xs font-mono text-emerald-400 font-semibold">● Active</span>
+                )}
+              </div>
+              <p className="text-[11px] text-muted-foreground font-mono">
+                {duesSummary.config
+                  ? `${formatAmount(duesSummary.config.amount)} / member`
+                  : "No recurring schedule"}
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card telemetry="TREASURY.DUES_UNPAID_METRIC" cornerLines className="bg-card/90 border-border shadow-sm">
-          <CardContent className="p-4 space-y-1.5">
-            <div className="flex items-center justify-between text-muted-foreground">
-              <span className="text-[11px] font-mono uppercase tracking-wider">{t("treasury.dues.unpaid")}</span>
-              <Receipt className="w-4 h-4 text-amber-400" />
-            </div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-lg font-bold text-amber-400 font-mono">
-                {duesSummary.totalUnpaidMemberships}
-              </span>
-              <span className="text-xs text-muted-foreground">{t("treasury.dues.unpaid").toLowerCase()}</span>
-            </div>
-            <p className="text-[11px] text-muted-foreground font-mono">
-              Across {duesSummary.totalEvents} recorded dues
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+          <Card telemetry="TREASURY.DUES_UNPAID_METRIC" cornerLines className="bg-card/90 border-border shadow-sm">
+            <CardContent className="p-4 space-y-1.5">
+              <div className="flex items-center justify-between text-muted-foreground">
+                <span className="text-[11px] font-mono uppercase tracking-wider">{t("treasury.dues.unpaid")}</span>
+                <Receipt className="w-4 h-4 text-amber-400" />
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-lg font-bold text-amber-400 font-mono">
+                  {duesSummary.totalUnpaidMemberships}
+                </span>
+                <span className="text-xs text-muted-foreground">{t("treasury.dues.unpaid").toLowerCase()}</span>
+              </div>
+              <p className="text-[11px] text-muted-foreground font-mono">
+                Across {duesSummary.totalEvents} recorded dues
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Spreadsheet Card */}
-      <Card telemetry="TREASURY.DUES_SPREADSHEET" cornerLines className="bg-card border-border shadow-xl">
+      <Card
+        ref={containerRef}
+        telemetry="TREASURY.DUES_SPREADSHEET"
+        cornerLines={!isFullscreen}
+        className={
+          isFullscreen
+            ? "fixed inset-0 z-50 rounded-none border-none bg-background flex flex-col h-screen w-screen p-3 sm:p-5 overflow-hidden"
+            : "bg-card border-border shadow-xl"
+        }
+      >
         <CardHeader className="pb-4 border-b border-border/80">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
@@ -263,12 +331,17 @@ export function DuesSpreadsheetPane({
                 <CardTitle className="text-base font-semibold">
                   {t("treasury.dues.title")}
                 </CardTitle>
+                {isFullscreen && (
+                  <span className="text-[11px] font-mono text-primary px-2 py-0.5 bg-primary/10 border border-primary/20 rounded">
+                    {t("common.fullscreen") || "Fullscreen"}
+                  </span>
+                )}
               </div>
             </div>
 
-            {/* Filter and Search Controls & Create Dues Button */}
+            {/* Filter, Search, Minimizer, Zoom, Fullscreen & Create Dues Controls */}
             <div className="flex flex-wrap items-center gap-2">
-              <div className="relative flex items-center w-40 sm:w-48">
+              <div className="relative flex items-center flex-1 sm:flex-initial min-w-[120px] sm:w-44">
                 <Search className="w-3.5 h-3.5 absolute left-2.5 text-muted-foreground pointer-events-none shrink-0" />
                 <input
                   type="text"
@@ -282,12 +355,90 @@ export function DuesSpreadsheetPane({
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as any)}
-                className="h-8 px-2.5 bg-background/80 border border-border text-xs text-foreground focus:outline-none focus:border-primary cursor-pointer"
+                className="h-8 px-2 bg-background/80 border border-border text-xs text-foreground focus:outline-none focus:border-primary cursor-pointer"
               >
                 <option value="all">{t("common.all")} ({spreadsheet.members.length})</option>
                 <option value="has_unpaid">With Unpaid</option>
                 <option value="fully_paid">Fully Paid</option>
               </select>
+
+              {/* Quick toggle for compact/minimized member column */}
+              <Button
+                type="button"
+                variant={isMemberColMinimized ? "cyber" : "outline"}
+                chamfer="dual"
+                size="sm"
+                onClick={() => setIsMemberColMinimized((prev) => !prev)}
+                className="h-8 text-xs flex items-center gap-1.5 cursor-pointer px-2.5"
+                title={isMemberColMinimized ? (t("treasury.dues.expandMembers") || "Expand member column") : (t("treasury.dues.minimizeMembers") || "Minimize member column")}
+              >
+                {isMemberColMinimized ? (
+                  <>
+                    <PanelLeftOpen className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">{t("treasury.dues.compactView") || "Compact"}</span>
+                  </>
+                ) : (
+                  <>
+                    <PanelLeftClose className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">{t("treasury.dues.minimizeMembers") || "Minimize"}</span>
+                  </>
+                )}
+              </Button>
+
+              {/* Zoom In & Zoom Out Controls */}
+              <div className="flex items-center bg-background/80 border border-border h-8 px-1 rounded-sm gap-0.5 shadow-sm">
+                <button
+                  type="button"
+                  onClick={handleZoomOut}
+                  disabled={zoomPercent <= 70}
+                  className="p-1 hover:bg-muted/50 rounded text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+                  title={t("common.zoomOut") || "Zoom Out"}
+                  aria-label={t("common.zoomOut") || "Zoom Out"}
+                >
+                  <ZoomOut className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetZoom}
+                  className="px-1 text-[10px] font-mono font-medium text-muted-foreground hover:text-primary transition-colors cursor-pointer min-w-[34px] text-center"
+                  title={t("common.resetZoom") || "Reset Zoom (100%)"}
+                >
+                  {zoomPercent}%
+                </button>
+                <button
+                  type="button"
+                  onClick={handleZoomIn}
+                  disabled={zoomPercent >= 130}
+                  className="p-1 hover:bg-muted/50 rounded text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+                  title={t("common.zoomIn") || "Zoom In"}
+                  aria-label={t("common.zoomIn") || "Zoom In"}
+                >
+                  <ZoomIn className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Fullscreen Toggle Button */}
+              <Button
+                type="button"
+                variant={isFullscreen ? "cyber" : "outline"}
+                chamfer="dual"
+                size="sm"
+                onClick={toggleFullscreen}
+                className="h-8 text-xs flex items-center gap-1.5 cursor-pointer px-2.5"
+                title={isFullscreen ? (t("common.exitFullscreen") || "Exit Fullscreen") : (t("common.fullscreen") || "Fullscreen")}
+              >
+                {isFullscreen ? (
+                  <>
+                    <Minimize2 className="w-3.5 h-3.5 text-primary" />
+                    <span className="hidden sm:inline">{t("common.exitFullscreen") || "Exit Fullscreen"}</span>
+                  </>
+                ) : (
+                  <>
+                    <Maximize2 className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">{t("common.fullscreen") || "Fullscreen"}</span>
+                  </>
+                )}
+              </Button>
 
               {canManage && onOpenCreateDues && (
                 <Button
@@ -307,7 +458,7 @@ export function DuesSpreadsheetPane({
           </div>
         </CardHeader>
 
-        <CardContent className="p-0">
+        <CardContent className={isFullscreen ? "p-0 flex-1 min-h-0 flex flex-col overflow-hidden" : "p-0"}>
           {events.length === 0 ? (
             <div className="py-16 text-center space-y-4 px-4">
               <div className="inline-flex p-4 bg-muted/30 border border-border text-muted-foreground rounded-full">
@@ -348,21 +499,52 @@ export function DuesSpreadsheetPane({
               </div>
             </div>
           ) : (
-            <div className="relative overflow-x-auto border-b border-border">
-              <table className="w-full border-collapse text-left text-xs">
+            <div className={`relative overflow-x-auto border-b border-border ${isFullscreen ? "flex-1 min-h-0 overflow-y-auto" : ""}`}>
+              <table
+                className="w-full border-collapse text-left text-xs transition-transform origin-top-left"
+                style={{ zoom: `${zoomPercent}%` }}
+              >
                 <thead>
-                  <tr className="bg-muted/30 border-b border-border/80">
-                    {/* Sticky left header: Member */}
-                    <th className="sticky left-0 z-20 w-[220px] min-w-[220px] max-w-[220px] p-3.5 bg-card/95 backdrop-blur-sm border-r border-border font-semibold text-foreground shadow-sm overflow-hidden">
-                      <div className="flex items-center justify-between">
-                        <span>{t("organization.member")}</span>
-                        <span className="text-[10px] font-mono text-muted-foreground font-normal">
-                          {filteredMembers.length} shown
-                        </span>
-                      </div>
-                    </th>
+                  <tr className="bg-muted/30 border-b border-border/80 sticky top-0 z-20">
+                    {/* Sticky left header: Member (Expanded vs Minimized) */}
+                    {isMemberColMinimized ? (
+                      <th className="sticky left-0 top-0 z-30 w-[56px] min-w-[56px] max-w-[56px] p-2.5 bg-card border-r border-border shadow-[4px_0_12px_-2px_rgba(0,0,0,0.5)] text-center">
+                        <button
+                          type="button"
+                          onClick={() => setIsMemberColMinimized(false)}
+                          className="w-full flex items-center justify-center p-1 hover:bg-muted/40 rounded transition-colors text-muted-foreground hover:text-foreground cursor-pointer"
+                          title={t("treasury.dues.expandMembers") || "Expand member column"}
+                          aria-label={t("treasury.dues.expandMembers") || "Expand member column"}
+                        >
+                          <PanelLeftOpen className="w-4 h-4 text-primary" />
+                        </button>
+                      </th>
+                    ) : (
+                      <th className="sticky left-0 top-0 z-30 w-[190px] sm:w-[220px] min-w-[190px] sm:min-w-[220px] max-w-[190px] sm:max-w-[220px] p-3 bg-card border-r border-border shadow-[4px_0_12px_-2px_rgba(0,0,0,0.5)] font-semibold text-foreground overflow-hidden">
+                        <div className="flex items-center justify-between gap-1.5">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <Users className="w-3.5 h-3.5 text-primary shrink-0" />
+                            <span className="truncate">{t("organization.member")}</span>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <span className="text-[10px] font-mono text-muted-foreground font-normal hidden sm:inline">
+                              {filteredMembers.length}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setIsMemberColMinimized(true)}
+                              className="p-1 hover:bg-muted/50 rounded text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                              title={t("treasury.dues.minimizeMembers") || "Minimize member column"}
+                              aria-label={t("treasury.dues.minimizeMembers") || "Minimize member column"}
+                            >
+                              <PanelLeftClose className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      </th>
+                    )}
 
-                    {/* Paginated 4 Period Columns per page */}
+                    {/* Paginated Period Columns per page */}
                     {displayedEvents.map((event) => {
                       const paidRatio = `${event.paidCount}/${event.totalMembers}`;
                       const isComplete = event.totalMembers > 0 && event.paidCount >= event.totalMembers;
@@ -370,7 +552,7 @@ export function DuesSpreadsheetPane({
                       return (
                         <th
                           key={event._id}
-                          className="min-w-[100px] p-3 border-r border-border/60 font-medium text-foreground bg-muted/20"
+                          className="min-w-[110px] sm:min-w-[125px] p-2.5 sm:p-3 border-r border-border/60 font-medium text-foreground bg-muted/20"
                         >
                           <div className="space-y-1 text-center">
                             <p className="font-semibold text-xs text-foreground truncate">
@@ -403,37 +585,64 @@ export function DuesSpreadsheetPane({
                   ) : (
                     filteredMembers.map((member) => (
                       <tr key={member._id} className="hover:bg-muted/15 transition-colors group">
-                        {/* Sticky Left Column: Member Profile */}
-                        <td className="sticky left-0 z-10 w-[220px] min-w-[220px] max-w-[220px] p-3 bg-card/95 backdrop-blur-sm border-r border-border shadow-sm overflow-hidden">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-7 h-7 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold text-xs shrink-0 overflow-hidden">
-                              {member.image ? (
-                                <img src={member.image} alt="" className="w-full h-full object-cover" />
-                              ) : (
-                                <span>{(member.nickname || member.name).charAt(0).toUpperCase()}</span>
-                              )}
-                            </div>
-                            <div className="min-w-0 flex-1 overflow-hidden">
-                              <p
-                                className="font-semibold text-xs text-foreground truncate block"
-                                title={member.nickname ? `${member.nickname} (${member.name})` : member.name}
+                        {/* Sticky Left Column: Member Profile (Expanded vs Minimized) */}
+                        {isMemberColMinimized ? (
+                          <td className="sticky left-0 z-10 w-[56px] min-w-[56px] max-w-[56px] p-2 bg-card border-r border-border shadow-[4px_0_12px_-2px_rgba(0,0,0,0.5)] text-center">
+                            <div className="relative inline-flex items-center justify-center group/avatar">
+                              <div
+                                className="w-7 h-7 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold text-xs shrink-0 overflow-hidden cursor-help"
+                                title={`${member.nickname ? `${member.nickname} (${member.name})` : member.name} — ${
+                                  member.unpaidPeriodsCount > 0
+                                    ? `${member.unpaidPeriodsCount} ${t("treasury.dues.unpaid").toLowerCase()}`
+                                    : t("treasury.dues.paid")
+                                }`}
                               >
-                                {member.nickname || member.name}
-                              </p>
-                              <div className="flex items-center gap-1.5 text-[10px] font-mono">
-                                {member.unpaidPeriodsCount > 0 ? (
-                                  <span className="text-rose-400 font-semibold truncate">
-                                    {member.unpaidPeriodsCount} {t("treasury.dues.unpaid").toLowerCase()}
-                                  </span>
+                                {member.image ? (
+                                  <img src={member.image} alt="" className="w-full h-full object-cover" />
                                 ) : (
-                                  <span className="text-emerald-400 font-semibold truncate">
-                                    ✓ {t("treasury.dues.paid")}
-                                  </span>
+                                  <span>{(member.nickname || member.name).charAt(0).toUpperCase()}</span>
                                 )}
                               </div>
+                              {/* Mini Status Dot Badge */}
+                              <span
+                                className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-card ${
+                                  member.unpaidPeriodsCount > 0 ? "bg-rose-500" : "bg-emerald-400"
+                                }`}
+                              />
                             </div>
-                          </div>
-                        </td>
+                          </td>
+                        ) : (
+                          <td className="sticky left-0 z-10 w-[190px] sm:w-[220px] min-w-[190px] sm:min-w-[220px] max-w-[190px] sm:max-w-[220px] p-2.5 sm:p-3 bg-card border-r border-border shadow-[4px_0_12px_-2px_rgba(0,0,0,0.5)] overflow-hidden">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className="w-7 h-7 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold text-xs shrink-0 overflow-hidden">
+                                {member.image ? (
+                                  <img src={member.image} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <span>{(member.nickname || member.name).charAt(0).toUpperCase()}</span>
+                                )}
+                              </div>
+                              <div className="min-w-0 flex-1 overflow-hidden">
+                                <p
+                                  className="font-semibold text-xs text-foreground truncate block"
+                                  title={member.nickname ? `${member.nickname} (${member.name})` : member.name}
+                                >
+                                  {member.nickname || member.name}
+                                </p>
+                                <div className="flex items-center gap-1.5 text-[10px] font-mono">
+                                  {member.unpaidPeriodsCount > 0 ? (
+                                    <span className="text-rose-400 font-semibold truncate">
+                                      {member.unpaidPeriodsCount} {t("treasury.dues.unpaid").toLowerCase()}
+                                    </span>
+                                  ) : (
+                                    <span className="text-emerald-400 font-semibold truncate">
+                                      ✓ {t("treasury.dues.paid")}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                        )}
 
                         {/* Paginated Period Cells */}
                         {displayedEvents.map((event) => {
@@ -455,14 +664,14 @@ export function DuesSpreadsheetPane({
                                         onOpenEntryDetails(cell.ledgerEntryId);
                                       }
                                     }}
-                                    className="w-full py-1.5 px-2 bg-indigo-500/10 border border-indigo-500/30 hover:bg-indigo-500/20 text-indigo-300 rounded transition-all text-center group/cell cursor-pointer"
+                                    className="w-full py-1.5 px-1.5 sm:px-2 bg-indigo-500/10 border border-indigo-500/30 hover:bg-indigo-500/20 text-indigo-300 rounded transition-all text-center group/cell cursor-pointer"
                                   >
-                                    <div className="inline-flex items-center gap-1 text-[11px] font-mono font-medium">
-                                      <ShieldCheck className="w-3 h-3 text-indigo-400" />
-                                      <span>{t("treasury.dues.waived")}</span>
+                                    <div className="inline-flex items-center justify-center gap-1 text-[10px] sm:text-[11px] font-mono font-medium">
+                                      <ShieldCheck className="w-3 h-3 text-indigo-400 shrink-0" />
+                                      <span className="truncate">{t("treasury.dues.waived")}</span>
                                     </div>
                                     {cell?.paidAt && (
-                                      <p className="text-[9px] text-muted-foreground font-mono">
+                                      <p className="text-[9px] text-muted-foreground font-mono truncate">
                                         {new Date(cell.paidAt).toLocaleDateString()}
                                       </p>
                                     )}
@@ -483,14 +692,14 @@ export function DuesSpreadsheetPane({
                                       onOpenEntryDetails(cell.ledgerEntryId);
                                     }
                                   }}
-                                  className="w-full py-1.5 px-2 bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 text-emerald-300 rounded transition-all text-center group/cell cursor-pointer"
+                                  className="w-full py-1.5 px-1.5 sm:px-2 bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 text-emerald-300 rounded transition-all text-center group/cell cursor-pointer"
                                 >
-                                  <div className="inline-flex items-center gap-1 text-[11px] font-mono font-medium">
-                                    <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                                    <span>{t("treasury.dues.paid")}</span>
+                                  <div className="inline-flex items-center justify-center gap-1 text-[10px] sm:text-[11px] font-mono font-medium">
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
+                                    <span className="truncate">{t("treasury.dues.paid")}</span>
                                   </div>
                                   {cell?.paidAt && (
-                                    <p className="text-[9px] text-muted-foreground font-mono">
+                                    <p className="text-[9px] text-muted-foreground font-mono truncate">
                                       {new Date(cell.paidAt).toLocaleDateString()}
                                     </p>
                                   )}
@@ -517,14 +726,14 @@ export function DuesSpreadsheetPane({
                                   }
                                 }}
                                 disabled={!canSign}
-                                className={`w-full py-1.5 px-2 bg-rose-500/10 border border-rose-500/30 text-rose-300 rounded transition-all text-center group/cell ${canSign
+                                className={`w-full py-1.5 px-1.5 sm:px-2 bg-rose-500/10 border border-rose-500/30 text-rose-300 rounded transition-all text-center group/cell ${canSign
                                   ? "hover:bg-rose-500/25 hover:border-rose-500/60 cursor-pointer shadow-sm"
                                   : "opacity-80 cursor-default"
                                   }`}
                               >
-                                <div className="inline-flex items-center gap-1 text-[11px] font-mono font-medium">
-                                  <Clock className="w-3 h-3 text-rose-400" />
-                                  <span>{t("treasury.dues.unpaid")}</span>
+                                <div className="inline-flex items-center justify-center gap-1 text-[10px] sm:text-[11px] font-mono font-medium">
+                                  <Clock className="w-3 h-3 text-rose-400 shrink-0" />
+                                  <span className="truncate">{t("treasury.dues.unpaid")}</span>
                                 </div>
                               </button>
                             </td>
@@ -539,8 +748,8 @@ export function DuesSpreadsheetPane({
           )}
 
           {/* Table Footer & Legend & Pagination */}
-          <div className="p-3.5 bg-muted/20 border-t border-border flex flex-wrap items-center justify-between gap-3 text-[11px] font-mono text-muted-foreground">
-            <div className="flex items-center gap-4">
+          <div className="p-3.5 bg-muted/20 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] font-mono text-muted-foreground shrink-0">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 sm:gap-4">
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 border border-emerald-500" />
                 <span className="text-foreground">{t("treasury.dues.paid")}</span>
@@ -556,7 +765,7 @@ export function DuesSpreadsheetPane({
             </div>
 
             {totalPages > 1 ? (
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center justify-center gap-3">
                 <div className="flex items-center gap-1.5 text-[11px] font-mono">
                   <span className="font-bold text-foreground">
                     {pagePeriodRangeLabel || `Month ${safePageIndex + 1}`}
