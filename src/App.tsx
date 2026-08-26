@@ -2,7 +2,7 @@ import { Authenticated, Unauthenticated } from "convex/react";
 import { Route, Switch, Redirect } from "wouter";
 import { useTranslation } from "react-i18next";
 import { Layout } from "./components/layout";
-import { SignInForm } from "./features/auth";
+import { SignInForm, ClaimRegistrationView } from "./features/auth";
 import { UserProfileView, OrganizationView } from "./features/profile";
 import { TreasuryView, TreasuryErrorBoundary } from "./features/treasury";
 
@@ -15,6 +15,12 @@ export default function App() {
         <Switch>
           <Route path="/">
             <Redirect to="/profile" />
+          </Route>
+          <Route path="/claim">
+            <ClaimRegistrationView />
+          </Route>
+          <Route path="/register">
+            <ClaimRegistrationView />
           </Route>
           <Route path="/profile">
             <UserProfileView />
@@ -63,18 +69,29 @@ export default function App() {
       </Authenticated>
 
       <Unauthenticated>
-        <div className="space-y-8 max-w-sm mx-auto w-full">
-          <div className="text-center space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">
-              {t("auth.welcomeTitle")}
-            </h1>
-            <p className="text-xs text-muted-foreground">
-              {t("auth.welcomeSubtitle")}
-            </p>
-          </div>
-          <SignInForm />
-        </div>
+        <Switch>
+          <Route path="/claim">
+            <ClaimRegistrationView />
+          </Route>
+          <Route path="/register">
+            <ClaimRegistrationView />
+          </Route>
+          <Route>
+            <div className="space-y-8 max-w-sm mx-auto w-full">
+              <div className="text-center space-y-2">
+                <h1 className="text-3xl font-bold tracking-tight text-foreground">
+                  {t("auth.welcomeTitle")}
+                </h1>
+                <p className="text-xs text-muted-foreground">
+                  {t("auth.welcomeSubtitle")}
+                </p>
+              </div>
+              <SignInForm />
+            </div>
+          </Route>
+        </Switch>
       </Unauthenticated>
     </Layout>
   );
 }
+

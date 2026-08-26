@@ -62,8 +62,9 @@
     "signUpInstead": "Daftar sekarang",
     "signInInstead": "Masuk sekarang",
     "registrationsDisabled": "Pendaftaran pengguna baru saat ini dinonaktifkan.",
+    "registrationLinkRequired": "Pendaftaran invite-only. Silakan gunakan tautan pendaftaran yang dikirimkan kepada Anda.",
     "welcomeTitle": "Platform Kasly",
-    "welcomeSubtitle": "Platform RBAC & Manajemen Organisasi",
+    "welcomeSubtitle": "Platform Managemen Organisasi & Keuangan",
     "preReg": {
       "step1Title": "Verifikasi Identitas Siswa",
       "step1Subtitle": "Masukkan NISN, tahun lahir, dan nomor telepon terdaftar untuk klaim akun siswa Anda.",
@@ -78,6 +79,23 @@
       "completeSignUpBtn": "Buat Akun & Klaim Profil",
       "backToVerify": "Kembali ke Cek Identitas",
       "stepIndicator": "Langkah {{current}} dari {{total}}"
+    },
+    "claim": {
+      "title": "Klaim Akun Siswa",
+      "subtitle": "Verifikasi identitas Anda untuk mengaktifkan akun Kasly di {{orgName}}",
+      "invalidLinkTitle": "Tautan Pendaftaran Tidak Tersedia",
+      "invalidLinkDesc": "Tautan pendaftaran ini tidak valid, kedaluwarsa, atau akun sudah pernah diklaim.",
+      "disabledTitle": "Tautan Pendaftaran Dinonaktifkan",
+      "disabledDesc": "Pendaftaran via tautan personal sedang dinonaktifkan oleh administrator sistem.",
+      "goToSignIn": "Ke Halaman Masuk",
+      "welcomeHeading": "Selamat Datang di Kasly!",
+      "welcomeSubheading": "Masukkan data identitas terdaftar Anda di bawah untuk mengonfirmasi akun.",
+      "step1Title": "Verifikasi Identitas Anda",
+      "step2Title": "Lengkapi Kredensial Akun",
+      "step2Subtitle": "Identitas terverifikasi! Tentukan alamat email dan kata sandi akun Anda.",
+      "completeBtn": "Aktifkan Akun & Masuk Ruang Kerja",
+      "alreadyClaimed": "Akun Sudah Diklaim",
+      "alreadyClaimedDesc": "Akun profil ini sudah berhasil diklaim sebelumnya. Silakan masuk menggunakan email dan kata sandi Anda."
     }
   },
   "profile": {
@@ -327,7 +345,29 @@
       "markUnpaid": "Tandai Belum Lunas",
       "assignBtn": "Tetapkan",
       "removeBtn": "Hapus",
-      "totalOwed": "Total Tagihan Belum Lunas"
+      "totalOwed": "Total Tagihan Belum Lunas",
+      "enableRegLinks": "Aktifkan Tautan Pendaftaran",
+      "enableRegLinksDesc": "Izinkan pendaftaran terdistribusi melalui tautan personal yang terikat pada data siswa.",
+      "copyLink": "Salin Tautan",
+      "linkCopied": "Tautan Pendaftaran Disalin!",
+      "shareWa": "WhatsApp",
+      "copyWa": "Salin Teks WhatsApp",
+      "openWa": "Kirim via WhatsApp",
+      "waCopied": "Pesan WhatsApp disalin!",
+      "regenerateLink": "Buat Ulang Tautan",
+      "regenerateConfirm": "Apakah Anda yakin ingin membuat ulang tautan ini? Tautan sebelumnya tidak akan dapat digunakan lagi.",
+      "linkRegenerated": "Tautan pendaftaran baru berhasil dibuat.",
+      "exportLinksCsv": "Ekspor Tautan Belum Klaim (CSV)",
+      "downloadRosterLinks": "Unduh CSV Distribusi (dengan Tautan)",
+      "waTemplateSection": "Templat Pesan WhatsApp",
+      "waTemplateDefault": "Standar (Tunggakan & Ledger)",
+      "waTemplateShort": "Ringkas & Langsung",
+      "waTemplateEnglish": "Bahasa Inggris",
+      "waTemplateCustom": "Kustom",
+      "waTemplateEditor": "Edit Templat Pesan WhatsApp",
+      "waPreview": "Pratinjau Pesan",
+      "placeholdersHelp": "Tag dinamis yang tersedia: {name}, {orgName}, {regLink}",
+      "singleLinkCreated": "Tautan Pendaftaran Terbit"
     }
   }
 }
