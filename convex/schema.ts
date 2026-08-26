@@ -32,6 +32,21 @@ export default defineSchema({
     isUsed: v.boolean(),
   }).index("by_token", ["token"]),
 
+  // Distributed registration links tied to specific pre-registered placeholder students
+  registrationLinks: defineTable({
+    token: v.string(),
+    userId: v.id("users"),
+    organizationId: v.id("organizations"),
+    createdAt: v.number(),
+    expiresAt: v.optional(v.number()),
+    isClaimed: v.boolean(),
+    claimedAt: v.optional(v.number()),
+  })
+    .index("by_token", ["token"])
+    .index("by_userId", ["userId"])
+    .index("by_organizationId", ["organizationId"])
+    .index("by_organizationId_and_isClaimed", ["organizationId", "isClaimed"]),
+
   // Organizations (Servers in Discord terminology)
   organizations: defineTable({
     name: v.string(),

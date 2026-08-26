@@ -38,7 +38,20 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
           .unique();
 
         const isPreRegRequired = preRegSetting !== null ? preRegSetting.value : false;
+
+        const regLinksSetting = await ctx.db
+          .query("appSettings")
+          .withIndex("by_key", (q) => q.eq("key", "enableRegistrationLinks"))
+          .unique();
+
+        const isRegLinksEnabled = regLinksSetting !== null ? regLinksSetting.value : true;
         const rawClaimToken = (args.profile as any)?.claimToken;
+
+        if (isRegLinksEnabled && !rawClaimToken) {
+          throw new Error(
+            "Public registration is closed. Please register using your personal registration link.",
+          );
+        }
 
         // If pre-registration is required, or if a claim token was provided
         if (rawClaimToken) {
@@ -94,6 +107,19 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
             isClaimed: true,
             emailVerificationTime: Date.now(),
           });
+
+          // Mark any registration links for this user as claimed
+          const regLinks = await ctx.db
+            .query("registrationLinks")
+            .withIndex("by_userId", (q) => q.eq("userId", placeholderUser._id))
+            .collect();
+
+          for (const rl of regLinks) {
+            await ctx.db.patch("registrationLinks", rl._id, {
+              isClaimed: true,
+              claimedAt: Date.now(),
+            });
+          }
 
           return placeholderUser._id;
         }

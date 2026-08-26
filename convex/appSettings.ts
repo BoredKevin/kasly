@@ -14,6 +14,7 @@ export const get = query({
     allowProfileNameChange: v.boolean(),
     allowSignUps: v.boolean(),
     enablePreRegistration: v.boolean(),
+    enableRegistrationLinks: v.boolean(),
   }),
   handler: async (ctx) => {
     const orgCreationSetting = await ctx.db
@@ -41,6 +42,11 @@ export const get = query({
       .withIndex("by_key", (q) => q.eq("key", "enablePreRegistration"))
       .unique();
 
+    const regLinksSetting = await ctx.db
+      .query("appSettings")
+      .withIndex("by_key", (q) => q.eq("key", "enableRegistrationLinks"))
+      .unique();
+
     return {
       allowOrganizationCreation:
         orgCreationSetting !== null ? orgCreationSetting.value : true,
@@ -52,6 +58,8 @@ export const get = query({
         signUpsSetting !== null ? signUpsSetting.value : true,
       enablePreRegistration:
         preRegSetting !== null ? preRegSetting.value : false,
+      enableRegistrationLinks:
+        regLinksSetting !== null ? regLinksSetting.value : true,
     };
   },
 });
@@ -109,6 +117,13 @@ export const populate = mutation({
       value: false,
       description:
         "Controls whether user registration requires claiming a pre-registered identity.",
+    });
+
+    await ctx.db.insert("appSettings", {
+      key: "enableRegistrationLinks",
+      value: true,
+      description:
+        "Controls whether personalized pre-registration invitation links are enabled.",
     });
 
     return {
