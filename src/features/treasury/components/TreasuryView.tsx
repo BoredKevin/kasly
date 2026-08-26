@@ -304,6 +304,7 @@ export function TreasuryView({
               <div>
                 <DuesSpreadsheetPane
                   organizationId={effectiveOrgId}
+                  organizationName={orgs?.find((o) => o._id === effectiveOrgId)?.name}
                   fundId={activeFundId}
                   fundName={activeFund?.name}
                   currency={activeFund?.currency}

@@ -28,7 +28,12 @@
     "none": "None",
     "yes": "Yes",
     "no": "No",
-    "na": "N/A"
+    "na": "N/A",
+    "fullscreen": "Fullscreen",
+    "exitFullscreen": "Exit Fullscreen",
+    "zoomIn": "Zoom In",
+    "zoomOut": "Zoom Out",
+    "resetZoom": "Reset Zoom"
   },
   "nav": {
     "userProfile": "User Profile",
@@ -256,7 +261,27 @@
       "autoSchedule": "Automated Schedule",
       "selectMember": "Select Member",
       "periodsToPay": "Periods to Pay",
-      "signingKey": "Signing Key"
+      "signingKey": "Signing Key",
+      "minimizeMembers": "Minimize Member Column",
+      "expandMembers": "Expand Member Column",
+      "compactView": "Compact",
+      "expandedView": "Expanded",
+      "export": "Export",
+      "exportExcel": "Export to Excel (.xlsx)",
+      "exportPdf": "Export to PDF (.pdf)",
+      "exporting": "Exporting...",
+      "exportSuccess": "Report exported successfully",
+      "exportModalTitle": "Export Dues Report",
+      "exportModalDesc": "Configure date range, due cycles, and export format",
+      "exportFormat": "Export Format",
+      "rangeMode": "Due Cycle / Date Range",
+      "rangeCurrentPage": "Current Page",
+      "rangeCustom": "Custom Range",
+      "rangeAll": "All Recorded",
+      "fromCycle": "From Due Cycle",
+      "toCycle": "To Due Cycle",
+      "downloadPdf": "Download PDF",
+      "downloadExcel": "Download Excel"
     },
     "keys": {
       "title": "Treasurer Cryptographic Keys",
