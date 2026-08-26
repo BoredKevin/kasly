@@ -62,8 +62,9 @@
     "signUpInstead": "Sign up instead",
     "signInInstead": "Sign in instead",
     "registrationsDisabled": "New user registrations are currently disabled.",
+    "registrationLinkRequired": "Registration is invite-only. Please use the registration link sent to you.",
     "welcomeTitle": "Kasly Platform",
-    "welcomeSubtitle": "RBAC & Organization Management Platform",
+    "welcomeSubtitle": "Treasury & Organization Management Platform",
     "preReg": {
       "step1Title": "Verify Student Identity",
       "step1Subtitle": "Enter your registered NISN, birth year, and phone number to claim your student account.",
@@ -78,6 +79,23 @@
       "completeSignUpBtn": "Create Account & Claim Profile",
       "backToVerify": "Back to Identity Check",
       "stepIndicator": "Step {{current}} of {{total}}"
+    },
+    "claim": {
+      "title": "Claim Student Account",
+      "subtitle": "Verify your identity to claim your Kasly account in {{orgName}}",
+      "invalidLinkTitle": "Registration Link Unavailable",
+      "invalidLinkDesc": "This registration link is invalid, expired, or has already been claimed.",
+      "disabledTitle": "Registration Links Disabled",
+      "disabledDesc": "Personalized registration links are currently disabled by system administrators.",
+      "goToSignIn": "Go to Sign In",
+      "welcomeHeading": "Welcome to Kasly!",
+      "welcomeSubheading": "Enter your registered credentials below to confirm your student profile.",
+      "step1Title": "Verify Your Identity",
+      "step2Title": "Finalize Account Credentials",
+      "step2Subtitle": "Identity verified! Choose your email and password to complete your account.",
+      "completeBtn": "Activate Account & Enter Workspace",
+      "alreadyClaimed": "Account Already Claimed",
+      "alreadyClaimedDesc": "This account has already been claimed. If this is you, please sign in with your email and password."
     }
   },
   "profile": {
@@ -327,7 +345,29 @@
       "markUnpaid": "Mark Unpaid",
       "assignBtn": "Assign",
       "removeBtn": "Remove",
-      "totalOwed": "Total Outstanding"
+      "totalOwed": "Total Outstanding",
+      "enableRegLinks": "Enable Registration Links",
+      "enableRegLinksDesc": "Allow distributed registration links tied to specific student identities.",
+      "copyLink": "Copy Link",
+      "linkCopied": "Link Copied!",
+      "shareWa": "WhatsApp",
+      "copyWa": "Copy WhatsApp Text",
+      "openWa": "Send via WhatsApp",
+      "waCopied": "WhatsApp text copied!",
+      "regenerateLink": "Regenerate Link",
+      "regenerateConfirm": "Are you sure you want to regenerate this link? The previous link will no longer work.",
+      "linkRegenerated": "Registration link regenerated successfully.",
+      "exportLinksCsv": "Export Unclaimed Links (CSV)",
+      "downloadRosterLinks": "Download Distribution CSV (with Links)",
+      "waTemplateSection": "WhatsApp Message Template",
+      "waTemplateDefault": "Standard (Dues & Ledger)",
+      "waTemplateShort": "Short & Direct",
+      "waTemplateEnglish": "English",
+      "waTemplateCustom": "Custom",
+      "waTemplateEditor": "Edit WhatsApp Message Template",
+      "waPreview": "Message Preview",
+      "placeholdersHelp": "Available tags: {name}, {orgName}, {regLink}",
+      "singleLinkCreated": "Registration Link Created"
     }
   }
 }

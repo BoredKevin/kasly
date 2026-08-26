@@ -15,6 +15,15 @@ function bufferToHex(buffer: ArrayBuffer | Uint8Array): string {
 }
 
 /**
+ * Generates a cryptographically secure 32-byte registration link token (64 hex chars).
+ */
+function generateRegistrationToken(): string {
+  const tokenBytes = new Uint8Array(32);
+  crypto.getRandomValues(tokenBytes);
+  return bufferToHex(tokenBytes);
+}
+
+/**
  * Retrieves the global pre-registration salt, or initializes a CSPRNG salt if not present.
  */
 async function getOrCreatePreRegistrationSalt(ctx: MutationCtx): Promise<string> {
@@ -57,10 +66,26 @@ async function hashWithSalt(salt: string, rawValue: string): Promise<string> {
 }
 
 /**
- * Normalizes phone numbers (strips spaces, dashes, parentheses).
+ * Normalizes phone numbers to standard format (e.g. 6281234567890).
+ * Strips non-digits, converts leading '0' or '+62' or bare '8' to '628...'.
  */
 function normalizePhoneNumber(phone: string): string {
-  return phone.replace(/[\s\-\(\)]/g, "").trim();
+  let digits = phone.replace(/\D/g, "").trim();
+
+  // If starts with "08", replace leading "0" with "62"
+  if (digits.startsWith("08")) {
+    digits = "62" + digits.slice(1);
+  } else if (digits.startsWith("8")) {
+    // If starts directly with "8" (e.g. 81234567890)
+    digits = "62" + digits;
+  } else if (digits.startsWith("62")) {
+    // If starts with "6208...", remove the redundant '0'
+    if (digits.startsWith("6208")) {
+      digits = "62" + digits.slice(3);
+    }
+  }
+
+  return digits;
 }
 
 /**
@@ -102,6 +127,19 @@ export const verifyClaimIdentity = mutation({
     if (!isEnabled) {
       throw new Error(
         "Pre-registration identity verification is currently disabled in system settings.",
+      );
+    }
+
+    // Check if registration links are active (in which case public verification is closed)
+    const regLinksSetting = await ctx.db
+      .query("appSettings")
+      .withIndex("by_key", (q) => q.eq("key", "enableRegistrationLinks"))
+      .unique();
+
+    const isRegLinksEnabled = regLinksSetting !== null ? regLinksSetting.value : true;
+    if (isRegLinksEnabled) {
+      throw new Error(
+        "Public registration is closed. Please claim your account using your personal registration link.",
       );
     }
 
@@ -200,6 +238,16 @@ export const importRoster = mutation({
     skippedCount: v.number(),
     skippedNisns: v.array(v.string()),
     assignedDuesTotal: v.number(),
+    insertedStudents: v.array(
+      v.object({
+        name: v.string(),
+        nisn: v.string(),
+        birthYear: v.string(),
+        phone: v.string(),
+        token: v.string(),
+        userId: v.id("users"),
+      }),
+    ),
   }),
   handler: async (ctx, args) => {
     // Requires MANAGE_MEMBERS permission in the organization
@@ -254,6 +302,14 @@ export const importRoster = mutation({
     let skippedCount = 0;
     let assignedDuesTotal = 0;
     const skippedNisns: string[] = [];
+    const insertedStudents: Array<{
+      name: string;
+      nisn: string;
+      birthYear: string;
+      phone: string;
+      token: string;
+      userId: Id<"users">;
+    }> = [];
 
     for (const student of args.students) {
       const trimmedName = student.name.trim();
@@ -305,6 +361,25 @@ export const importRoster = mutation({
         joinedAt: Date.now(),
       });
 
+      // Mint unique registration link token
+      const regToken = generateRegistrationToken();
+      await ctx.db.insert("registrationLinks", {
+        token: regToken,
+        userId: placeholderUserId,
+        organizationId: args.organizationId,
+        createdAt: Date.now(),
+        isClaimed: false,
+      });
+
+      insertedStudents.push({
+        name: trimmedName,
+        nisn: trimmedNisn,
+        birthYear: trimmedBirthYear,
+        phone: normalizedPhone,
+        token: regToken,
+        userId: placeholderUserId,
+      });
+
       // Assign past dues cycles (default to all available cycles as unpaid unless explicitly specified)
       const requestedDuesCount =
         student.duesCount !== undefined
@@ -342,12 +417,14 @@ export const importRoster = mutation({
       skippedCount,
       skippedNisns,
       assignedDuesTotal,
+      insertedStudents,
     };
   },
 });
 
 /**
- * Lists all unclaimed placeholder members in an organization along with their unpaid dues summary.
+ * Lists all unclaimed placeholder members in an organization along with their unpaid dues summary
+ * and active registration link token.
  */
 export const listPlaceholderMembers = query({
   args: {
@@ -362,6 +439,7 @@ export const listPlaceholderMembers = query({
       isClaimed: v.boolean(),
       unpaidCyclesCount: v.number(),
       unpaidAmount: v.number(),
+      registrationToken: v.optional(v.string()),
     }),
   ),
   handler: async (ctx, args) => {
@@ -402,6 +480,12 @@ export const listPlaceholderMembers = query({
           }
         }
 
+        // Query active registration link token
+        const regLink = await ctx.db
+          .query("registrationLinks")
+          .withIndex("by_userId", (q) => q.eq("userId", member.userId))
+          .first();
+
         results.push({
           memberId: member._id,
           userId: member.userId,
@@ -410,11 +494,281 @@ export const listPlaceholderMembers = query({
           isClaimed: false,
           unpaidCyclesCount: unpaidMemberships.length,
           unpaidAmount,
+          registrationToken: regLink?.token,
         });
       }
     }
 
     return results;
+  },
+});
+
+/**
+ * Public query to fetch safe preview details for a registration link token.
+ */
+export const getRegistrationLinkInfo = query({
+  args: {
+    token: v.string(),
+  },
+  returns: v.object({
+    isValid: v.boolean(),
+    isEnabled: v.boolean(),
+    errorReason: v.optional(v.string()),
+    organizationName: v.optional(v.string()),
+    organizationSlug: v.optional(v.string()),
+    isClaimed: v.optional(v.boolean()),
+  }),
+  handler: async (ctx, args) => {
+    // Check if registration links feature is enabled globally
+    const regLinksSetting = await ctx.db
+      .query("appSettings")
+      .withIndex("by_key", (q) => q.eq("key", "enableRegistrationLinks"))
+      .unique();
+
+    const isEnabled = regLinksSetting !== null ? regLinksSetting.value : true;
+    if (!isEnabled) {
+      return {
+        isValid: false,
+        isEnabled: false,
+        errorReason: "Registration links are currently disabled by system administrators.",
+      };
+    }
+
+    const trimmedToken = args.token.trim();
+    if (!trimmedToken) {
+      return {
+        isValid: false,
+        isEnabled: true,
+        errorReason: "Invalid or missing registration link token.",
+      };
+    }
+
+    const linkDoc = await ctx.db
+      .query("registrationLinks")
+      .withIndex("by_token", (q) => q.eq("token", trimmedToken))
+      .unique();
+
+    if (!linkDoc) {
+      return {
+        isValid: false,
+        isEnabled: true,
+        errorReason: "Registration link not found or has been revoked.",
+      };
+    }
+
+    if (linkDoc.isClaimed) {
+      return {
+        isValid: false,
+        isEnabled: true,
+        isClaimed: true,
+        errorReason: "This registration link has already been claimed.",
+      };
+    }
+
+    if (linkDoc.expiresAt && Date.now() > linkDoc.expiresAt) {
+      return {
+        isValid: false,
+        isEnabled: true,
+        errorReason: "This registration link has expired.",
+      };
+    }
+
+    const user = await ctx.db.get("users", linkDoc.userId);
+    if (!user || user.isClaimed === true || Boolean(user.email)) {
+      return {
+        isValid: false,
+        isEnabled: true,
+        isClaimed: true,
+        errorReason: "This student profile has already been claimed.",
+      };
+    }
+
+    const org = await ctx.db.get("organizations", linkDoc.organizationId);
+
+    return {
+      isValid: true,
+      isEnabled: true,
+      organizationName: org?.name || "Kasly Workspace",
+      organizationSlug: org?.slug,
+      isClaimed: false,
+    };
+  },
+});
+
+/**
+ * Public mutation to verify 3-factor identity (NISN, Birth Year, Phone) against a specific registration link.
+ * On match, mints a 15-minute single-use claimToken.
+ */
+export const verifyRegistrationLinkIdentity = mutation({
+  args: {
+    token: v.string(),
+    nisn: v.string(),
+    birthYear: v.string(),
+    phone: v.string(),
+  },
+  returns: v.object({
+    claimToken: v.string(),
+    displayName: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    // Check if registration links feature is enabled globally
+    const regLinksSetting = await ctx.db
+      .query("appSettings")
+      .withIndex("by_key", (q) => q.eq("key", "enableRegistrationLinks"))
+      .unique();
+
+    const isEnabled = regLinksSetting !== null ? regLinksSetting.value : true;
+    if (!isEnabled) {
+      throw new Error(
+        "Registration links are currently disabled by system administrators.",
+      );
+    }
+
+    const trimmedToken = args.token.trim();
+    const linkDoc = await ctx.db
+      .query("registrationLinks")
+      .withIndex("by_token", (q) => q.eq("token", trimmedToken))
+      .unique();
+
+    if (
+      !linkDoc ||
+      linkDoc.isClaimed ||
+      (linkDoc.expiresAt && Date.now() > linkDoc.expiresAt)
+    ) {
+      throw new Error("Invalid, expired, or already claimed registration link.");
+    }
+
+    const targetUser = await ctx.db.get("users", linkDoc.userId);
+    if (!targetUser || targetUser.isClaimed === true || Boolean(targetUser.email)) {
+      throw new Error("This student account has already been claimed.");
+    }
+
+    const trimmedNisn = args.nisn.trim();
+    const trimmedBirthYear = args.birthYear.trim();
+    const normalizedPhone = normalizePhoneNumber(args.phone);
+
+    if (!validateNisnFormat(trimmedNisn)) {
+      throw new Error("Invalid NISN format: Must be exactly 10 digits.");
+    }
+
+    if (!validateBirthYearFormat(trimmedBirthYear)) {
+      throw new Error("Invalid Birth Year format: Must be exactly 4 digits (e.g. 2008).");
+    }
+
+    if (!normalizedPhone || normalizedPhone.length < 8) {
+      throw new Error("Invalid phone number format.");
+    }
+
+    const salt = await getOrCreatePreRegistrationSalt(ctx);
+    const candidateNisnHash = await hashWithSalt(salt, trimmedNisn);
+    const candidateBirthYearHash = await hashWithSalt(salt, trimmedBirthYear);
+    const candidatePhoneHash = await hashWithSalt(salt, normalizedPhone);
+
+    // Strictly verify credentials match this specific student user
+    if (
+      targetUser.nisn !== candidateNisnHash ||
+      targetUser.birthYearHash !== candidateBirthYearHash ||
+      targetUser.phoneHash !== candidatePhoneHash
+    ) {
+      throw new Error(
+        "Verification failed: The provided NISN, birth year, or phone number does not match this registration link.",
+      );
+    }
+
+    // Generate single-use CSPRNG 32-byte claim token
+    const tokenBytes = new Uint8Array(32);
+    crypto.getRandomValues(tokenBytes);
+    const claimToken = bufferToHex(tokenBytes);
+    const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes TTL
+
+    await ctx.db.insert("claimTokens", {
+      token: claimToken,
+      userId: targetUser._id,
+      expiresAt,
+      isUsed: false,
+    });
+
+    return {
+      claimToken,
+      displayName: targetUser.name || "Student",
+    };
+  },
+});
+
+/**
+ * Regenerates a fresh registration link for a pre-registered student.
+ */
+export const regenerateRegistrationLink = mutation({
+  args: {
+    organizationId: v.id("organizations"),
+    userId: v.id("users"),
+  },
+  returns: v.string(),
+  handler: async (ctx, args) => {
+    await requirePermission(
+      ctx,
+      args.organizationId,
+      PERMISSIONS.MANAGE_MEMBERS,
+    );
+
+    const user = await ctx.db.get("users", args.userId);
+    if (!user || user.isClaimed === true || Boolean(user.email)) {
+      throw new Error("Cannot regenerate link for an already claimed account.");
+    }
+
+    // Invalidate existing registration links for this user
+    const existingLinks = await ctx.db
+      .query("registrationLinks")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    for (const link of existingLinks) {
+      await ctx.db.delete("registrationLinks", link._id);
+    }
+
+    const newToken = generateRegistrationToken();
+    await ctx.db.insert("registrationLinks", {
+      token: newToken,
+      userId: args.userId,
+      organizationId: args.organizationId,
+      createdAt: Date.now(),
+      isClaimed: false,
+    });
+
+    return newToken;
+  },
+});
+
+/**
+ * Toggles the global registration links system setting.
+ */
+export const toggleRegistrationLinks = mutation({
+  args: {
+    enabled: v.boolean(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireUser(ctx);
+
+    const existing = await ctx.db
+      .query("appSettings")
+      .withIndex("by_key", (q) => q.eq("key", "enableRegistrationLinks"))
+      .unique();
+
+    if (existing) {
+      await ctx.db.patch("appSettings", existing._id, {
+        value: args.enabled,
+      });
+    } else {
+      await ctx.db.insert("appSettings", {
+        key: "enableRegistrationLinks",
+        value: args.enabled,
+        description:
+          "Controls whether personalized pre-registration invitation links are enabled.",
+      });
+    }
+
+    return null;
   },
 });
 
@@ -673,7 +1027,7 @@ export const togglePlaceholderDuesPayment = mutation({
 });
 
 /**
- * Deletes an unclaimed placeholder member from an organization and removes the placeholder user.
+ * Deletes an unclaimed placeholder member from an organization and removes the placeholder user and any registration links.
  */
 export const deletePlaceholderMember = mutation({
   args: {
@@ -719,6 +1073,16 @@ export const deletePlaceholderMember = mutation({
 
     for (const dm of duesMemberships) {
       await ctx.db.delete("duesMemberships", dm._id);
+    }
+
+    // Delete any registration links for this placeholder
+    const regLinks = await ctx.db
+      .query("registrationLinks")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    for (const rl of regLinks) {
+      await ctx.db.delete("registrationLinks", rl._id);
     }
 
     // Delete placeholder user

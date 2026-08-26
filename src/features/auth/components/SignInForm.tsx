@@ -31,7 +31,8 @@ export function SignInForm() {
   const verifyIdentity = useMutation(api.preRegistration.verifyClaimIdentity);
 
   const appSettings = useQuery(api.appSettings.get);
-  const allowSignUps = appSettings?.allowSignUps !== false;
+  const isRegLinksEnabled = appSettings?.enableRegistrationLinks !== false;
+  const allowSignUps = appSettings?.allowSignUps !== false && !isRegLinksEnabled;
   const isPreRegRequired = appSettings?.enablePreRegistration === true;
   const effectiveFlow = !allowSignUps ? "signIn" : flow;
 
@@ -304,8 +305,10 @@ export function SignInForm() {
               </span>
             </div>
           ) : (
-            <div className="text-center text-xs text-muted-foreground pt-3">
-              {t("auth.registrationsDisabled")}
+            <div className="text-center text-xs text-muted-foreground pt-3 font-mono">
+              {isRegLinksEnabled
+                ? t("auth.registrationLinkRequired")
+                : t("auth.registrationsDisabled")}
             </div>
           )}
 
