@@ -66,69 +66,88 @@ export const get = query({
 
 /**
  * Populates default app settings on initial setup or deployment.
- * Only executes and inserts entries if there are no existing app settings in the database.
+ * Checks for existing entries and skips them, whilst inserting any missing default settings.
+ * Returns what was added and what was skipped.
  */
 export const populate = mutation({
   args: {},
   returns: v.object({
-    populated: v.boolean(),
+    added: v.array(v.string()),
+    skipped: v.array(v.string()),
     message: v.string(),
   }),
   handler: async (ctx) => {
-    const existing = await ctx.db.query("appSettings").take(1);
-    if (existing.length > 0) {
-      return {
-        populated: false,
-        message:
-          "App settings already exist in the database. Skipping initialization.",
-      };
+    const DEFAULT_SETTINGS = [
+      {
+        key: "allowOrganizationCreation",
+        value: true,
+        description:
+          "Controls whether users are permitted to create new organization workspaces.",
+      },
+      {
+        key: "enableNISN",
+        value: true,
+        description:
+          "Controls whether the 10-digit private NISN identification and verification system is enabled.",
+      },
+      {
+        key: "allowProfileNameChange",
+        value: true,
+        description:
+          "Controls whether users are permitted to edit and update their profile display names.",
+      },
+      {
+        key: "allowSignUps",
+        value: true,
+        description:
+          "Controls whether new user registrations and sign ups are permitted on the platform.",
+      },
+      {
+        key: "enablePreRegistration",
+        value: false,
+        description:
+          "Controls whether user registration requires claiming a pre-registered identity.",
+      },
+      {
+        key: "enableRegistrationLinks",
+        value: true,
+        description:
+          "Controls whether personalized pre-registration invitation links are enabled.",
+      },
+    ];
+
+    const existingSettings = await ctx.db.query("appSettings").collect();
+    const existingKeys = new Set(existingSettings.map((s) => s.key));
+
+    const added: string[] = [];
+    const skipped: string[] = [];
+
+    for (const setting of DEFAULT_SETTINGS) {
+      if (existingKeys.has(setting.key)) {
+        skipped.push(setting.key);
+      } else {
+        await ctx.db.insert("appSettings", {
+          key: setting.key,
+          value: setting.value,
+          description: setting.description,
+        });
+        added.push(setting.key);
+      }
     }
 
-    await ctx.db.insert("appSettings", {
-      key: "allowOrganizationCreation",
-      value: true,
-      description:
-        "Controls whether users are permitted to create new organization workspaces.",
-    });
-
-    await ctx.db.insert("appSettings", {
-      key: "enableNISN",
-      value: true,
-      description:
-        "Controls whether the 10-digit private NISN identification and verification system is enabled.",
-    });
-
-    await ctx.db.insert("appSettings", {
-      key: "allowProfileNameChange",
-      value: true,
-      description:
-        "Controls whether users are permitted to edit and update their profile display names.",
-    });
-
-    await ctx.db.insert("appSettings", {
-      key: "allowSignUps",
-      value: true,
-      description:
-        "Controls whether new user registrations and sign ups are permitted on the platform.",
-    });
-
-    await ctx.db.insert("appSettings", {
-      key: "enablePreRegistration",
-      value: false,
-      description:
-        "Controls whether user registration requires claiming a pre-registered identity.",
-    });
-
-    await ctx.db.insert("appSettings", {
-      key: "enableRegistrationLinks",
-      value: true,
-      description:
-        "Controls whether personalized pre-registration invitation links are enabled.",
-    });
+    let message: string;
+    if (added.length === 0) {
+      message = `All ${skipped.length} app setting(s) already exist. None added, ${skipped.length} skipped.`;
+    } else if (skipped.length === 0) {
+      message = `Successfully populated all ${added.length} default app setting(s).`;
+    } else {
+      message = `Populated default app settings: added ${added.length}, skipped ${skipped.length}.`;
+    }
 
     return {
-      populated: true,
-      message: "Successfully populated default app settings.",
+      added,
+      skipped,
+      message,
     };
   },
 });

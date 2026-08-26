@@ -372,9 +372,9 @@ This document is the complete API reference for all public Convex functions in t
 ### `appSettings.populate`
 * **Type**: `mutation`
 * **Security**: System / Setup execution.
-* **Description**: Populates default system settings (`allowOrganizationCreation`, `enableNISN`, `allowProfileNameChange`, `allowSignUps`) if no records exist in the `appSettings` table. Idempotent; skips if any setting is already present.
+* **Description**: Populates default system settings (`allowOrganizationCreation`, `enableNISN`, `allowProfileNameChange`, `allowSignUps`, `enablePreRegistration`, `enableRegistrationLinks`). Checks for existing entries and skips them, inserting any missing default settings.
 * **Arguments**: None
-* **Returns**: `{ populated: boolean, message: string }`
+* **Returns**: `{ added: Array<string>, skipped: Array<string>, message: string }`
 
 ---
 
