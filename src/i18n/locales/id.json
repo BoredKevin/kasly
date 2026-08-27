@@ -242,7 +242,31 @@
       "revertEntry": "Revert Entri Ledger",
       "revertConfirmTitle": "Perlindungan Pembalikan Kompensasi",
       "revertHoldPrompt": "Tahan untuk Tanda Tangani Reversal",
-      "reverting": "Menandatangani & Merekam Reversal..."
+      "reverting": "Menandatangani & Merekam Reversal...",
+      "shareEntry": "Bagikan Entri",
+      "backToLedger": "Kembali ke Ledger",
+      "viewEntry": "Lihat Entri",
+      "entryNotFound": "Entri Ledger Tidak Ditemukan",
+      "entryNotFoundDesc": "Hash atau ID transaksi yang diminta tidak ditemukan di ledger ini.",
+      "restrictedReceipt": "Bukti Transaksi Terbatas",
+      "restrictedReceiptDesc": "Akses publik ke bukti transaksi ini dinonaktifkan oleh kebijakan organisasi. Silakan masuk dengan akun yang berwenang.",
+      "signInToView": "Masuk untuk Melihat Transaksi",
+      "accessDeniedTitle": "Akses Ditolak",
+      "accessDeniedDesc": "Anda tidak memiliki izin untuk melihat transaksi di organisasi ini.",
+      "backToWorkspace": "Kembali ke Workspace"
+    },
+    "share": {
+      "modalTitle": "Bagikan Bukti Ledger",
+      "modalDesc": "Bagikan bukti verifikasi kriptografis untuk transaksi ini",
+      "shortUrl": "Tautan Singkat",
+      "canonicalUrl": "Tautan Transaksi",
+      "qrCode": "Pindai Kode QR",
+      "hideQr": "Tutup Kode QR",
+      "copyLink": "Salin Tautan",
+      "linkCopied": "Tautan Disalin!",
+      "shareVia": "Bagikan melalui...",
+      "publicNotice": "Siapa saja yang memiliki tautan ini dapat melihat bukti kriptografis transaksi ini.",
+      "restrictedNotice": "Memerlukan login berwenang untuk melihat."
     },
     "dues": {
       "title": "Tunggakan & Pembayaran",
@@ -307,7 +331,9 @@
       "unfreezeFund": "Buka Pembekuan Dana",
       "pendingKeyReviews": "Pendaftaran Kunci Menunggu Peninjauan",
       "approveKey": "Setujui Kunci",
-      "rejectKey": "Tolak Kunci"
+      "rejectKey": "Tolak Kunci",
+      "enablePublicReceipts": "Tautan Bukti Transaksi Publik",
+      "enablePublicReceiptsDesc": "Izinkan siapa saja yang memegang hash transaksi / tautan singkat untuk melihat bukti kriptografis tanpa perlu masuk."
     },
     "generateKey": {
       "title": "Buat Kunci Penandatangan ECDSA",

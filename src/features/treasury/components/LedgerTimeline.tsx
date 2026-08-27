@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "convex/react";
+import { useLocation } from "wouter";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import {
@@ -20,7 +21,8 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { RevertEntryModal, TargetLedgerEntry } from "./RevertEntryModal";
-import { EntryDetailsModal, LedgerEntryItem } from "./EntryDetailsModal";
+import { LedgerEntryItem } from "./EntryDetailsModal";
+export type { LedgerEntryItem };
 
 export interface LedgerTimelineProps {
   fundId: Id<"funds"> | null;
@@ -88,10 +90,10 @@ export function LedgerTimeline({
   onOpenKeyGen,
   emptyMessage = "No ledger entries recorded for this fund yet.",
 }: LedgerTimelineProps) {
+  const [, setLocation] = useLocation();
   const [currentPage, setCurrentPage] = useState(1);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [activeMobileMenuId, setActiveMobileMenuId] = useState<string | null>(null);
-  const [selectedEntryForDetails, setSelectedEntryForDetails] = useState<LedgerEntryItem | null>(null);
   const [selectedEntryForRevert, setSelectedEntryForRevert] = useState<TargetLedgerEntry | null>(null);
 
   const fund = useQuery(
@@ -208,7 +210,7 @@ export function LedgerTimeline({
 
                         <button
                           type="button"
-                          onClick={() => setSelectedEntryForDetails(entry)}
+                          onClick={() => setLocation(`/tx/${entry.entryHash}`)}
                           className="text-xs font-semibold text-foreground truncate max-w-sm sm:max-w-md md:max-w-lg hover:text-primary hover:underline transition-colors text-left cursor-pointer"
                           title={entry.memo}
                         >
@@ -258,7 +260,7 @@ export function LedgerTimeline({
                         variant="outline"
                         size="sm"
                         chamfer="dual"
-                        onClick={() => setSelectedEntryForDetails(entry)}
+                        onClick={() => setLocation(`/tx/${entry.entryHash}`)}
                         title="View cryptographic details"
                         className="h-7 w-7 p-0 flex items-center justify-center cursor-pointer text-muted-foreground hover:text-foreground"
                       >
@@ -318,7 +320,7 @@ export function LedgerTimeline({
                           <button
                             type="button"
                             onClick={() => {
-                              setSelectedEntryForDetails(entry);
+                              setLocation(`/tx/${entry.entryHash}`);
                               setActiveMobileMenuId(null);
                             }}
                             className="w-full px-2.5 py-1.5 flex items-center gap-2 hover:bg-muted/40 text-foreground text-left cursor-pointer transition-colors"
@@ -406,15 +408,6 @@ export function LedgerTimeline({
           </div>
         </div>
       )}
-
-      {/* Entry Cryptographic Details Modal */}
-      <EntryDetailsModal
-        isOpen={Boolean(selectedEntryForDetails)}
-        onClose={() => setSelectedEntryForDetails(null)}
-        entry={selectedEntryForDetails}
-        currency={fund?.currency}
-        fundName={fund?.name}
-      />
 
       {/* Revert Entry Modal */}
       {canSign && (

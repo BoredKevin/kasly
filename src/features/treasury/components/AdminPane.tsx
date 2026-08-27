@@ -27,6 +27,8 @@ import {
   Laptop,
   CalendarPlus,
   Users,
+  Globe,
+  Lock,
 } from "lucide-react";
 import { CreateManualDuesModal } from "./CreateManualDuesModal";
 import { PreRegistrationAdminModal } from "./PreRegistrationAdminModal";
@@ -42,6 +44,9 @@ export function AdminPane({ organizationId, activeFundId, onOpenCreateFund }: Ad
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPreRegModalOpen, setIsPreRegModalOpen] = useState(false);
+
+  const appSettings = useQuery(api.appSettings.get);
+  const togglePublicReceipts = useMutation(api.appSettings.togglePublicLedgerReceipts);
 
   const pendingKeys = useQuery(api.treasury.keys.listPendingKeys, { organizationId });
   const activeKeys = useQuery(api.treasury.keys.listActiveKeys, { organizationId });
@@ -487,7 +492,52 @@ export function AdminPane({ organizationId, activeFundId, onOpenCreateFund }: Ad
         initialFundId={activeFundId}
       />
 
-      {/* Section 5: Pre-Registered Student Roster & Settings */}
+      {/* Section 5: Public Transaction Proof Links Setting */}
+      <Card telemetry="TREASURY.PUBLIC_RECEIPTS" cornerLines className="bg-card border-border shadow-lg">
+        <CardHeader className="pb-4 border-b border-border/80">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 bg-primary/10 border border-primary/20 text-primary">
+                <Globe className="w-5 h-5" />
+              </div>
+              <div>
+                <CardTitle className="text-base font-semibold">
+                  {t("treasury.admin.enablePublicReceipts")}
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  {t("treasury.admin.enablePublicReceiptsDesc")}
+                </CardDescription>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              variant={appSettings?.enablePublicLedgerReceipts !== false ? "default" : "outline"}
+              size="sm"
+              chamfer="dual"
+              onClick={async () => {
+                const current = appSettings?.enablePublicLedgerReceipts !== false;
+                await togglePublicReceipts({ enabled: !current });
+              }}
+              className="text-xs flex items-center gap-1.5 cursor-pointer self-start sm:self-auto shrink-0 font-mono"
+            >
+              {appSettings?.enablePublicLedgerReceipts !== false ? (
+                <>
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Enabled (Public)</span>
+                </>
+              ) : (
+                <>
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>Disabled (Restricted)</span>
+                </>
+              )}
+            </Button>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Section 6: Pre-Registered Student Roster & Settings */}
       <Card telemetry="TREASURY.PRE_REG" cornerLines className="bg-card border-border shadow-lg">
         <CardHeader className="pb-4 border-b border-border/80">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

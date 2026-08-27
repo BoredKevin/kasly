@@ -15,7 +15,7 @@ import { CreateDueEventModal } from "./CreateDueEventModal";
 import { CreateManualDuesModal } from "./CreateManualDuesModal";
 import { GenerateKeyModal } from "./GenerateKeyModal";
 import { CreateFundModal } from "./CreateFundModal";
-import { EntryDetailsModal, LedgerEntryItem } from "./EntryDetailsModal";
+import { SharedEntryPage } from "./SharedEntryPage";
 import {
   Landmark,
   ChevronDown,
@@ -27,13 +27,15 @@ import { Button, Badge } from "@boredkevin/ui";
 import { TreasuryErrorBoundary } from "./TreasuryErrorBoundary";
 
 interface TreasuryViewProps {
-  activeTab?: TreasuryTab;
+  activeTab?: TreasuryTab | "entry";
   onTabChange?: (tab: TreasuryTab) => void;
+  entryIdentifier?: string;
 }
 
 export function TreasuryView({
   activeTab: controlledTab,
   onTabChange: controlledOnTabChange,
+  entryIdentifier,
 }: TreasuryViewProps = {}) {
   const [location, setLocation] = useLocation();
   const orgs = useQuery(api.organizations.listMine);
@@ -70,7 +72,8 @@ export function TreasuryView({
     activeFundId ? { fundId: activeFundId, limit: 100 } : "skip"
   );
 
-  const getTabFromLocation = (loc: string): TreasuryTab => {
+  const getTabFromLocation = (loc: string): TreasuryTab | "entry" => {
+    if (loc.startsWith("/tx/") || entryIdentifier) return "entry";
     if (loc === "/treasury/ledger") return "ledger";
     if (loc === "/treasury/dues") return "dues";
     if (loc === "/treasury/keys") return "keys";
@@ -110,7 +113,6 @@ export function TreasuryView({
   const [isCreateDuesModalOpen, setIsCreateDuesModalOpen] = useState(false);
   const [isKeyGenOpen, setIsKeyGenOpen] = useState(false);
   const [isCreateFundOpen, setIsCreateFundOpen] = useState(false);
-  const [inspectingEntry, setInspectingEntry] = useState<LedgerEntryItem | null>(null);
 
   const handleOpenRecordPayment = (prefill?: {
     userId?: Id<"users">;
@@ -135,7 +137,9 @@ export function TreasuryView({
   const handleInspectEntryById = (entryId: Id<"ledgerEntries">) => {
     const found = entries?.find((e) => e._id === entryId);
     if (found) {
-      setInspectingEntry(found);
+      setLocation(`/tx/${found.entryHash}`);
+    } else {
+      setLocation(`/tx/${entryId}`);
     }
   };
 
@@ -161,13 +165,12 @@ export function TreasuryView({
     );
   }
 
-  // Safety fallback for tab permissions
-  const safeCurrentTab =
-    currentTab === "admin" && !canAdmin
+  // Resolved tab: if on a tab user lacks permission for, fallback to overview
+  const safeCurrentTab: TreasuryTab | "entry" =
+    (currentTab === "keys" && !canSign) ||
+    (currentTab === "admin" && !canAdmin)
       ? "overview"
-      : currentTab === "keys" && !canSign
-        ? "overview"
-        : currentTab;
+      : currentTab;
 
   return (
     <div className="w-full space-y-6">
@@ -258,14 +261,21 @@ export function TreasuryView({
         </div>
       </div>
 
-      {/* Responsive Grid Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] lg:grid-cols-[260px_1fr] gap-6 items-start">
-        {/* Left Desktop Sticky Sidebar */}
-        <div className="hidden md:block md:sticky md:top-24">
+      {/* Main Treasury Layout: Left Sidebar + Right Content Area */}
+      <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6 items-start">
+        {/* Left Sticky Sidebar (Desktop Only) */}
+        <div className="hidden md:block sticky top-24 space-y-4">
           <TreasurySidebar
-            activeTab={safeCurrentTab}
-            onSelectTab={handleSelectTab}
             activeOrgId={effectiveOrgId}
+            activeTab={safeCurrentTab === "entry" ? "ledger" : safeCurrentTab}
+            onSelectTab={(tab) => {
+              handleSelectTab(tab);
+              if (tab === "overview") setLocation("/treasury");
+              if (tab === "ledger") setLocation("/treasury/ledger");
+              if (tab === "dues") setLocation("/treasury/dues");
+              if (tab === "keys") setLocation("/treasury/keys");
+              if (tab === "admin") setLocation("/treasury/admin");
+            }}
             activeFundId={activeFundId}
             onSelectFund={setSelectedFundId}
             onOpenRecordPayment={handleOpenRecordPayment}
@@ -277,6 +287,15 @@ export function TreasuryView({
         {/* Right Active Tab Pane */}
         <div className="min-w-0 w-full space-y-6">
           <TreasuryErrorBoundary>
+            {safeCurrentTab === "entry" && (
+              <div>
+                <SharedEntryPage
+                  identifier={entryIdentifier ?? location.split("/").pop() ?? ""}
+                  isAuthenticated={true}
+                />
+              </div>
+            )}
+
             {safeCurrentTab === "overview" && (
               <div>
                 <FundOverviewPane
@@ -361,13 +380,20 @@ export function TreasuryView({
             onClose={() => setIsDueEventOpen(false)}
             organizationId={effectiveOrgId}
             fundId={activeFundId}
-            onOpenDuesTab={() => setLocation("/treasury/dues")}
+            onOpenDuesTab={() => {
+              handleSelectTab("dues");
+              setLocation("/treasury/dues");
+            }}
           />
 
           <GenerateKeyModal
             isOpen={isKeyGenOpen}
             onClose={() => setIsKeyGenOpen(false)}
             organizationId={effectiveOrgId}
+            onSuccess={() => {
+              handleSelectTab("keys");
+              setLocation("/treasury/keys");
+            }}
           />
         </>
       )}
@@ -391,16 +417,6 @@ export function TreasuryView({
           />
         </>
       )}
-
-      {/* Entry Details Inspection Modal */}
-      <EntryDetailsModal
-        isOpen={Boolean(inspectingEntry)}
-        onClose={() => setInspectingEntry(null)}
-        entry={inspectingEntry}
-        currency={activeFund?.currency ?? "IDR"}
-        fundName={activeFund?.name ?? "Fund"}
-      />
     </div>
   );
 }
-
