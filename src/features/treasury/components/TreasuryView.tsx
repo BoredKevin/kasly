@@ -16,8 +16,13 @@ import { CreateManualDuesModal } from "./CreateManualDuesModal";
 import { GenerateKeyModal } from "./GenerateKeyModal";
 import { CreateFundModal } from "./CreateFundModal";
 import { SharedEntryPage } from "./SharedEntryPage";
-import { Landmark, PenLine } from "lucide-react";
-import { Button } from "@boredkevin/ui";
+import {
+  Landmark,
+  ChevronDown,
+  Plus,
+  PenLine,
+} from "lucide-react";
+import { Button, Badge } from "@boredkevin/ui";
 
 import { TreasuryErrorBoundary } from "./TreasuryErrorBoundary";
 
@@ -160,9 +165,6 @@ export function TreasuryView({
     );
   }
 
-  // Active Fund Quick Info
-  const isFundArchived = Boolean(activeFund?.isArchived);
-
   // Resolved tab: if on a tab user lacks permission for, fallback to overview
   const safeCurrentTab: TreasuryTab | "entry" =
     (currentTab === "keys" && !canSign) ||
@@ -171,125 +173,92 @@ export function TreasuryView({
       : currentTab;
 
   return (
-    <div className="space-y-6">
-      {/* Mobile Top Navigation & Fund Picker */}
-      <div className="md:hidden flex flex-col gap-3">
-        {/* Horizontal Navigation Pills with Active Highlight */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs font-mono">
-          <button
-            type="button"
-            onClick={() => {
-              handleSelectTab("overview");
-              setLocation("/treasury");
-            }}
-            className={`px-3 py-1.5 border whitespace-nowrap transition-all cursor-pointer ${
-              safeCurrentTab === "overview"
-                ? "bg-primary/20 text-primary border-primary/50 font-bold"
-                : "bg-muted/20 text-muted-foreground border-border/60 hover:text-foreground"
-            }`}
-          >
-            Overview
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              handleSelectTab("ledger");
-              setLocation("/treasury/ledger");
-            }}
-            className={`px-3 py-1.5 border whitespace-nowrap transition-all cursor-pointer ${
-              safeCurrentTab === "ledger"
-                ? "bg-primary/20 text-primary border-primary/50 font-bold"
-                : "bg-muted/20 text-muted-foreground border-border/60 hover:text-foreground"
-            }`}
-          >
-            Ledger
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              handleSelectTab("dues");
-              setLocation("/treasury/dues");
-            }}
-            className={`px-3 py-1.5 border whitespace-nowrap transition-all cursor-pointer ${
-              safeCurrentTab === "dues"
-                ? "bg-primary/20 text-primary border-primary/50 font-bold"
-                : "bg-muted/20 text-muted-foreground border-border/60 hover:text-foreground"
-            }`}
-          >
-            Dues & Payments
-          </button>
-
-          {canSign && (
-            <button
-              type="button"
-              onClick={() => {
-                handleSelectTab("keys");
-                setLocation("/treasury/keys");
-              }}
-              className={`px-3 py-1.5 border whitespace-nowrap transition-all cursor-pointer ${
-                safeCurrentTab === "keys"
-                  ? "bg-primary/20 text-primary border-primary/50 font-bold"
-                  : "bg-muted/20 text-muted-foreground border-border/60 hover:text-foreground"
-              }`}
-            >
-              My Keys
-            </button>
-          )}
-
-          {canAdmin && (
-            <button
-              type="button"
-              onClick={() => {
-                handleSelectTab("admin");
-                setLocation("/treasury/admin");
-              }}
-              className={`px-3 py-1.5 border whitespace-nowrap transition-all cursor-pointer ${
-                safeCurrentTab === "admin"
-                  ? "bg-primary/20 text-primary border-primary/50 font-bold"
-                  : "bg-muted/20 text-muted-foreground border-border/60 hover:text-foreground"
-              }`}
-            >
-              Administration
-            </button>
-          )}
+    <div className="w-full space-y-6">
+      {/* Treasury Header & Mobile Fund Switcher */}
+      <div className="flex flex-col gap-4">
+        <div className="space-y-1">
+          <h2 className="text-2xl font-bold tracking-tight text-foreground">
+            Treasury & Ledger
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            Secure chained ledger, automated member dues, and treasury information
+          </p>
         </div>
 
-        {/* Mobile Compact Fund Switcher Bar */}
-        {funds && funds.length > 0 && (
-          <div className="flex items-center justify-between gap-2 p-2 bg-muted/20 border border-border/70 text-xs">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="text-[10px] uppercase font-mono text-muted-foreground shrink-0">
-                Fund:
+        {/* Mobile Fund Switcher Bar */}
+        <div className="md:hidden p-3 bg-card/80 backdrop-blur-md border border-border/80 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="p-1 bg-primary/20 border border-primary/40 text-primary">
+                <Landmark className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-[10px] font-mono tracking-wider text-muted-foreground uppercase">
+                Active Fund
               </span>
-              <select
-                value={activeFundId ?? ""}
-                onChange={(e) => setSelectedFundId(e.target.value as Id<"funds">)}
-                className="bg-transparent text-foreground font-semibold text-xs border-none focus:outline-none truncate cursor-pointer"
-              >
-                {funds.map((f) => (
-                  <option key={f._id} value={f._id} className="bg-popover text-popover-foreground">
-                    {f.name} ({f.currency}) {f.isArchived ? "[Archived]" : ""}
-                  </option>
-                ))}
-              </select>
             </div>
+            {activeFund && (
+              <Badge
+                variant="secondary"
+                className="text-[9px] font-mono px-1.5 py-0.5 bg-primary/15 text-primary border-primary/30"
+              >
+                {activeFund.currency}
+              </Badge>
+            )}
+          </div>
 
-            {canSign && !isFundArchived && (
+          <div className="flex items-center gap-2">
+            {funds && funds.length > 0 ? (
+              <div className="relative flex-1 min-w-0">
+                <select
+                  value={activeFundId ?? ""}
+                  onChange={(e) => {
+                    setSelectedFundId(e.target.value as Id<"funds">);
+                  }}
+                  className="w-full h-8 px-2.5 pr-8 bg-background border border-border text-xs text-foreground font-semibold font-mono focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer truncate"
+                >
+                  {funds.map((fund) => (
+                    <option key={fund._id} value={fund._id}>
+                      {fund.name} ({fund.currency})
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-2.5 pointer-events-none text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="text-xs text-muted-foreground italic py-1 font-mono flex-1">
+                No funds
+              </div>
+            )}
+
+            {canSign && (
               <Button
-                variant="default"
+                type="button"
+                variant="outline"
                 size="sm"
                 chamfer="dual"
                 onClick={() => handleOpenRecordPayment()}
-                className="h-7 px-2.5 text-[11px] font-mono shrink-0 flex items-center gap-1 cursor-pointer"
+                className="h-8 text-xs px-2.5 flex items-center gap-1 cursor-pointer shrink-0"
               >
-                <PenLine className="w-3 h-3" />
+                <PenLine className="w-3.5 h-3.5" />
                 <span>Record</span>
               </Button>
             )}
+
+            {canAdmin && (
+              <Button
+                type="button"
+                variant="cyber"
+                size="sm"
+                chamfer="dual"
+                onClick={() => setIsCreateFundOpen(true)}
+                className="h-8 text-xs px-2.5 flex items-center gap-1 cursor-pointer shrink-0"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>New</span>
+              </Button>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* Main Treasury Layout: Left Sidebar + Right Content Area */}
