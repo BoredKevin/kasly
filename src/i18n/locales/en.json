@@ -242,7 +242,30 @@
       "revertEntry": "Revert Ledger Entry",
       "revertConfirmTitle": "Compensating Reversal Safeguard",
       "revertHoldPrompt": "Hold to Sign Reversal",
-      "reverting": "Signing & Committing Reversal..."
+      "reverting": "Signing & Committing Reversal...",
+      "shareEntry": "Share Entry",
+      "backToLedger": "Back to Ledger",
+      "viewEntry": "View Entry",
+      "entryNotFound": "Ledger Entry Not Found",
+      "entryNotFoundDesc": "The requested transaction hash or ID does not exist in this ledger.",
+      "restrictedReceipt": "Restricted Transaction Receipt",
+      "restrictedReceiptDesc": "Public access to this transaction receipt is disabled by organization policy. Please sign in with an authorized account.",
+      "signInToView": "Sign In to View Transaction",
+      "accessDeniedTitle": "Access Denied",
+      "accessDeniedDesc": "You do not have permission to view transactions in this organization.",
+      "backToWorkspace": "Return to Workspace"
+    },
+    "share": {
+      "modalTitle": "Share Ledger Proof",
+      "modalDesc": "Share cryptographic verification proof of this transaction",
+      "shortUrl": "Short Link",
+      "canonicalUrl": "Transaction Link",
+      "qrCode": "Scan QR Code",
+      "copyLink": "Copy Link",
+      "linkCopied": "Link Copied!",
+      "shareVia": "Share via...",
+      "publicNotice": "Anyone holding this link can view this transaction's cryptographic proof.",
+      "restrictedNotice": "Requires authorized sign-in to view."
     },
     "dues": {
       "title": "Dues & Payments",
@@ -307,7 +330,9 @@
       "unfreezeFund": "Unfreeze Fund",
       "pendingKeyReviews": "Key Registrations Pending Review",
       "approveKey": "Approve Key",
-      "rejectKey": "Reject Key"
+      "rejectKey": "Reject Key",
+      "enablePublicReceipts": "Public Transaction Proof Links",
+      "enablePublicReceiptsDesc": "Allow anyone holding the transaction hash / short URL to view the cryptographic proof receipt without signing in."
     },
     "generateKey": {
       "title": "Generate ECDSA Signing Key",
