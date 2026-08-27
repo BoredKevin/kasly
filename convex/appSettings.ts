@@ -15,6 +15,7 @@ export const get = query({
     allowSignUps: v.boolean(),
     enablePreRegistration: v.boolean(),
     enableRegistrationLinks: v.boolean(),
+    enablePublicLedgerReceipts: v.boolean(),
   }),
   handler: async (ctx) => {
     const orgCreationSetting = await ctx.db
@@ -47,6 +48,11 @@ export const get = query({
       .withIndex("by_key", (q) => q.eq("key", "enableRegistrationLinks"))
       .unique();
 
+    const publicReceiptsSetting = await ctx.db
+      .query("appSettings")
+      .withIndex("by_key", (q) => q.eq("key", "enablePublicLedgerReceipts"))
+      .unique();
+
     return {
       allowOrganizationCreation:
         orgCreationSetting !== null ? orgCreationSetting.value : true,
@@ -60,6 +66,8 @@ export const get = query({
         preRegSetting !== null ? preRegSetting.value : false,
       enableRegistrationLinks:
         regLinksSetting !== null ? regLinksSetting.value : true,
+      enablePublicLedgerReceipts:
+        publicReceiptsSetting !== null ? publicReceiptsSetting.value : true,
     };
   },
 });
@@ -114,6 +122,12 @@ export const populate = mutation({
         description:
           "Controls whether personalized pre-registration invitation links are enabled.",
       },
+      {
+        key: "enablePublicLedgerReceipts",
+        value: true,
+        description:
+          "Controls whether possessing a transaction hash allows viewing the cryptographic receipt without logging in.",
+      },
     ];
 
     const existingSettings = await ctx.db.query("appSettings").collect();
@@ -149,6 +163,37 @@ export const populate = mutation({
       skipped,
       message,
     };
+  },
+});
+
+/**
+ * Toggles the public ledger receipts system setting.
+ */
+export const togglePublicLedgerReceipts = mutation({
+  args: {
+    enabled: v.boolean(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("appSettings")
+      .withIndex("by_key", (q) => q.eq("key", "enablePublicLedgerReceipts"))
+      .unique();
+
+    if (existing) {
+      await ctx.db.patch("appSettings", existing._id, {
+        value: args.enabled,
+      });
+    } else {
+      await ctx.db.insert("appSettings", {
+        key: "enablePublicLedgerReceipts",
+        value: args.enabled,
+        description:
+          "Controls whether possessing a transaction hash allows viewing the cryptographic receipt without logging in.",
+      });
+    }
+
+    return null;
   },
 });
 

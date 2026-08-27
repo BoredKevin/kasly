@@ -183,7 +183,8 @@ export default defineSchema({
     .index("by_fundId", ["fundId"])
     .index("by_fundId_and_sequenceNumber", ["fundId", "sequenceNumber"])
     .index("by_organizationId", ["organizationId"])
-    .index("by_organizationId_and_timestamp", ["organizationId", "timestamp"]),
+    .index("by_organizationId_and_timestamp", ["organizationId", "timestamp"])
+    .index("by_entryHash", ["entryHash"]),
 
   // Tamper-evident balance checkpoints for fast balance derivation & auditing
   ledgerCheckpoints: defineTable({
