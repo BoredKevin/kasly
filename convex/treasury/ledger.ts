@@ -948,3 +948,181 @@ export const exportLedger = query({
   },
 });
 
+/**
+ * Public query to fetch a single ledger entry by its SHA-256 entryHash, short hash prefix, or document ID.
+ * Follows the capability security model: if public receipts setting is enabled, knowledge of the hash
+ * grants access to view that specific entry's cryptographic receipt.
+ * If disabled, requires authentication and VIEW_TREASURY permission.
+ */
+export const getPublicEntry = query({
+  args: {
+    identifier: v.string(),
+  },
+  returns: v.union(
+    v.object({
+      status: v.literal("not_found"),
+    }),
+    v.object({
+      status: v.literal("unauthenticated"),
+      requiresAuth: v.literal(true),
+      entrySnippet: v.object({
+        sequenceNumber: v.number(),
+        fundName: v.string(),
+        organizationName: v.string(),
+      }),
+    }),
+    v.object({
+      status: v.literal("forbidden"),
+      requiresAuth: v.literal(false),
+    }),
+    v.object({
+      status: v.literal("success"),
+      requiresAuth: v.literal(false),
+      isPublic: v.boolean(),
+      entry: v.object({
+        _id: v.id("ledgerEntries"),
+        _creationTime: v.number(),
+        organizationId: v.id("organizations"),
+        organizationName: v.string(),
+        fundId: v.id("funds"),
+        fundName: v.string(),
+        currency: v.string(),
+        sequenceNumber: v.number(),
+        previousHash: v.string(),
+        entryHash: v.string(),
+        timestamp: v.number(),
+        direction: v.string(),
+        amount: v.number(),
+        memo: v.string(),
+        keyId: v.string(),
+        signerId: v.id("users"),
+        signerName: v.optional(v.string()),
+        signature: v.string(),
+        transferId: v.optional(v.string()),
+        entryType: v.optional(v.string()),
+        duesEventId: v.optional(v.id("duesEvents")),
+        duesPeriodLabel: v.optional(v.string()),
+      }),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const trimmed = args.identifier.trim();
+    if (!trimmed) {
+      return { status: "not_found" as const };
+    }
+
+    let entry: Doc<"ledgerEntries"> | null = null;
+
+    // 1. Try exact match on entryHash (64-char hex)
+    const byExactHash = await ctx.db
+      .query("ledgerEntries")
+      .withIndex("by_entryHash", (q) => q.eq("entryHash", trimmed))
+      .first();
+
+    if (byExactHash) {
+      entry = byExactHash;
+    } else if (trimmed.length >= 6 && /^[0-9a-fA-F]+$/.test(trimmed)) {
+      // 2. Try prefix search using index range
+      const prefix = trimmed.toLowerCase();
+      const candidate = await ctx.db
+        .query("ledgerEntries")
+        .withIndex("by_entryHash", (q) =>
+          q.gte("entryHash", prefix).lte("entryHash", prefix + "\uffff")
+        )
+        .first();
+
+      if (candidate && candidate.entryHash.toLowerCase().startsWith(prefix)) {
+        entry = candidate;
+      }
+    }
+
+    // 3. Fallback: try as Document ID
+    if (!entry) {
+      try {
+        const byId = await ctx.db.get("ledgerEntries", trimmed as Id<"ledgerEntries">);
+        if (byId) {
+          entry = byId;
+        }
+      } catch {
+        // Not a valid Document ID format, ignore
+      }
+    }
+
+    if (!entry) {
+      return { status: "not_found" as const };
+    }
+
+    const fund = await ctx.db.get("funds", entry.fundId);
+    const organization = await ctx.db.get("organizations", entry.organizationId);
+
+    const publicSetting = await ctx.db
+      .query("appSettings")
+      .withIndex("by_key", (q) => q.eq("key", "enablePublicLedgerReceipts"))
+      .unique();
+
+    const isPublicEnabled = publicSetting !== null ? publicSetting.value : true;
+
+    if (!isPublicEnabled) {
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity) {
+        return {
+          status: "unauthenticated" as const,
+          requiresAuth: true as const,
+          entrySnippet: {
+            sequenceNumber: entry.sequenceNumber,
+            fundName: fund?.name ?? "Fund",
+            organizationName: organization?.name ?? "Organization",
+          },
+        };
+      }
+
+      try {
+        await requirePermission(ctx, entry.organizationId, PERMISSIONS.VIEW_TREASURY);
+      } catch {
+        return {
+          status: "forbidden" as const,
+          requiresAuth: false as const,
+        };
+      }
+    }
+
+    const signer = await ctx.db.get("users", entry.signerId);
+    let duesPeriodLabel: string | undefined = undefined;
+    if (entry.duesEventId) {
+      const duesEvent = await ctx.db.get("duesEvents", entry.duesEventId);
+      duesPeriodLabel = duesEvent?.periodLabel;
+    }
+
+    return {
+      status: "success" as const,
+      requiresAuth: false as const,
+      isPublic: isPublicEnabled,
+      entry: {
+        _id: entry._id,
+        _creationTime: entry._creationTime,
+        organizationId: entry.organizationId,
+        organizationName: organization?.name ?? "Organization",
+        fundId: entry.fundId,
+        fundName: fund?.name ?? "Fund",
+        currency: fund?.currency ?? "IDR",
+        sequenceNumber: entry.sequenceNumber,
+        previousHash: entry.previousHash,
+        entryHash: entry.entryHash,
+        timestamp: entry.timestamp,
+        direction: entry.direction,
+        amount: entry.amount,
+        memo: entry.memo,
+        keyId: entry.keyId,
+        signerId: entry.signerId,
+        signerName: signer?.name,
+        signature: entry.signature,
+        transferId: entry.transferId,
+        entryType: entry.entryType,
+        duesEventId: entry.duesEventId,
+        duesPeriodLabel,
+      },
+    };
+  },
+});
+
+
