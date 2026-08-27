@@ -261,6 +261,7 @@
       "shortUrl": "Tautan Singkat",
       "canonicalUrl": "Tautan Transaksi",
       "qrCode": "Pindai Kode QR",
+      "hideQr": "Tutup Kode QR",
       "copyLink": "Salin Tautan",
       "linkCopied": "Tautan Disalin!",
       "shareVia": "Bagikan melalui...",

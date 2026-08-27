@@ -261,6 +261,7 @@
       "shortUrl": "Short Link",
       "canonicalUrl": "Transaction Link",
       "qrCode": "Scan QR Code",
+      "hideQr": "Hide QR Code",
       "copyLink": "Copy Link",
       "linkCopied": "Link Copied!",
       "shareVia": "Share via...",

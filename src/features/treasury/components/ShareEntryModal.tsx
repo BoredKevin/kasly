@@ -51,7 +51,6 @@ export function ShareEntryModal({
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const shortHash = entryHash.slice(0, 8);
   const shortUrl = `${origin}/${shortHash}`;
-  const canonicalUrl = `${origin}/tx/${entryHash}`;
 
   const handleCopy = (text: string, key: string) => {
     void navigator.clipboard.writeText(text);
@@ -79,6 +78,9 @@ export function ShareEntryModal({
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
     shortUrl
   )}&margin=10`;
+
+  const hasNativeShare =
+    typeof navigator !== "undefined" && typeof navigator.share === "function";
 
   const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-200">
@@ -139,115 +141,68 @@ export function ShareEntryModal({
               </p>
             </div>
 
-            {/* Native Short Link Box */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
-                  {t("treasury.share.shortUrl")}
-                </span>
-                <span className="text-[10px] text-primary font-mono font-bold">
-                  kasly.bkev.in/{shortHash}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 bg-muted/20 p-2 border border-border/70">
+            {/* Native Short Link Section */}
+            <div className="space-y-2">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
+                {t("treasury.share.shortUrl")}
+              </span>
+
+              {/* Full Width URL Display */}
+              <div className="p-2.5 bg-muted/20 border border-border/70">
                 <input
                   type="text"
                   readOnly
                   value={shortUrl}
                   className="bg-transparent text-xs text-foreground font-mono w-full focus:outline-none select-all"
                 />
-                <Button
-                  type="button"
-                  variant="default"
-                  size="sm"
-                  chamfer="dual"
-                  onClick={() => handleCopy(shortUrl, "short")}
-                  className="h-7 px-2.5 text-[11px] shrink-0 flex items-center gap-1 cursor-pointer"
-                >
-                  {copiedKey === "short" ? (
-                    <>
-                      <Check className="w-3 h-3 text-black" />
-                      <span>{t("treasury.ledger.copied")}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3 h-3" />
-                      <span>{t("treasury.share.copyLink")}</span>
-                    </>
-                  )}
-                </Button>
               </div>
+
+              {/* Copy Button Below Field */}
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                chamfer="dual"
+                onClick={() => handleCopy(shortUrl, "short")}
+                className="w-full h-8 text-xs font-mono flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {copiedKey === "short" ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-black" />
+                    <span>{t("treasury.ledger.copied")}</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>{t("treasury.share.copyLink")}</span>
+                  </>
+                )}
+              </Button>
             </div>
 
-            {/* Canonical Full Transaction Link Box */}
-            <div className="space-y-1.5">
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
-                {t("treasury.share.canonicalUrl")}
-              </span>
-              <div className="flex items-center gap-2 bg-muted/20 p-2 border border-border/70">
-                <input
-                  type="text"
-                  readOnly
-                  value={canonicalUrl}
-                  className="bg-transparent text-[11px] text-muted-foreground font-mono w-full focus:outline-none select-all truncate"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  chamfer="dual"
-                  onClick={() => handleCopy(canonicalUrl, "canonical")}
-                  className="h-7 px-2.5 text-[11px] shrink-0 flex items-center gap-1 cursor-pointer"
-                >
-                  {copiedKey === "canonical" ? (
-                    <>
-                      <Check className="w-3 h-3 text-emerald-400" />
-                      <span>{t("treasury.ledger.copied")}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3 h-3" />
-                      <span>{t("treasury.share.copyLink")}</span>
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-
-            {/* QR Code Section Toggle */}
-            <div className="pt-2 border-t border-border/50">
+            {/* Side-by-side Columns: QR Code Button & Share Via Button */}
+            <div
+              className={`pt-2 border-t border-border/50 grid gap-2.5 ${
+                hasNativeShare ? "grid-cols-2" : "grid-cols-1"
+              }`}
+            >
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 chamfer="dual"
                 onClick={() => setShowQr(!showQr)}
-                className="w-full h-8 text-xs flex items-center justify-center gap-2 cursor-pointer text-muted-foreground hover:text-foreground"
+                className="w-full h-8 text-xs flex items-center justify-center gap-1.5 cursor-pointer text-muted-foreground hover:text-foreground"
               >
-                <QrCode className="w-3.5 h-3.5" />
-                <span>
-                  {showQr ? "Hide QR Code" : t("treasury.share.qrCode")}
+                <QrCode className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">
+                  {showQr
+                    ? t("treasury.share.hideQr") ?? "Hide QR Code"
+                    : t("treasury.share.qrCode")}
                 </span>
               </Button>
 
-              {showQr && (
-                <div className="mt-3 p-4 bg-white/95 border border-border/60 flex flex-col items-center justify-center gap-2 animate-in fade-in zoom-in-95 duration-200">
-                  <img
-                    src={qrImageUrl}
-                    alt={`QR Code for entry #${sequenceNumber}`}
-                    className="w-44 h-44 border border-black/10"
-                    loading="lazy"
-                  />
-                  <span className="text-[10px] font-mono text-black/70 font-semibold text-center">
-                    kasly.bkev.in/{shortHash}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* Web Share API Action (Mobile / Desktop Supported) */}
-            {typeof navigator !== "undefined" && typeof navigator.share === "function" && (
-              <div className="pt-1">
+              {hasNativeShare && (
                 <Button
                   type="button"
                   variant="outline"
@@ -256,11 +211,26 @@ export function ShareEntryModal({
                   onClick={() => {
                     void handleNativeShare();
                   }}
-                  className="w-full h-8 text-xs flex items-center justify-center gap-2 cursor-pointer bg-primary/10 border-primary/30 text-primary hover:bg-primary/20"
+                  className="w-full h-8 text-xs flex items-center justify-center gap-1.5 cursor-pointer bg-primary/10 border-primary/30 text-primary hover:bg-primary/20"
                 >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span>{t("treasury.share.shareVia")}</span>
+                  <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">{t("treasury.share.shareVia")}</span>
                 </Button>
+              )}
+            </div>
+
+            {/* QR Code Expandable View */}
+            {showQr && (
+              <div className="p-4 bg-white/95 border border-border/60 flex flex-col items-center justify-center gap-2 animate-in fade-in zoom-in-95 duration-200">
+                <img
+                  src={qrImageUrl}
+                  alt={`QR Code for entry #${sequenceNumber}`}
+                  className="w-44 h-44 border border-black/10"
+                  loading="lazy"
+                />
+                <span className="text-[10px] font-mono text-black/70 font-semibold text-center select-all">
+                  {shortUrl}
+                </span>
               </div>
             )}
           </CardContent>
