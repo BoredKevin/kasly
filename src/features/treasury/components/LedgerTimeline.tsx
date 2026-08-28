@@ -22,6 +22,11 @@ import {
 } from "lucide-react";
 import { RevertEntryModal, TargetLedgerEntry } from "./RevertEntryModal";
 import { LedgerEntryItem } from "./EntryDetailsModal";
+import {
+  parseRevertMemo,
+  findReversalForEntry,
+  findTargetEntry,
+} from "../utils/revertUtils";
 export type { LedgerEntryItem };
 
 export interface LedgerTimelineProps {
@@ -175,6 +180,13 @@ export function LedgerTimeline({
             <div className="border border-border/80 bg-card/60 divide-y divide-border/60 overflow-hidden shadow-sm">
               {group.entries.map((entry) => {
                 const isCredit = entry.direction === "credit";
+                const revertInfo = parseRevertMemo(entry.memo);
+                const targetRevertedEntry =
+                  revertInfo.isRevert && revertInfo.targetSequenceNumber
+                    ? findTargetEntry(revertInfo.targetSequenceNumber, entriesList)
+                    : null;
+                const reversalForThisEntry = findReversalForEntry(entry.sequenceNumber, entriesList);
+
                 return (
                   <div
                     key={entry._id}
@@ -209,6 +221,40 @@ export function LedgerTimeline({
                             className="text-[9px] font-mono px-1 py-0 bg-blue-500/15 text-blue-300 border-blue-500/30 shrink-0"
                           >
                             Transfer
+                          </Badge>
+                        )}
+
+                        {revertInfo.isRevert && revertInfo.targetSequenceNumber && (
+                          <Badge
+                            variant="secondary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (targetRevertedEntry) {
+                                setLocation(`/tx/${targetRevertedEntry.entryHash}`);
+                              }
+                            }}
+                            className={`text-[9px] font-mono px-1.5 py-0.5 bg-purple-500/15 text-purple-300 border border-purple-500/30 flex items-center gap-1 shrink-0 ${
+                              targetRevertedEntry ? "cursor-pointer hover:bg-purple-500/25 hover:text-purple-200" : ""
+                            }`}
+                            title={`Reverts Entry #${revertInfo.targetSequenceNumber}`}
+                          >
+                            <RotateCcw className="w-2.5 h-2.5" />
+                            <span>Reverts #{revertInfo.targetSequenceNumber}</span>
+                          </Badge>
+                        )}
+
+                        {reversalForThisEntry && (
+                          <Badge
+                            variant="secondary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setLocation(`/tx/${reversalForThisEntry.entryHash}`);
+                            }}
+                            className="text-[9px] font-mono px-1.5 py-0.5 bg-amber-500/15 text-amber-300 border border-amber-500/30 flex items-center gap-1 shrink-0 cursor-pointer hover:bg-amber-500/25 hover:text-amber-200"
+                            title={`Reverted by Entry #${reversalForThisEntry.sequenceNumber}`}
+                          >
+                            <RotateCcw className="w-2.5 h-2.5 text-amber-400" />
+                            <span>Reverted by #{reversalForThisEntry.sequenceNumber}</span>
                           </Badge>
                         )}
 
@@ -272,7 +318,7 @@ export function LedgerTimeline({
                       </Button>
 
                       {/* Revert Action */}
-                      {canSign && !fund?.isArchived && !isFrozen && (
+                      {canSign && !fund?.isArchived && !isFrozen && !reversalForThisEntry && (
                         <Button
                           type="button"
                           variant="destructive"
@@ -346,7 +392,7 @@ export function LedgerTimeline({
                             <span>Copy full SHA for {entry.entryHash.slice(0, 7)}</span>
                           </button>
 
-                          {canSign && !fund?.isArchived && !isFrozen && (
+                          {canSign && !fund?.isArchived && !isFrozen && !reversalForThisEntry && (
                             <button
                               type="button"
                               onClick={() => {

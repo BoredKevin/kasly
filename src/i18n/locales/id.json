@@ -253,7 +253,19 @@
       "signInToView": "Masuk untuk Melihat Transaksi",
       "accessDeniedTitle": "Akses Ditolak",
       "accessDeniedDesc": "Anda tidak memiliki izin untuk melihat transaksi di organisasi ini.",
-      "backToWorkspace": "Kembali ke Workspace"
+      "backToWorkspace": "Kembali ke Workspace",
+      "reversalEntry": "Pembalikan Kompensasi",
+      "reversalEntryBadge": "ENTRI REVERSAL",
+      "revertsEntry": "Membalikkan Entri #{{seq}}",
+      "revertedByEntry": "Dibatalkan oleh Entri #{{seq}}",
+      "goToRevertedEntry": "Buka Entri Asli #{{seq}}",
+      "goToReversalEntry": "Lihat Entri Pembalik #{{seq}}",
+      "reversalNotice": "Entri ini dicatat sebagai pembalikan kompensasi untuk Entri #{{seq}}.",
+      "revertedNotice": "Transaksi ini telah dibatalkan oleh Entri #{{seq}}.",
+      "revertReasonLabel": "Alasan Reversal",
+      "originalTransaction": "Transaksi Asli",
+      "viewOriginalEntry": "Lihat Entri Asli",
+      "viewReversal": "Lihat Reversal"
     },
     "share": {
       "modalTitle": "Bagikan Bukti Ledger",

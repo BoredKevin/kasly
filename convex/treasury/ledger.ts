@@ -349,8 +349,22 @@ export const revertEntry = mutation({
       throw new Error("Target ledger entry not found.");
     }
 
-    if (targetEntry.memo.startsWith("Revert #")) {
-      throw new Error("Cannot revert a compensating reversal entry.");
+    // Check if target entry has already been reverted
+    const subsequentEntries = await ctx.db
+      .query("ledgerEntries")
+      .withIndex("by_fundId_and_sequenceNumber", (q) =>
+        q.eq("fundId", targetEntry.fundId).gt("sequenceNumber", targetEntry.sequenceNumber)
+      )
+      .collect();
+
+    const alreadyReverted = subsequentEntries.some((e) =>
+      e.memo.startsWith(`Revert #${targetEntry.sequenceNumber}:`) ||
+      e.memo.startsWith(`Revert #${targetEntry.sequenceNumber} `) ||
+      e.memo === `Revert #${targetEntry.sequenceNumber}`
+    );
+
+    if (alreadyReverted) {
+      throw new Error(`Ledger entry #${targetEntry.sequenceNumber} has already been reverted.`);
     }
 
     const fund = await ctx.db.get("funds", targetEntry.fundId);
