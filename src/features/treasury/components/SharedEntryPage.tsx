@@ -382,13 +382,8 @@ export function SharedEntryPage({
                     variant="outline"
                     size="sm"
                     chamfer="dual"
-                    disabled={!fundEntries}
-                    onClick={() => {
-                      if (targetEntry) {
-                        setLocation(`/tx/${targetEntry.entryHash}`);
-                      }
-                    }}
-                    className="h-7 px-3 text-xs font-mono flex items-center justify-center gap-1.5 cursor-pointer bg-purple-500/10 border-purple-500/20 text-purple-300/70 shrink-0 self-start sm:self-auto"
+                    disabled
+                    className="h-7 px-3 text-xs font-mono flex items-center justify-center gap-1.5 cursor-not-allowed bg-purple-500/10 border-purple-500/20 text-purple-300/50 shrink-0 self-start sm:self-auto"
                   >
                     <span>{t("treasury.ledger.goToRevertedEntry", { seq: currentRevertInfo.targetSequenceNumber })}</span>
                   </Button>
