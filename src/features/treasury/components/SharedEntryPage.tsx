@@ -24,12 +24,14 @@ import {
   Copy,
   Check,
   Share2,
+  RotateCcw,
   ArrowLeft,
   LogIn,
   AlertTriangle,
   FileQuestion,
 } from "lucide-react";
 import { ShareEntryModal } from "./ShareEntryModal";
+import { RevertEntryModal, TargetLedgerEntry } from "./RevertEntryModal";
 
 interface SharedEntryPageProps {
   identifier: string;
@@ -44,10 +46,25 @@ export function SharedEntryPage({
   const [, setLocation] = useLocation();
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [selectedEntryForRevert, setSelectedEntryForRevert] = useState<TargetLedgerEntry | null>(null);
 
   const entryResult = useQuery(api.treasury.ledger.getPublicEntry, {
     identifier,
   });
+
+  const entryOrgId =
+    entryResult?.status === "success" ? entryResult.entry.organizationId : undefined;
+
+  const myMembership = useQuery(
+    api.members.getMyMembership,
+    entryOrgId && isAuthenticated ? { organizationId: entryOrgId } : "skip"
+  );
+
+  const canSign = Boolean(
+    myMembership?.isOwner ||
+    myMembership?.permissions.includes("ADMINISTRATOR") ||
+    myMembership?.permissions.includes("SIGN_TREASURY")
+  );
 
   const handleCopy = (text: string, key: string) => {
     void navigator.clipboard.writeText(text);
@@ -191,6 +208,10 @@ export function SharedEntryPage({
     );
   }
 
+  if (entryResult.status !== "success") {
+    return null;
+  }
+
   const entry = entryResult.entry;
   const isCredit = entry.direction === "credit";
 
@@ -255,8 +276,33 @@ export function SharedEntryPage({
               </div>
             </div>
 
-            {/* Share Entry Button (Inside Actual Entry) */}
+            {/* Action Buttons: Revert (if permitted) & Share Entry */}
             <div className="flex items-center gap-2 shrink-0">
+              {canSign && isAuthenticated && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  chamfer="dual"
+                  onClick={() =>
+                    setSelectedEntryForRevert({
+                      _id: entry._id,
+                      fundId: entry.fundId,
+                      sequenceNumber: entry.sequenceNumber,
+                      direction: entry.direction,
+                      amount: entry.amount,
+                      memo: entry.memo,
+                      keyId: entry.keyId,
+                    })
+                  }
+                  className="h-8 px-2.5 text-xs font-mono flex items-center gap-1.5 cursor-pointer text-foreground hover:text-amber-300 hover:border-amber-500/40 transition-colors"
+                  title={t("treasury.ledger.revertEntry")}
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{t("treasury.ledger.revert")}</span>
+                </Button>
+              )}
+
               <Button
                 type="button"
                 variant="outline"
@@ -463,6 +509,17 @@ export function SharedEntryPage({
         amount={entry.amount}
         isPublic={entryResult.isPublic}
       />
+
+      {/* Revert Entry Modal */}
+      {canSign && isAuthenticated && selectedEntryForRevert && (
+        <RevertEntryModal
+          isOpen={Boolean(selectedEntryForRevert)}
+          onClose={() => setSelectedEntryForRevert(null)}
+          organizationId={entry.organizationId}
+          entry={selectedEntryForRevert}
+          currency={entry.currency}
+        />
+      )}
     </div>
   );
 }
