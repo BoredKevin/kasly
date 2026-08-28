@@ -37,6 +37,7 @@ export interface TargetLedgerEntry {
   amount: number;
   memo: string;
   keyId: string;
+  duesEventId?: Id<"duesEvents">;
 }
 
 interface RevertEntryModalProps {
@@ -274,6 +275,19 @@ export function RevertEntryModal({
                 This will append a new <strong>{compensatingDirection.toUpperCase()}</strong> entry of <strong>{currency} {entry.amount.toLocaleString()}</strong> to the chain HEAD, offsetting the balance while preserving the complete append-only history.
               </p>
             </div>
+
+            {/* Dues Rollback Notice if linked to dues */}
+            {entry.duesEventId && (
+              <div className="p-3 bg-indigo-500/10 border border-indigo-500/30 text-xs space-y-1 text-indigo-300">
+                <div className="flex items-center gap-1.5 font-bold font-mono text-[11px]">
+                  <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Dues Rollback Notice:</span>
+                </div>
+                <p className="leading-relaxed text-[11px]">
+                  This transaction is linked to a member dues payment cycle. Reverting will also restore the member's dues payment status back to unpaid.
+                </p>
+              </div>
+            )}
 
             <form
               onSubmit={(e) => {

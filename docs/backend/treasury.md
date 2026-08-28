@@ -181,11 +181,14 @@ ledgerEntries: defineTable({
   signerId: v.id("users"),             // Authenticated user ID of the signer
   signature: v.string(),               // Base64URL raw ECDSA signature
   transferId: v.optional(v.string()),  // UUID linking paired transfer debit/credit
+  entryType: v.optional(v.string()),   // "waiver" for zero-amount waiver entries
+  duesEventId: v.optional(v.id("duesEvents")), // Links payment/reversal to a dues cycle
 })
   .index("by_fundId", ["fundId"])
   .index("by_fundId_and_sequenceNumber", ["fundId", "sequenceNumber"])
   .index("by_organizationId", ["organizationId"])
-  .index("by_organizationId_and_timestamp", ["organizationId", "timestamp"]),
+  .index("by_organizationId_and_timestamp", ["organizationId", "timestamp"])
+  .index("by_entryHash", ["entryHash"]),
 ```
 
 ### E. `ledgerCheckpoints` Table
@@ -370,7 +373,13 @@ Returns the current HEAD sequence number and hash for pre-sign payload assembly.
 
 #### `commitEntry` *(Mutation)*
 Appends a signed transaction to the ledger.
-- **Args**: `fundId: v.id("funds"), direction: "credit" | "debit", amount: v.number(), memo: v.string(), keyId: v.string(), previousHash: v.string(), signature: v.string()`
+- **Args**: `fundId: v.id("funds"), direction: "credit" | "debit", amount: v.number(), memo: v.string(), keyId: v.string(), previousHash: v.string(), signature: v.string(), entryType?: string, duesEventId?: v.id("duesEvents")`
+- **Permission**: `SIGN_TREASURY`
+- **Returns**: `{ entryId: Id<"ledgerEntries">, sequenceNumber: number, entryHash: string, timestamp: number }`
+
+#### `revertEntry` *(Mutation)*
+Appends a signed compensating entry that inverts the direction of a target transaction. If the target entry was linked to dues, it attaches `duesEventId` and automatically rolls back all linked member dues statuses to unpaid and decrements the event's `paidCount`.
+- **Args**: `targetEntryId: v.id("ledgerEntries"), reason: v.string(), keyId: v.string(), previousHash: v.string(), signature: v.string()`
 - **Permission**: `SIGN_TREASURY`
 - **Returns**: `{ entryId: Id<"ledgerEntries">, sequenceNumber: number, entryHash: string, timestamp: number }`
 
@@ -539,7 +548,7 @@ Snapshots a generated dues cycle created by the automated scheduler for a specif
 #### 3. `duesMemberships` Table
 Tracks individual member payment and waiver statuses per cycle in a fund.
 - **Fields**: `duesEventId`, `organizationId`, `fundId`, `memberId`, `userId`, `hasPaid`, `isWaived`, `paidAt`, `ledgerEntryId`, `recordedBy`.
-- **Indexes**: `by_duesEventId`, `by_duesEventId_and_memberId`, `by_fundId_and_userId`, `by_fundId_and_hasPaid`, `by_organizationId_and_userId`, `by_organizationId_and_hasPaid`.
+- **Indexes**: `by_duesEventId`, `by_duesEventId_and_memberId`, `by_fundId_and_userId`, `by_fundId_and_hasPaid`, `by_organizationId_and_userId`, `by_organizationId_and_hasPaid`, `by_ledgerEntryId`.
 
 ### C. Dues API Reference (`convex/treasury/dues.ts`)
 
@@ -557,4 +566,11 @@ Tracks individual member payment and waiver statuses per cycle in a fund.
 | `getMemberUnpaidPeriods` | Query | `VIEW_TREASURY` | Returns ordered list of outstanding unpaid periods for a member in a fund. |
 | `markDuesPaid` | Mutation | `SIGN_TREASURY` | Validates ECDSA signature and appends a single CLE credit entry covering N oldest unpaid periods for a fund. |
 | `waiveDues` | Mutation | `SIGN_TREASURY` | Signs and appends a zero-amount `entryType: "waiver"` entry to exempt a member obligation. |
+
+### D. Reversing Dues Payments & Waivers
+
+When a ledger entry associated with a dues payment or waiver is reverted via `treasury.ledger.revertEntry`:
+1. **Compensating Ledger Entry**: The Cryptographic Ledger Engine appends an offsetting transaction (e.g. `debit` for a prior `credit` payment, or zero-amount for a waiver) with `duesEventId` attached.
+2. **Atomic Dues Rollback**: In the same atomic mutation transaction, the system queries `duesMemberships` using the `by_ledgerEntryId` index and resets `hasPaid: false`, `isWaived: false`, `paidAt: undefined`, `ledgerEntryId: undefined`, and `recordedBy: undefined`.
+3. **Event Paid Count Decrement**: For each impacted dues cycle event, `duesEvents.paidCount` is decremented by 1, instantly updating the real-time collection ratios across all client spreadsheets and dashboards.
 

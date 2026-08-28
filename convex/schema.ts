@@ -252,7 +252,8 @@ export default defineSchema({
     .index("by_fundId_and_userId", ["fundId", "userId"])
     .index("by_fundId_and_hasPaid", ["fundId", "hasPaid"])
     .index("by_organizationId_and_userId", ["organizationId", "userId"])
-    .index("by_organizationId_and_hasPaid", ["organizationId", "hasPaid"]),
+    .index("by_organizationId_and_hasPaid", ["organizationId", "hasPaid"])
+    .index("by_ledgerEntryId", ["ledgerEntryId"]),
 });
 
 

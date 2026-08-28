@@ -327,6 +327,7 @@ export const commitEntry = mutation({
 /**
  * Reverts a previous ledger entry by creating and appending a cryptographically signed compensating entry.
  * In an append-only ledger, entries are never modified or deleted; a compensating entry inverts the direction.
+ * If the target entry was linked to dues, this also rolls back the member's dues payment status atomically.
  */
 export const revertEntry = mutation({
   args: {
@@ -346,6 +347,10 @@ export const revertEntry = mutation({
     const targetEntry = await ctx.db.get("ledgerEntries", args.targetEntryId);
     if (!targetEntry) {
       throw new Error("Target ledger entry not found.");
+    }
+
+    if (targetEntry.memo.startsWith("Revert #")) {
+      throw new Error("Cannot revert a compensating reversal entry.");
     }
 
     const fund = await ctx.db.get("funds", targetEntry.fundId);
@@ -368,14 +373,44 @@ export const revertEntry = mutation({
     const compensatingDirection = targetEntry.direction === "credit" ? "debit" : "credit";
     const memo = `Revert #${targetEntry.sequenceNumber}: ${trimmedReason}`;
 
-    return await executeCommit(ctx, user, fund, {
+    // 1. Commit the compensating transaction with attached duesEventId and entryType
+    const commitResult = await executeCommit(ctx, user, fund, {
       direction: compensatingDirection,
       amount: targetEntry.amount,
       memo,
       keyId: args.keyId,
       previousHash: args.previousHash,
       signature: args.signature,
+      duesEventId: targetEntry.duesEventId,
+      entryType: targetEntry.entryType,
     });
+
+    // 2. Roll back any dues memberships marked by the target ledger entry
+    const linkedMemberships = await ctx.db
+      .query("duesMemberships")
+      .withIndex("by_ledgerEntryId", (q) =>
+        q.eq("ledgerEntryId", targetEntry._id)
+      )
+      .collect();
+
+    for (const membership of linkedMemberships) {
+      await ctx.db.patch("duesMemberships", membership._id, {
+        hasPaid: false,
+        isWaived: false,
+        paidAt: undefined,
+        ledgerEntryId: undefined,
+        recordedBy: undefined,
+      });
+
+      const event = await ctx.db.get("duesEvents", membership.duesEventId);
+      if (event && event.paidCount > 0) {
+        await ctx.db.patch("duesEvents", event._id, {
+          paidCount: Math.max(0, event.paidCount - 1),
+        });
+      }
+    }
+
+    return commitResult;
   },
 });
 
