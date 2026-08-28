@@ -460,8 +460,10 @@ For the exhaustive cryptographic specifications, payload canonicalization, signa
 ### Append-Only Ledger (`convex/treasury/ledger.ts`)
 * `treasury.ledger.getLatestEntry` *(Query)*: Returns current HEAD sequence number and hash for pre-sign payload assembly. Requires `SIGN_TREASURY`.
 * `treasury.ledger.commitEntry` *(Mutation)*: Commits a cryptographically signed debit or credit entry to the append-only chain. Requires `SIGN_TREASURY`.
+* `treasury.ledger.revertEntry` *(Mutation)*: Appends a signed compensating entry that inverts a previous transaction. If the target entry was linked to dues, it attaches `duesEventId` and automatically rolls back linked member dues statuses to unpaid and decrements event `paidCount`. Requires `SIGN_TREASURY`.
 * `treasury.ledger.transfer` *(Mutation)*: Atomically executes a paired debit and credit across two funds in a single transaction with a shared `transferId`. Requires `SIGN_TREASURY`.
 * `treasury.ledger.listEntries` *(Query)*: Lists paginated ledger entries in reverse chronological order. Requires `VIEW_TREASURY`.
+* `treasury.ledger.getPublicEntry` *(Query)*: Resolves a single cryptographic ledger entry proof by SHA-256 hash or ID. Respects public receipts configuration and `VIEW_TREASURY`.
 * `treasury.ledger.getBalance` *(Query)*: Derives current balance from nearest checkpoint to HEAD. Requires `VIEW_TREASURY`.
 * `treasury.ledger.getBalances` *(Query)*: Derives current balances for all active funds in an organization. Requires `VIEW_TREASURY`.
 * `treasury.ledger.verifyChain` *(Query)*: Mathematically verifies entire hash chain and all ECDSA signatures from genesis to HEAD. Requires `VIEW_TREASURY`.

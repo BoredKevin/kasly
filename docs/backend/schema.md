@@ -287,8 +287,11 @@ For exhaustive field specifications, cryptographic algorithms, hash chaining for
 * `funds` — Organization financial accounts (`name`, `currency`, `createdBy`, `isArchived`).
 * `pendingKeys` — Zero-trust public key registration requests awaiting admin approval (`userId`, `publicKeyJwk`, `keyId`, `status`).
 * `treasurerKeys` — Approved public keys authorized to sign debit/credit ledger entries (`userId`, `publicKeyJwk`, `keyId`, `revokedAt`).
-* `ledgerEntries` — Append-only immutable hash chain (`fundId`, `sequenceNumber`, `previousHash`, `entryHash`, `direction`, `amount`, `memo`, `keyId`, `signerId`, `signature`, `transferId`).
+* `ledgerEntries` — Append-only immutable hash chain (`fundId`, `sequenceNumber`, `previousHash`, `entryHash`, `direction`, `amount`, `memo`, `keyId`, `signerId`, `signature`, `transferId`, `entryType`, `duesEventId`).
 * `ledgerCheckpoints` — Periodic running balance and entry hash snapshots for $O(1)$ fast balance replay.
+* `duesConfig` — Recurring dues schedule settings scoped per fund (`intervalType`, `intervalValue`, `amount`, `isEnabled`, `nextScheduledAt`).
+* `duesEvents` — Historical and active dues cycle snapshots per fund (`periodLabel`, `dueDate`, `amount`, `totalMembers`, `paidCount`).
+* `duesMemberships` — Member payment and waiver tracking per dues cycle (`duesEventId`, `fundId`, `userId`, `memberId`, `hasPaid`, `isWaived`, `paidAt`, `ledgerEntryId`). Indexed by `by_ledgerEntryId` for $O(1)$ reversal rollback.
 
 
 ### Role Deletion Cleanup
