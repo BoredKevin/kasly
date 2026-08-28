@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "convex/react";
 import { useLocation } from "wouter";
 import { api } from "../../../../convex/_generated/api";
@@ -26,7 +26,7 @@ export type { LedgerEntryItem };
 
 export interface LedgerTimelineProps {
   fundId: Id<"funds"> | null;
-  organizationId: Id<"organizations">;
+  organizationId?: Id<"organizations">;
   limit?: number;
   pageSize?: number;
   showPagination?: boolean;
@@ -45,11 +45,8 @@ function formatRelativeTime(timestamp: number): string {
   if (diffHours < 24) return `${diffHours}h ago`;
   const diffDays = Math.floor(diffHours / 24);
   if (diffDays === 1) return "yesterday";
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return new Date(timestamp).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
+  if (diffDays < 30) return `${diffDays}d ago`;
+  return new Date(timestamp).toLocaleDateString();
 }
 
 interface DateGroup {
@@ -60,7 +57,6 @@ interface DateGroup {
 
 function groupEntriesByDate(entries: LedgerEntryItem[]): DateGroup[] {
   const groups: DateGroup[] = [];
-
   for (const entry of entries) {
     const d = new Date(entry.timestamp);
     const dateKey = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
@@ -77,7 +73,6 @@ function groupEntriesByDate(entries: LedgerEntryItem[]): DateGroup[] {
     }
     group.entries.push(entry);
   }
-
   return groups;
 }
 
@@ -101,9 +96,11 @@ export function LedgerTimeline({
     fundId ? { fundId } : "skip"
   );
 
+  const effectiveOrgId = organizationId ?? fund?.organizationId;
+
   const myMembership = useQuery(
     api.members.getMyMembership,
-    organizationId ? { organizationId } : "skip"
+    effectiveOrgId ? { organizationId: effectiveOrgId } : "skip"
   );
 
   const canSign = Boolean(
@@ -111,6 +108,13 @@ export function LedgerTimeline({
     myMembership?.permissions.includes("ADMINISTRATOR") ||
     myMembership?.permissions.includes("SIGN_TREASURY")
   );
+
+  useEffect(() => {
+    if (!activeMobileMenuId) return;
+    const handleOutsideClick = () => setActiveMobileMenuId(null);
+    window.addEventListener("click", handleOutsideClick);
+    return () => window.removeEventListener("click", handleOutsideClick);
+  }, [activeMobileMenuId]);
 
   // Fetch entries with optional limit
   const entriesData = useQuery(
@@ -410,11 +414,11 @@ export function LedgerTimeline({
       )}
 
       {/* Revert Entry Modal */}
-      {canSign && (
+      {canSign && effectiveOrgId && (
         <RevertEntryModal
           isOpen={Boolean(selectedEntryForRevert)}
           onClose={() => setSelectedEntryForRevert(null)}
-          organizationId={organizationId}
+          organizationId={effectiveOrgId}
           entry={selectedEntryForRevert}
           currency={fund?.currency}
           onOpenKeyGen={onOpenKeyGen}
