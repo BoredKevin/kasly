@@ -287,6 +287,7 @@ export function LedgerTimeline({
                               amount: entry.amount,
                               memo: entry.memo,
                               keyId: entry.keyId,
+                              duesEventId: entry.duesEventId,
                             })
                           }
                           title={`Revert Entry #${entry.sequenceNumber}`}
@@ -357,6 +358,7 @@ export function LedgerTimeline({
                                   amount: entry.amount,
                                   memo: entry.memo,
                                   keyId: entry.keyId,
+                                  duesEventId: entry.duesEventId,
                                 });
                                 setActiveMobileMenuId(null);
                               }}

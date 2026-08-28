@@ -293,6 +293,7 @@ export function SharedEntryPage({
                       amount: entry.amount,
                       memo: entry.memo,
                       keyId: entry.keyId,
+                      duesEventId: entry.duesEventId,
                     })
                   }
                   className="h-8 px-2.5 text-xs font-mono flex items-center gap-1.5 cursor-pointer text-foreground hover:text-amber-300 hover:border-amber-500/40 transition-colors"

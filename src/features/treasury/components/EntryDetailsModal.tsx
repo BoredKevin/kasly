@@ -42,6 +42,8 @@ export interface LedgerEntryItem {
   signerName?: string;
   signature: string;
   transferId?: string;
+  entryType?: string;
+  duesEventId?: Id<"duesEvents">;
 }
 
 interface EntryDetailsModalProps {
