@@ -253,7 +253,19 @@
       "signInToView": "Sign In to View Transaction",
       "accessDeniedTitle": "Access Denied",
       "accessDeniedDesc": "You do not have permission to view transactions in this organization.",
-      "backToWorkspace": "Return to Workspace"
+      "backToWorkspace": "Return to Workspace",
+      "reversalEntry": "Compensating Reversal",
+      "reversalEntryBadge": "REVERSAL ENTRY",
+      "revertsEntry": "Reverts Entry #{{seq}}",
+      "revertedByEntry": "Reverted by Entry #{{seq}}",
+      "goToRevertedEntry": "Go to Original Entry #{{seq}}",
+      "goToReversalEntry": "View Reversal Entry #{{seq}}",
+      "reversalNotice": "This entry was recorded as a compensating reversal for Entry #{{seq}}.",
+      "revertedNotice": "This transaction was reversed by compensating Entry #{{seq}}.",
+      "revertReasonLabel": "Reversal Reason",
+      "originalTransaction": "Original Transaction",
+      "viewOriginalEntry": "View Original Entry",
+      "viewReversal": "View Reversal"
     },
     "share": {
       "modalTitle": "Share Ledger Proof",

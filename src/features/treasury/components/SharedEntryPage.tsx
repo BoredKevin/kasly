@@ -26,12 +26,19 @@ import {
   Share2,
   RotateCcw,
   ArrowLeft,
+  ArrowRight,
   LogIn,
   AlertTriangle,
+  AlertCircle,
   FileQuestion,
 } from "lucide-react";
 import { ShareEntryModal } from "./ShareEntryModal";
 import { RevertEntryModal, TargetLedgerEntry } from "./RevertEntryModal";
+import {
+  parseRevertMemo,
+  findReversalForEntry,
+  findTargetEntry,
+} from "../utils/revertUtils";
 
 interface SharedEntryPageProps {
   identifier: string;
@@ -54,6 +61,13 @@ export function SharedEntryPage({
 
   const entryOrgId =
     entryResult?.status === "success" ? entryResult.entry.organizationId : undefined;
+
+  const fundEntries = useQuery(
+    api.treasury.ledger.listEntries,
+    entryResult?.status === "success" && isAuthenticated
+      ? { fundId: entryResult.entry.fundId, limit: 200 }
+      : "skip"
+  );
 
   const myMembership = useQuery(
     api.members.getMyMembership,
@@ -214,6 +228,12 @@ export function SharedEntryPage({
 
   const entry = entryResult.entry;
   const isCredit = entry.direction === "credit";
+  const currentRevertInfo = parseRevertMemo(entry.memo);
+  const targetEntry =
+    currentRevertInfo.isRevert && currentRevertInfo.targetSequenceNumber
+      ? findTargetEntry(currentRevertInfo.targetSequenceNumber, fundEntries)
+      : null;
+  const compensatingEntry = findReversalForEntry(entry.sequenceNumber, fundEntries);
 
   return (
     <div className="w-full max-w-2xl mx-auto space-y-4 animate-in fade-in duration-200">
@@ -256,11 +276,10 @@ export function SharedEntryPage({
                   <span>{t("treasury.ledger.entryNumber", { seq: entry.sequenceNumber })}</span>
                   <Badge
                     variant="outline"
-                    className={`text-[10px] font-mono font-bold px-1.5 py-0.5 border flex items-center gap-1 shrink-0 ${
-                      isCredit
-                        ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
-                        : "bg-red-500/15 text-red-300 border-red-500/30"
-                    }`}
+                    className={`text-[10px] font-mono font-bold px-1.5 py-0.5 border flex items-center gap-1 shrink-0 ${isCredit
+                      ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+                      : "bg-red-500/15 text-red-300 border-red-500/30"
+                      }`}
                   >
                     {isCredit ? (
                       <ArrowDownLeft className="w-3 h-3" />
@@ -278,7 +297,7 @@ export function SharedEntryPage({
 
             {/* Action Buttons: Revert (if permitted) & Share Entry */}
             <div className="flex items-center gap-2 shrink-0">
-              {canSign && isAuthenticated && (
+              {canSign && isAuthenticated && !compensatingEntry && (
                 <Button
                   type="button"
                   variant="outline"
@@ -322,6 +341,139 @@ export function SharedEntryPage({
 
         {/* Content Section */}
         <CardContent className="pt-4 space-y-4 text-xs font-mono">
+          {/* Quick Switcher: Compensating Reversal View */}
+          {currentRevertInfo.isRevert && currentRevertInfo.targetSequenceNumber && (
+            <div className="p-3.5 bg-purple-500/10 border border-purple-500/30 space-y-2.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div className="flex items-start sm:items-center gap-2">
+                  <div className="p-1 bg-purple-500/20 text-purple-300 border border-purple-500/40 shrink-0 mt-0.5 sm:mt-0">
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-purple-300">
+                        {t("treasury.ledger.reversalEntryBadge")}
+                      </span>
+                      <Badge variant="outline" className="text-[10px] font-mono border-purple-500/40 text-purple-200">
+                        #{entry.sequenceNumber} ➔ #{currentRevertInfo.targetSequenceNumber}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground font-sans mt-0.5">
+                      {t("treasury.ledger.reversalNotice", { seq: currentRevertInfo.targetSequenceNumber })}
+                    </p>
+                  </div>
+                </div>
+
+                {targetEntry ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    chamfer="dual"
+                    onClick={() => setLocation(`/tx/${targetEntry.entryHash}`)}
+                    className="h-7 px-3 text-xs font-mono flex items-center justify-center gap-1.5 cursor-pointer bg-purple-500/15 border-purple-500/40 text-purple-200 hover:bg-purple-500/25 hover:text-purple-100 shrink-0 self-start sm:self-auto"
+                  >
+                    <span>{t("treasury.ledger.goToRevertedEntry", { seq: currentRevertInfo.targetSequenceNumber })}</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    chamfer="dual"
+                    disabled={!fundEntries}
+                    onClick={() => {
+                      if (targetEntry) {
+                        setLocation(`/tx/${targetEntry.entryHash}`);
+                      }
+                    }}
+                    className="h-7 px-3 text-xs font-mono flex items-center justify-center gap-1.5 cursor-pointer bg-purple-500/10 border-purple-500/20 text-purple-300/70 shrink-0 self-start sm:self-auto"
+                  >
+                    <span>{t("treasury.ledger.goToRevertedEntry", { seq: currentRevertInfo.targetSequenceNumber })}</span>
+                  </Button>
+                )}
+              </div>
+
+              {/* Revert Reason & Target Entry Snippet */}
+              <div className="pt-2 border-t border-purple-500/20 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                {currentRevertInfo.reason && (
+                  <div className="p-2 bg-background/50 border border-purple-500/20 space-y-0.5">
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
+                      {t("treasury.ledger.revertReasonLabel")}
+                    </span>
+                    <p className="text-foreground font-sans break-words text-xs">
+                      {currentRevertInfo.reason}
+                    </p>
+                  </div>
+                )}
+
+                {targetEntry && (
+                  <div className="p-2 bg-background/50 border border-purple-500/20 space-y-0.5">
+                    <div className="flex items-center justify-between text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
+                      <span>{t("treasury.ledger.originalTransaction")}</span>
+                      <Badge
+                        variant="outline"
+                        className={`text-[9px] font-mono px-1 py-0 ${targetEntry.direction === "credit"
+                          ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+                          : "bg-red-500/15 text-red-300 border-red-500/30"
+                          }`}
+                      >
+                        {targetEntry.direction.toUpperCase()} {entry.currency} {targetEntry.amount.toLocaleString()}
+                      </Badge>
+                    </div>
+                    <p className="text-foreground font-sans truncate text-xs" title={targetEntry.memo}>
+                      {targetEntry.memo}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Quick Notice: Reverted Entry View */}
+          {compensatingEntry && (
+            <div className="p-3.5 bg-amber-500/10 border border-amber-500/40 space-y-2.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div className="flex items-start sm:items-center gap-2">
+                  <div className="p-1 bg-amber-500/20 text-amber-400 border border-amber-500/40 shrink-0 mt-0.5 sm:mt-0">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge variant="outline" className="text-[10px] font-mono border-amber-500/40 text-amber-300">
+                        {t("treasury.ledger.revertedByEntry", { seq: compensatingEntry.sequenceNumber })}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  chamfer="dual"
+                  onClick={() => setLocation(`/tx/${compensatingEntry.entryHash}`)}
+                  className="h-7 px-3 text-xs font-mono flex items-center justify-center gap-1.5 cursor-pointer bg-amber-500/15 border-amber-500/40 text-amber-300 hover:bg-amber-500/25 hover:text-amber-200 shrink-0 self-start sm:self-auto"
+                >
+                  <span>{t("treasury.ledger.goToReversalEntry", { seq: compensatingEntry.sequenceNumber })}</span>
+                  <ArrowRight className="w-3 h-3" />
+                </Button>
+              </div>
+
+              {compensatingEntry.revertReason && (
+                <div className="p-2 bg-background/50 border border-amber-500/20 space-y-0.5">
+                  <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
+                    {t("treasury.ledger.revertReasonLabel")}
+                  </span>
+                  <p className="text-foreground font-sans break-words text-xs">
+                    {compensatingEntry.revertReason}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Amount & Memo */}
           <div className="p-3.5 bg-background/60 border border-border/70 space-y-2">
             <div className="flex items-center justify-between">

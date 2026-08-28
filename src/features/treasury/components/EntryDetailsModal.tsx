@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
+import { useQuery } from "convex/react";
+import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
+import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import {
   Card,
@@ -19,11 +22,19 @@ import {
   Lock,
   ArrowDownLeft,
   ArrowUpRight,
+  ArrowRight,
+  RotateCcw,
+  AlertCircle,
   GitCommit,
   User,
   Clock,
   KeyRound,
 } from "lucide-react";
+import {
+  parseRevertMemo,
+  findReversalForEntry,
+  findTargetEntry,
+} from "../utils/revertUtils";
 
 export interface LedgerEntryItem {
   _id: Id<"ledgerEntries">;
@@ -62,16 +73,33 @@ export function EntryDetailsModal({
   fundName = "Fund",
 }: EntryDetailsModalProps) {
   const { t } = useTranslation();
+  const [, setLocation] = useLocation();
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const fundEntries = useQuery(
+    api.treasury.ledger.listEntries,
+    isOpen && entry?.fundId ? { fundId: entry.fundId, limit: 200 } : "skip"
+  );
 
   if (!isOpen || !entry || typeof document === "undefined") return null;
 
   const isCredit = entry.direction === "credit";
+  const currentRevertInfo = parseRevertMemo(entry.memo);
+  const targetEntry =
+    currentRevertInfo.isRevert && currentRevertInfo.targetSequenceNumber
+      ? findTargetEntry(currentRevertInfo.targetSequenceNumber, fundEntries)
+      : null;
+  const compensatingEntry = findReversalForEntry(entry.sequenceNumber, fundEntries);
 
   const handleCopy = (text: string, key: string) => {
     void navigator.clipboard.writeText(text);
     setCopiedKey(key);
     setTimeout(() => setCopiedKey(null), 2000);
+  };
+
+  const handleNavigateToEntry = (hash: string) => {
+    setLocation(`/tx/${hash}`);
+    onClose();
   };
 
   const modalContent = (
@@ -120,6 +148,87 @@ export function EntryDetailsModal({
           </CardHeader>
 
           <CardContent className="pt-4 max-h-[75vh] overflow-y-auto space-y-4 text-xs font-mono">
+            {/* Quick Switcher: Compensating Reversal View */}
+            {currentRevertInfo.isRevert && currentRevertInfo.targetSequenceNumber && (
+              <div className="p-3 bg-purple-500/10 border border-purple-500/30 space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-start sm:items-center gap-2">
+                    <div className="p-1 bg-purple-500/20 text-purple-300 border border-purple-500/40 shrink-0 mt-0.5 sm:mt-0">
+                      <RotateCcw className="w-3 h-3" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-purple-300">
+                          {t("treasury.ledger.reversalEntryBadge")}
+                        </span>
+                        <Badge variant="outline" className="text-[9px] font-mono border-purple-500/40 text-purple-200">
+                          #{entry.sequenceNumber} ➔ #{currentRevertInfo.targetSequenceNumber}
+                        </Badge>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground font-sans mt-0.5">
+                        {t("treasury.ledger.reversalNotice", { seq: currentRevertInfo.targetSequenceNumber })}
+                      </p>
+                    </div>
+                  </div>
+
+                  {targetEntry && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      chamfer="dual"
+                      onClick={() => handleNavigateToEntry(targetEntry.entryHash)}
+                      className="h-6 px-2 text-[11px] font-mono flex items-center justify-center gap-1 cursor-pointer bg-purple-500/15 border-purple-500/40 text-purple-200 hover:bg-purple-500/25 shrink-0"
+                    >
+                      <span>{t("treasury.ledger.goToRevertedEntry", { seq: currentRevertInfo.targetSequenceNumber })}</span>
+                      <ArrowRight className="w-2.5 h-2.5" />
+                    </Button>
+                  )}
+                </div>
+
+                {currentRevertInfo.reason && (
+                  <div className="p-2 bg-background/50 border border-purple-500/20 text-[11px]">
+                    <span className="text-[9px] uppercase font-bold text-muted-foreground block">
+                      {t("treasury.ledger.revertReasonLabel")}
+                    </span>
+                    <p className="text-foreground font-sans break-words">{currentRevertInfo.reason}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Quick Notice: Reverted Entry View */}
+            {compensatingEntry && (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/40 space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-start sm:items-center gap-2">
+                    <div className="p-1 bg-amber-500/20 text-amber-400 border border-amber-500/40 shrink-0 mt-0.5 sm:mt-0">
+                      <AlertCircle className="w-3 h-3" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant="outline" className="text-[9px] font-mono border-amber-500/40 text-amber-300">
+                          {t("treasury.ledger.revertedByEntry", { seq: compensatingEntry.sequenceNumber })}
+                        </Badge>
+                      </div>` `
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    chamfer="dual"
+                    onClick={() => handleNavigateToEntry(compensatingEntry.entryHash)}
+                    className="h-6 px-2 text-[11px] font-mono flex items-center justify-center gap-1 cursor-pointer bg-amber-500/15 border-amber-500/40 text-amber-300 hover:bg-amber-500/25 shrink-0"
+                  >
+                    <span>{t("treasury.ledger.goToReversalEntry", { seq: compensatingEntry.sequenceNumber })}</span>
+                    <ArrowRight className="w-2.5 h-2.5" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* Amount & Memo */}
             <div className="p-3.5 bg-background/60 border border-border/70 space-y-2">
               <div className="flex items-center justify-between">
