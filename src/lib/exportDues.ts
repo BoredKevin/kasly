@@ -1,4 +1,3 @@
-import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import packageJson from "../../package.json";
@@ -50,14 +49,33 @@ export interface DuesExportPayload {
   };
 }
 
-function formatCurrency(amt: number, currency: string = "IDR"): string {
+export interface DuesMemberSummary {
+  member: DuesExportMember;
+  rangePaid: number;
+  rangeUnpaid: number;
+}
+
+export interface DuesReportAggregates {
+  rangeMemberTotals: DuesMemberSummary[];
+  totalPaidSum: number;
+  totalUnpaidSum: number;
+  totalExpected: number;
+  totalCollected: number;
+  collectionRate: number;
+}
+
+// ==========================================
+// Formatting & Calculation Helpers
+// ==========================================
+
+export function formatCurrency(amt: number, currency: string = "IDR"): string {
   if (currency === "IDR") {
     return `Rp ${amt.toLocaleString("id-ID")}`;
   }
   return `${currency} ${amt.toLocaleString()}`;
 }
 
-function formatDueDateYMD(dueDate: number): string {
+export function formatDueDateYMD(dueDate: number): string {
   const d = new Date(dueDate);
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, "0");
@@ -65,30 +83,24 @@ function formatDueDateYMD(dueDate: number): string {
   return `${year}/${month}/${day}`;
 }
 
-function sanitizeFilename(name: string): string {
+export function formatDueDateShort(dueDate: number): string {
+  return new Date(dueDate).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+export function sanitizeFilename(name: string): string {
   return name.replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
 }
 
 /**
- * Generates and downloads an Excel workbook (.xlsx) containing the Dues Matrix
- * and a high-level Executive Summary sheet.
+ * Computes range-specific paid/unpaid totals per member and aggregate collection stats.
  */
-export async function exportDuesToExcel(payload: DuesExportPayload): Promise<void> {
-  const {
-    fundName,
-    organizationName = "Kasly Workspace",
-    currency = "IDR",
-    events,
-    members,
-    cellMap,
-    rangeLabel,
-  } = payload;
+export function calculateDuesAggregates(payload: DuesExportPayload): DuesReportAggregates {
+  const { events, members, cellMap } = payload;
 
-  const dateStr = new Date().toISOString().slice(0, 10);
-  const formattedNow = new Date().toLocaleString();
-
-  // 1. Calculate Range-Specific Aggregate Totals
-  const rangeMemberTotals = members.map((m) => {
+  const rangeMemberTotals: DuesMemberSummary[] = members.map((m) => {
     const rangePaid = events.reduce((sum, e) => {
       const cell = cellMap.get(`${m._id}_${e._id}`);
       return sum + (cell?.hasPaid && !cell.isWaived ? e.amount : 0);
@@ -106,117 +118,19 @@ export async function exportDuesToExcel(payload: DuesExportPayload): Promise<voi
   const totalCollected = events.reduce((sum, e) => sum + e.amount * e.paidCount, 0);
   const collectionRate = totalExpected > 0 ? Math.round((totalCollected / totalExpected) * 100) : 0;
 
-  // 2. Build Sheet 1: Dues Matrix (AOA - Array of Arrays)
-  const matrixData: (string | number)[][] = [
-    ["KASLY TREASURY - DUES & PAYMENTS REPORT"],
-    ["Organization:", organizationName],
-    ["Fund Account:", fundName],
-    ["Cycle Range:", rangeLabel || `All ${events.length} Recorded Cycles`],
-    ["Generated At:", formattedNow],
-    ["Currency:", currency],
-    [], // Blank separator row
-    [
-      "No",
-      "Member Name",
-      "Email / Identifier",
-      `Paid in Range (${currency})`,
-      "Unpaid in Range",
-      "Range Status",
-      ...events.map(
-        (e) =>
-          `${e.periodLabel} (${new Date(e.dueDate).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          })})`
-      ),
-    ],
-  ];
-
-  rangeMemberTotals.forEach(({ member, rangePaid, rangeUnpaid }, index) => {
-    const row: (string | number)[] = [
-      index + 1,
-      member.nickname ? `${member.nickname} (${member.name})` : member.name,
-      member.email || "-",
-      rangePaid,
-      rangeUnpaid,
-      rangeUnpaid === 0 ? "✓ Fully Paid" : `✗ ${rangeUnpaid} Unpaid`,
-    ];
-
-    events.forEach((event) => {
-      const cell = cellMap.get(`${member._id}_${event._id}`);
-      if (cell?.hasPaid) {
-        if (cell.isWaived) {
-          row.push("WAIVED");
-        } else {
-          row.push(cell.paidAt ? `✓ (${new Date(cell.paidAt).toLocaleDateString()})` : "✓");
-        }
-      } else {
-        row.push("✗");
-      }
-    });
-
-    matrixData.push(row);
-  });
-
-  // Footer Totals Row
-  const totalsRow: (string | number)[] = [
-    "TOTALS",
-    `${members.length} Members`,
-    "",
+  return {
+    rangeMemberTotals,
     totalPaidSum,
     totalUnpaidSum,
-    "",
-    ...events.map((e) => `${e.paidCount}/${e.totalMembers} Paid`),
-  ];
-  matrixData.push(totalsRow);
-
-  // Convert Matrix to Worksheet
-  const matrixWs = XLSX.utils.aoa_to_sheet(matrixData);
-
-  // Auto-calculate column widths
-  const colWidths = [
-    { wch: 6 },  // No
-    { wch: 26 }, // Member Name
-    { wch: 28 }, // Email
-    { wch: 18 }, // Total Paid
-    { wch: 15 }, // Unpaid Periods
-    { wch: 14 }, // Status
-    ...events.map(() => ({ wch: 22 })), // Cycle columns
-  ];
-  matrixWs["!cols"] = colWidths;
-
-  // 3. Build Sheet 2: Executive Summary
-  const summaryData: (string | number)[][] = [
-    ["KASLY TREASURY - EXECUTIVE SUMMARY"],
-    ["Fund Account", fundName],
-    ["Organization", organizationName],
-    ["Report Date", formattedNow],
-    ["Report Currency", currency],
-    [],
-    ["Metric", "Value"],
-    ["Total Enrolled Members", members.length],
-    ["Total Dues Cycles Recorded", events.length],
-    ["Dues Amount per Member", formatCurrency(payload.summary?.config?.amount ?? (events[0]?.amount ?? 0), currency)],
-    ["Total Expected Collection", formatCurrency(totalExpected, currency)],
-    ["Total Amount Collected", formatCurrency(totalCollected, currency)],
-    ["Total Outstanding Balance", formatCurrency(Math.max(0, totalExpected - totalCollected), currency)],
-    ["Overall Collection Rate", `${collectionRate}%`],
-    ["Schedule Status", payload.summary?.config?.isEnabled ? "Active" : "Paused / None"],
-    ["Schedule Interval", payload.summary?.config?.intervalType ? `${payload.summary.config.intervalType}` : "Manual"],
-  ];
-
-  const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
-  summaryWs["!cols"] = [{ wch: 28 }, { wch: 30 }];
-
-  // 4. Create Workbook and Export
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, matrixWs, "Dues Matrix");
-  XLSX.utils.book_append_sheet(wb, summaryWs, "Fund Summary");
-
-  const filename = `${sanitizeFilename(fundName)}_dues_matrix_${dateStr}.xlsx`;
-  XLSX.writeFile(wb, filename);
+    totalExpected,
+    totalCollected,
+    collectionRate,
+  };
 }
+
+// ==========================================
+// Font Loader
+// ==========================================
 
 let cachedJakartaRegular: string | null = null;
 let cachedJakartaBold: string | null = null;
@@ -269,54 +183,19 @@ async function loadJakartaFont(doc: jsPDF): Promise<string> {
   }
 }
 
-/**
- * Generates and downloads a vector-styled PDF report (.pdf) in landscape orientation
- * with KPI summary cards and an auto-paginated dues matrix table.
- */
-export async function exportDuesToPdf(payload: DuesExportPayload): Promise<void> {
-  const {
-    fundName,
-    organizationName = "Kasly Workspace",
-    currency = "IDR",
-    events,
-    members,
-    cellMap,
-    rangeLabel,
-  } = payload;
+// ==========================================
+// PDF Header & KPI Drawing
+// ==========================================
 
-  const dateStr = new Date().toISOString().slice(0, 10);
-  const formattedNow = new Date().toLocaleString();
+function drawReportHeader(
+  doc: jsPDF,
+  fontName: string,
+  payload: DuesExportPayload,
+  pageWidth: number,
+  formattedNow: string
+): void {
+  const { fundName, organizationName = "Kasly Workspace", currency = "IDR", rangeLabel } = payload;
 
-  // 1. Calculate Range-Specific Aggregate Totals
-  const rangeMemberTotals = members.map((m) => {
-    const rangePaid = events.reduce((sum, e) => {
-      const cell = cellMap.get(`${m._id}_${e._id}`);
-      return sum + (cell?.hasPaid && !cell.isWaived ? e.amount : 0);
-    }, 0);
-    const rangeUnpaid = events.reduce((sum, e) => {
-      const cell = cellMap.get(`${m._id}_${e._id}`);
-      return sum + (!cell?.hasPaid ? 1 : 0);
-    }, 0);
-    return { member: m, rangePaid, rangeUnpaid };
-  });
-
-  const totalPaidSum = rangeMemberTotals.reduce((sum, item) => sum + item.rangePaid, 0);
-  const totalUnpaidSum = rangeMemberTotals.reduce((sum, item) => sum + item.rangeUnpaid, 0);
-  const totalExpected = events.reduce((sum, e) => sum + e.amount * members.length, 0);
-  const totalCollected = events.reduce((sum, e) => sum + e.amount * e.paidCount, 0);
-  const collectionRate = totalExpected > 0 ? Math.round((totalCollected / totalExpected) * 100) : 0;
-
-  // 2. Initialize PDF in Landscape A4
-  const doc = new jsPDF({
-    orientation: "landscape",
-    unit: "pt",
-    format: "a4",
-  });
-
-  const fontName = await loadJakartaFont(doc);
-  const pageWidth = doc.internal.pageSize.getWidth();
-
-  // 3. Draw Header Section
   doc.setFont(fontName, "bold");
   doc.setFontSize(16);
   doc.setTextColor(15, 23, 42); // slate-900
@@ -330,12 +209,22 @@ export async function exportDuesToPdf(payload: DuesExportPayload): Promise<void>
     : `Organization: ${organizationName}   |   Fund: ${fundName}   |   Currency: ${currency}   |   Generated: ${formattedNow}`;
   doc.text(headerSubtitle, 40, 58);
 
-  // Decorative header line
+  // Decorative header separator line
   doc.setDrawColor(226, 232, 240); // slate-200
   doc.setLineWidth(1);
   doc.line(40, 68, pageWidth - 40, 68);
+}
 
-  // 4. Draw Summary KPI Box with Dual-Chamfer Frames
+function drawKpiSummaryBox(
+  doc: jsPDF,
+  fontName: string,
+  payload: DuesExportPayload,
+  aggregates: DuesReportAggregates,
+  pageWidth: number
+): void {
+  const { currency = "IDR", members, events } = payload;
+  const { totalExpected, totalCollected, collectionRate } = aggregates;
+
   const summaryBoxY = 78;
   const summaryBoxHeight = 44;
   const summaryBoxWidth = pageWidth - 80;
@@ -366,7 +255,7 @@ export async function exportDuesToPdf(payload: DuesExportPayload): Promise<void>
 
   const colWidth = summaryBoxWidth / kpis.length;
 
-  // Draw subtle vertical column dividers
+  // Draw subtle vertical dividers between KPI segments
   for (let i = 1; i < kpis.length; i++) {
     const sepX = 40 + i * colWidth;
     doc.setDrawColor(226, 232, 240); // slate-200
@@ -386,14 +275,52 @@ export async function exportDuesToPdf(payload: DuesExportPayload): Promise<void>
     doc.setTextColor(15, 23, 42); // slate-900
     doc.text(kpi.value, x, summaryBoxY + 34);
   });
+}
 
-  // Determine if column spacing is too narrow for standard multi-line horizontal text
+// ==========================================
+// Main PDF Generator
+// ==========================================
+
+/**
+ * Generates and downloads a vector-styled PDF report (.pdf) in landscape orientation
+ * with KPI summary cards and an auto-paginated dues matrix table.
+ */
+export async function exportDuesToPdf(payload: DuesExportPayload): Promise<void> {
+  const {
+    fundName,
+    currency = "IDR",
+    events,
+    cellMap,
+  } = payload;
+
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const formattedNow = new Date().toLocaleString();
+
+  // 1. Calculate Aggregates
+  const aggregates = calculateDuesAggregates(payload);
+  const { rangeMemberTotals, totalPaidSum, totalUnpaidSum } = aggregates;
+
+  // 2. Initialize PDF in Landscape A4
+  const doc = new jsPDF({
+    orientation: "landscape",
+    unit: "pt",
+    format: "a4",
+  });
+
+  const fontName = await loadJakartaFont(doc);
+  const pageWidth = doc.internal.pageSize.getWidth();
+
+  // 3. Draw Header Section & KPI Box
+  drawReportHeader(doc, fontName, payload, pageWidth, formattedNow);
+  drawKpiSummaryBox(doc, fontName, payload, aggregates, pageWidth);
+
+  // 4. Calculate Column Spacing & Header Geometry
   const availableTableWidth = pageWidth - 80;
-  const fixedColsWidth = 22 + (events.length <= 6 ? 140 : 110) + 65 + 55;
+  const fixedColsWidth = 22 + (events.length <= 6 ? 140 : events.length > 20 ? 100 : 110) + 65 + 55;
   const eventColWidth = events.length > 0 ? (availableTableWidth - fixedColsWidth) / events.length : 100;
   const isNarrow = eventColWidth < 52 || events.length > 8;
 
-  // 5. Build Table Data for AutoTable
+  // 5. Build AutoTable Data Structure
   const head = [
     [
       "#",
@@ -403,10 +330,7 @@ export async function exportDuesToPdf(payload: DuesExportPayload): Promise<void>
       ...events.map((e) =>
         isNarrow
           ? formatDueDateYMD(e.dueDate)
-          : `${e.periodLabel}\n${new Date(e.dueDate).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-          })}`
+          : `${e.periodLabel}\n${formatDueDateShort(e.dueDate)}`
       ),
     ],
   ];
@@ -445,12 +369,12 @@ export async function exportDuesToPdf(payload: DuesExportPayload): Promise<void>
     ],
   ];
 
-  // Dynamic font sizing and header height depending on cycle count & narrowness
+  // Dynamic font sizing & header height
   const tableFontSize = events.length <= 6 ? 8 : events.length <= 12 ? 7 : events.length > 20 ? 5.5 : 6;
   const headerFontSize = isNarrow ? (events.length > 20 ? 5.5 : 6.5) : tableFontSize;
   const headerMinHeight = isNarrow ? (events.length > 20 ? 48 : 52) : 24;
 
-  // 6. Generate Table with Custom Formatting
+  // 6. Generate Table with AutoTable
   autoTable(doc, {
     startY: 134,
     margin: { left: 40, right: 40, bottom: 40 },
@@ -500,7 +424,7 @@ export async function exportDuesToPdf(payload: DuesExportPayload): Promise<void>
         data.cell.text = [""];
       }
 
-      // Style specific cell statuses
+      // Style specific body cell statuses
       if (data.section === "body" && data.column.index >= 4) {
         const rawVal = typeof data.cell.raw === "string" ? data.cell.raw : data.cell.text.join("");
         if (rawVal === "PAID" || rawVal === "✓") {
@@ -519,7 +443,7 @@ export async function exportDuesToPdf(payload: DuesExportPayload): Promise<void>
       }
     },
     didDrawCell: (data) => {
-      // Draw crisp vertical date text for narrow event header cells
+      // Draw vertical date text for narrow event header cells
       if (data.section === "head" && isNarrow && data.column.index >= 4) {
         const eventIndex = data.column.index - 4;
         const event = events[eventIndex];
@@ -546,7 +470,7 @@ export async function exportDuesToPdf(payload: DuesExportPayload): Promise<void>
         }
       }
 
-      // Draw crisp vector checkmark or cross inside cell
+      // Draw crisp vector checkmark or cross inside body cell
       if (data.section === "body" && data.column.index >= 4) {
         const rawVal = typeof data.cell.raw === "string" ? data.cell.raw : "";
         const { x, y, width, height } = data.cell;
