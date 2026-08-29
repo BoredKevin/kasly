@@ -57,6 +57,14 @@ function formatCurrency(amt: number, currency: string = "IDR"): string {
   return `${currency} ${amt.toLocaleString()}`;
 }
 
+function formatDueDateYMD(dueDate: number): string {
+  const d = new Date(dueDate);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}/${month}/${day}`;
+}
+
 function sanitizeFilename(name: string): string {
   return name.replace(/[^a-zA-Z0-9_-]/g, "_").toLowerCase();
 }
@@ -379,6 +387,12 @@ export async function exportDuesToPdf(payload: DuesExportPayload): Promise<void>
     doc.text(kpi.value, x, summaryBoxY + 34);
   });
 
+  // Determine if column spacing is too narrow for standard multi-line horizontal text
+  const availableTableWidth = pageWidth - 80;
+  const fixedColsWidth = 22 + (events.length <= 6 ? 140 : 110) + 65 + 55;
+  const eventColWidth = events.length > 0 ? (availableTableWidth - fixedColsWidth) / events.length : 100;
+  const isNarrow = eventColWidth < 52 || events.length > 8;
+
   // 5. Build Table Data for AutoTable
   const head = [
     [
@@ -386,9 +400,10 @@ export async function exportDuesToPdf(payload: DuesExportPayload): Promise<void>
       "Member",
       `Paid (${currency})`,
       "Unpaid",
-      ...events.map(
-        (e) =>
-          `${e.periodLabel}\n${new Date(e.dueDate).toLocaleDateString("en-US", {
+      ...events.map((e) =>
+        isNarrow
+          ? formatDueDateYMD(e.dueDate)
+          : `${e.periodLabel}\n${new Date(e.dueDate).toLocaleDateString("en-US", {
             month: "short",
             day: "numeric",
           })}`
@@ -430,8 +445,10 @@ export async function exportDuesToPdf(payload: DuesExportPayload): Promise<void>
     ],
   ];
 
-  // Dynamic font sizing depending on cycle count
-  const tableFontSize = events.length <= 6 ? 8 : events.length <= 12 ? 7 : 6.5;
+  // Dynamic font sizing and header height depending on cycle count & narrowness
+  const tableFontSize = events.length <= 6 ? 8 : events.length <= 12 ? 7 : events.length > 20 ? 5.5 : 6;
+  const headerFontSize = isNarrow ? (events.length > 20 ? 5.5 : 6.5) : tableFontSize;
+  const headerMinHeight = isNarrow ? (events.length > 20 ? 48 : 52) : 24;
 
   // 6. Generate Table with Custom Formatting
   autoTable(doc, {
@@ -448,11 +465,12 @@ export async function exportDuesToPdf(payload: DuesExportPayload): Promise<void>
       font: fontName,
       fillColor: [30, 41, 59], // slate-800
       textColor: [255, 255, 255],
-      fontSize: tableFontSize,
+      fontSize: headerFontSize,
       fontStyle: "bold",
       halign: "center",
       valign: "middle",
-      cellPadding: 3,
+      cellPadding: isNarrow ? 2 : 3,
+      minCellHeight: headerMinHeight,
     },
     footStyles: {
       font: fontName,
@@ -468,15 +486,20 @@ export async function exportDuesToPdf(payload: DuesExportPayload): Promise<void>
       fontSize: tableFontSize,
       textColor: [51, 65, 85],
       halign: "center",
-      cellPadding: 3,
+      cellPadding: isNarrow ? 2 : 3,
     },
     columnStyles: {
-      0: { cellWidth: 22, halign: "center" }, // #
-      1: { cellWidth: events.length <= 6 ? 140 : 110, halign: "left", fontStyle: "bold" }, // Member Name
-      2: { cellWidth: 65, halign: "right" }, // Total Paid
-      3: { cellWidth: 55, halign: "center" }, // Status/Unpaid
+      0: { cellWidth: events.length > 20 ? 20 : 22, halign: "center" }, // #
+      1: { cellWidth: events.length <= 6 ? 140 : events.length > 20 ? 100 : 110, halign: "left", fontStyle: "bold" }, // Member Name
+      2: { cellWidth: events.length > 20 ? 60 : 65, halign: "right" }, // Total Paid
+      3: { cellWidth: events.length > 20 ? 50 : 55, halign: "center" }, // Status/Unpaid
     },
     didParseCell: (data) => {
+      // Clear header text for narrow event columns so autotable doesn't wrap/draw it horizontally
+      if (data.section === "head" && isNarrow && data.column.index >= 4) {
+        data.cell.text = [""];
+      }
+
       // Style specific cell statuses
       if (data.section === "body" && data.column.index >= 4) {
         const rawVal = typeof data.cell.raw === "string" ? data.cell.raw : data.cell.text.join("");
@@ -496,31 +519,65 @@ export async function exportDuesToPdf(payload: DuesExportPayload): Promise<void>
       }
     },
     didDrawCell: (data) => {
+      // Draw crisp vertical date text for narrow event header cells
+      if (data.section === "head" && isNarrow && data.column.index >= 4) {
+        const eventIndex = data.column.index - 4;
+        const event = events[eventIndex];
+        if (event) {
+          const dateText = formatDueDateYMD(event.dueDate);
+          const { x, y, width, height } = data.cell;
+          const cx = x + width / 2;
+
+          doc.saveGraphicsState();
+          doc.setFont(fontName, "bold");
+          doc.setFontSize(headerFontSize);
+          doc.setTextColor(255, 255, 255);
+
+          const textWidth = doc.getTextWidth(dateText);
+          const startY = y + Math.max(4, (height - textWidth) / 2);
+
+          // Angle -90 rotates text 90 deg clockwise (reads downwards from top to bottom)
+          doc.text(dateText, cx, startY, {
+            angle: -90,
+            align: "left",
+            baseline: "middle",
+          });
+          doc.restoreGraphicsState();
+        }
+      }
+
       // Draw crisp vector checkmark or cross inside cell
       if (data.section === "body" && data.column.index >= 4) {
         const rawVal = typeof data.cell.raw === "string" ? data.cell.raw : "";
         const { x, y, width, height } = data.cell;
         const cx = x + width / 2;
         const cy = y + height / 2;
+        const isDense = events.length > 20;
+        const strokeW = isDense ? 1.2 : 1.4;
 
         if (rawVal === "PAID" || rawVal === "✓") {
           // Draw crisp emerald green vector checkmark
           doc.setDrawColor(21, 128, 61); // emerald-700
-          doc.setLineWidth(1.4);
-          doc.line(cx - 3.2, cy - 0.5, cx - 1, cy + 2.2);
-          doc.line(cx - 1, cy + 2.2, cx + 3.8, cy - 2.8);
+          doc.setLineWidth(strokeW);
+          if (isDense) {
+            doc.line(cx - 2.6, cy - 0.4, cx - 0.8, cy + 1.8);
+            doc.line(cx - 0.8, cy + 1.8, cx + 3.0, cy - 2.2);
+          } else {
+            doc.line(cx - 3.2, cy - 0.5, cx - 1, cy + 2.2);
+            doc.line(cx - 1, cy + 2.2, cx + 3.8, cy - 2.8);
+          }
         } else if (rawVal === "UNPAID" || rawVal === "✗") {
           // Draw crisp rose red vector cross (X)
           doc.setDrawColor(220, 38, 38); // rose-600
-          doc.setLineWidth(1.4);
-          doc.line(cx - 2.8, cy - 2.8, cx + 2.8, cy + 2.8);
-          doc.line(cx + 2.8, cy - 2.8, cx - 2.8, cy + 2.8);
+          doc.setLineWidth(strokeW);
+          const r = isDense ? 2.4 : 2.8;
+          doc.line(cx - r, cy - r, cx + r, cy + r);
+          doc.line(cx + r, cy - r, cx - r, cy + r);
         }
       }
     },
     didDrawPage: (data) => {
       // Add Footer on every page
-      const pageCount = doc.getNumberOfPages();
       const currentYear = new Date().getFullYear();
       const buildHash = typeof __BUILD_HASH__ !== "undefined" ? __BUILD_HASH__ : "dev";
       const footerText = `© ${currentYear} boredkevin/kasly v${packageJson.version} • ${buildHash} • kasly.bkev.in`;
@@ -531,7 +588,7 @@ export async function exportDuesToPdf(payload: DuesExportPayload): Promise<void>
 
       const footerY = doc.internal.pageSize.getHeight() - 20;
       doc.text(footerText, 40, footerY);
-      doc.text(`Page ${data.pageNumber} of ${pageCount}`, pageWidth - 40, footerY, { align: "right" });
+      doc.text(`Page ${data.pageNumber}`, pageWidth - 40, footerY, { align: "right" });
     },
   });
 
