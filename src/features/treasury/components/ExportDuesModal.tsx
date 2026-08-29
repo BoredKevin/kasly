@@ -12,10 +12,8 @@ import {
 import {
   Download,
   X,
-  FileSpreadsheet,
   FileText,
   CalendarDays,
-  Check,
   Loader2,
   Info,
 } from "lucide-react";
@@ -24,7 +22,6 @@ import {
   DuesExportMember,
   DuesExportCell,
   DuesExportPayload,
-  exportDuesToExcel,
   exportDuesToPdf,
 } from "../../../lib/exportDues";
 
@@ -38,7 +35,6 @@ interface ExportDuesModalProps {
   members: DuesExportMember[];
   cellMap: Map<string, DuesExportCell>;
   summary?: DuesExportPayload["summary"];
-  initialFormat?: "pdf" | "excel";
   currentPageIndex?: number;
   weeksPerPage?: number;
 }
@@ -53,12 +49,10 @@ export function ExportDuesModal({
   members,
   cellMap,
   summary,
-  initialFormat = "pdf",
   currentPageIndex = 0,
   weeksPerPage = 4,
 }: ExportDuesModalProps) {
   const { t } = useTranslation();
-  const [format, setFormat] = useState<"pdf" | "excel">(initialFormat);
   const [rangeMode, setRangeMode] = useState<"page" | "custom" | "all">(
     events.length > 8 ? "page" : "all"
   );
@@ -124,11 +118,7 @@ export function ExportDuesModal({
         summary,
       };
 
-      if (format === "excel") {
-        await exportDuesToExcel(payload);
-      } else {
-        await exportDuesToPdf(payload);
-      }
+      await exportDuesToPdf(payload);
       onClose();
     } catch (err) {
       console.error("Export failed:", err);
@@ -145,15 +135,15 @@ export function ExportDuesModal({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="p-1.5 bg-primary/10 border border-primary/20 text-primary">
-                  <Download className="w-5 h-5" />
+                  <FileText className="w-5 h-5 text-rose-400" />
                 </div>
                 <div>
                   <CardTitle className="text-base font-semibold">
-                    {t("treasury.dues.exportModalTitle") || "Export Dues Report"}
+                    {t("treasury.dues.exportModalTitle") || "Export Dues Report (PDF)"}
                   </CardTitle>
                   <CardDescription className="text-xs">
                     {t("treasury.dues.exportModalDesc") ||
-                      `Export ${fundName} dues matrix with customizable cycle date ranges`}
+                      `Export ${fundName} dues report with customizable cycle date ranges`}
                   </CardDescription>
                 </div>
               </div>
@@ -170,64 +160,6 @@ export function ExportDuesModal({
           </CardHeader>
 
           <CardContent className="pt-5 space-y-5">
-            {/* Format Selection (Tabs) */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground flex items-center justify-between">
-                <span>{t("treasury.dues.exportFormat") || "Export Format"}</span>
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setFormat("pdf")}
-                  className={`p-3 rounded border text-left flex items-start gap-2.5 transition-all cursor-pointer ${
-                    format === "pdf"
-                      ? "bg-primary/10 border-primary text-foreground shadow-sm"
-                      : "bg-muted/20 border-border hover:border-border/80 text-muted-foreground"
-                  }`}
-                >
-                  <FileText
-                    className={`w-5 h-5 mt-0.5 shrink-0 ${
-                      format === "pdf" ? "text-rose-400" : "text-muted-foreground"
-                    }`}
-                  />
-                  <div className="space-y-0.5">
-                    <div className="text-xs font-semibold flex items-center gap-1.5">
-                      <span>PDF Document (.pdf)</span>
-                      {format === "pdf" && <Check className="w-3 h-3 text-primary" />}
-                    </div>
-                    <p className="text-[11px] text-muted-foreground">
-                      Printable landscape layout with vector badges
-                    </p>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setFormat("excel")}
-                  className={`p-3 rounded border text-left flex items-start gap-2.5 transition-all cursor-pointer ${
-                    format === "excel"
-                      ? "bg-primary/10 border-primary text-foreground shadow-sm"
-                      : "bg-muted/20 border-border hover:border-border/80 text-muted-foreground"
-                  }`}
-                >
-                  <FileSpreadsheet
-                    className={`w-5 h-5 mt-0.5 shrink-0 ${
-                      format === "excel" ? "text-emerald-400" : "text-muted-foreground"
-                    }`}
-                  />
-                  <div className="space-y-0.5">
-                    <div className="text-xs font-semibold flex items-center gap-1.5">
-                      <span>Excel Spreadsheet (.xlsx)</span>
-                      {format === "excel" && <Check className="w-3 h-3 text-primary" />}
-                    </div>
-                    <p className="text-[11px] text-muted-foreground">
-                      Multi-sheet workbook with formulas & raw grid
-                    </p>
-                  </div>
-                </button>
-              </div>
-            </div>
-
             {/* Date / Cycle Range Selection */}
             <div className="space-y-2.5">
               <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
@@ -361,12 +293,12 @@ export function ExportDuesModal({
                 <p className="text-[11px] font-mono text-muted-foreground">
                   {dateRangeLabel}
                 </p>
-                {format === "pdf" && selectedEvents.length <= 8 && (
+                {selectedEvents.length <= 8 && (
                   <p className="text-[10px] text-emerald-400 font-mono">
                     ✓ Optimal column spacing for landscape PDF rendering
                   </p>
                 )}
-                {format === "pdf" && selectedEvents.length > 12 && (
+                {selectedEvents.length > 12 && (
                   <p className="text-[10px] text-amber-400 font-mono">
                     ⚠ Wide table: choosing a 4–8 cycle range is recommended for maximum readability.
                   </p>
@@ -406,11 +338,7 @@ export function ExportDuesModal({
                 ) : (
                   <>
                     <Download className="w-3.5 h-3.5" />
-                    <span>
-                      {format === "pdf"
-                        ? t("treasury.dues.downloadPdf") || "Download PDF"
-                        : t("treasury.dues.downloadExcel") || "Download Excel"}
-                    </span>
+                    <span>{t("treasury.dues.downloadPdf") || "Download PDF"}</span>
                   </>
                 )}
               </Button>
