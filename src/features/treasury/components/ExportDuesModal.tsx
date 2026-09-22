@@ -13,6 +13,7 @@ import {
   Download,
   X,
   FileText,
+  FileJson,
   CalendarDays,
   Loader2,
   Info,
@@ -23,6 +24,7 @@ import {
   DuesExportCell,
   DuesExportPayload,
   exportDuesToPdf,
+  exportDuesToJson,
 } from "../../../lib/exportDues";
 
 interface ExportDuesModalProps {
@@ -56,6 +58,7 @@ export function ExportDuesModal({
   const [rangeMode, setRangeMode] = useState<"page" | "custom" | "all">(
     events.length > 8 ? "page" : "all"
   );
+  const [exportFormat, setExportFormat] = useState<"pdf" | "json">("pdf");
   const [fromEventIndex, setFromEventIndex] = useState<number>(0);
   const [toEventIndex, setToEventIndex] = useState<number>(
     Math.min(events.length - 1, Math.max(0, fromEventIndex + 3))
@@ -102,8 +105,9 @@ export function ExportDuesModal({
       })()
     : "No events";
 
-  const handleExport = async () => {
+  const handleExport = async (formatOverride?: "pdf" | "json") => {
     if (selectedEvents.length === 0) return;
+    const format = formatOverride || exportFormat;
     setIsExporting(true);
 
     try {
@@ -118,7 +122,11 @@ export function ExportDuesModal({
         summary,
       };
 
-      await exportDuesToPdf(payload);
+      if (format === "json") {
+        exportDuesToJson(payload);
+      } else {
+        await exportDuesToPdf(payload);
+      }
       onClose();
     } catch (err) {
       console.error("Export failed:", err);
@@ -135,11 +143,15 @@ export function ExportDuesModal({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="p-1.5 bg-primary/10 border border-primary/20 text-primary">
-                  <FileText className="w-5 h-5 text-rose-400" />
+                  {exportFormat === "json" ? (
+                    <FileJson className="w-5 h-5 text-amber-400" />
+                  ) : (
+                    <FileText className="w-5 h-5 text-rose-400" />
+                  )}
                 </div>
                 <div>
                   <CardTitle className="text-base font-semibold">
-                    {t("treasury.dues.exportModalTitle") || "Export Dues Report (PDF)"}
+                    {t("treasury.dues.exportModalTitle") || "Export Dues Report"}
                   </CardTitle>
                   <CardDescription className="text-xs">
                     {t("treasury.dues.exportModalDesc") ||
@@ -278,6 +290,56 @@ export function ExportDuesModal({
               )}
             </div>
 
+            {/* Export Format Selection */}
+            <div className="space-y-2.5">
+              <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                <Download className="w-3.5 h-3.5 text-primary" />
+                <span>{t("treasury.dues.exportFormat") || "Export Format"}</span>
+              </label>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setExportFormat("pdf")}
+                  className={`p-2.5 rounded border text-left transition-all cursor-pointer text-xs flex items-center gap-2.5 ${
+                    exportFormat === "pdf"
+                      ? "bg-primary/10 border-primary text-primary font-semibold"
+                      : "bg-muted/20 border-border hover:border-border/80 text-muted-foreground"
+                  }`}
+                >
+                  <div className="p-1 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                    <FileText className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div>{t("treasury.dues.formatPdfTitle") || "PDF Report"}</div>
+                    <div className="text-[10px] font-mono text-muted-foreground">
+                      {t("treasury.dues.formatPdfDesc") || "Printable document (.pdf)"}
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setExportFormat("json")}
+                  className={`p-2.5 rounded border text-left transition-all cursor-pointer text-xs flex items-center gap-2.5 ${
+                    exportFormat === "json"
+                      ? "bg-primary/10 border-primary text-primary font-semibold"
+                      : "bg-muted/20 border-border hover:border-border/80 text-muted-foreground"
+                  }`}
+                >
+                  <div className="p-1 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    <FileJson className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <div>{t("treasury.dues.formatJsonTitle") || "JSON Data"}</div>
+                    <div className="text-[10px] font-mono text-muted-foreground">
+                      {t("treasury.dues.formatJsonDesc") || "Structured data payload (.json)"}
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </div>
+
             {/* Scope Summary Preview Box */}
             <div className="p-3 bg-muted/30 border border-border rounded flex items-start gap-2.5 text-xs">
               <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
@@ -293,14 +355,19 @@ export function ExportDuesModal({
                 <p className="text-[11px] font-mono text-muted-foreground">
                   {dateRangeLabel}
                 </p>
-                {selectedEvents.length <= 8 && (
+                {exportFormat === "pdf" && selectedEvents.length <= 8 && (
                   <p className="text-[10px] text-emerald-400 font-mono">
                     ✓ Optimal column spacing for landscape PDF rendering
                   </p>
                 )}
-                {selectedEvents.length > 12 && (
+                {exportFormat === "pdf" && selectedEvents.length > 12 && (
                   <p className="text-[10px] text-amber-400 font-mono">
                     ⚠ Wide table: choosing a 4–8 cycle range is recommended for maximum readability.
+                  </p>
+                )}
+                {exportFormat === "json" && (
+                  <p className="text-[10px] text-emerald-400 font-mono">
+                    ✓ Schema v1.0.0 with formatVersion, KPI aggregates, matrix cells, & member records
                   </p>
                 )}
               </div>
@@ -321,23 +388,46 @@ export function ExportDuesModal({
               </Button>
               <Button
                 type="button"
-                variant="cyber"
+                variant={exportFormat === "json" ? "cyber" : "outline"}
                 chamfer="dual"
                 size="sm"
                 onClick={() => {
-                  void handleExport();
+                  void handleExport("json");
                 }}
                 disabled={isExporting || selectedEvents.length === 0}
-                className="cursor-pointer text-xs flex items-center gap-1.5 min-w-[130px] justify-center"
+                className="cursor-pointer text-xs flex items-center gap-1.5"
               >
-                {isExporting ? (
+                {isExporting && exportFormat === "json" ? (
                   <>
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     <span>{t("treasury.dues.exporting") || "Exporting..."}</span>
                   </>
                 ) : (
                   <>
-                    <Download className="w-3.5 h-3.5" />
+                    <FileJson className="w-3.5 h-3.5 text-amber-400" />
+                    <span>{t("treasury.dues.downloadJson") || "Download JSON"}</span>
+                  </>
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant={exportFormat === "pdf" ? "cyber" : "outline"}
+                chamfer="dual"
+                size="sm"
+                onClick={() => {
+                  void handleExport("pdf");
+                }}
+                disabled={isExporting || selectedEvents.length === 0}
+                className="cursor-pointer text-xs flex items-center gap-1.5"
+              >
+                {isExporting && exportFormat === "pdf" ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>{t("treasury.dues.exporting") || "Exporting..."}</span>
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-3.5 h-3.5 text-rose-400" />
                     <span>{t("treasury.dues.downloadPdf") || "Download PDF"}</span>
                   </>
                 )}
