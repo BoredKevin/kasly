@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { query, mutation, action } from "./_generated/server";
 import { getCurrentUser, requireUser } from "./authz";
 import {
@@ -102,7 +102,7 @@ export const changeEmail = mutation({
       .unique();
 
     if (existingUser && existingUser._id !== user._id) {
-      throw new Error("An account with this email address already exists.");
+      throw new ConvexError("An account with this email address already exists.");
     }
 
     await ctx.db.patch("users", user._id, { email: newEmail });
@@ -137,20 +137,20 @@ export const changePassword = action({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
-      throw new Error("Unauthenticated: Please log in to perform this action.");
+      throw new ConvexError("Unauthenticated: Please log in to perform this action.");
     }
 
     if (!args.currentPassword) {
-      throw new Error("Current password is required.");
+      throw new ConvexError("Current password is required.");
     }
 
     if (!args.newPassword || args.newPassword.length < 8) {
-      throw new Error("New password must be at least 8 characters long.");
+      throw new ConvexError("New password must be at least 8 characters long.");
     }
 
     const user = await ctx.runQuery(api.users.viewer);
     if (!user || !user.email) {
-      throw new Error("User account or email address not found.");
+      throw new ConvexError("User account or email address not found.");
     }
 
     // Strictly verify current password
@@ -160,7 +160,7 @@ export const changePassword = action({
         account: { id: user.email, secret: args.currentPassword },
       });
     } catch {
-      throw new Error("The current password provided is incorrect.");
+      throw new ConvexError("The current password provided is incorrect.");
     }
 
     await modifyAccountCredentials(ctx, {
