@@ -1,10 +1,73 @@
 import { convexAuth } from "@convex-dev/auth/server";
 import { Password } from "@convex-dev/auth/providers/Password";
 import { MutationCtx } from "./_generated/server";
+import { ConvexError } from "convex/values";
+
+/**
+ * Enhanced Password provider wrapper that intercepts low-level credential errors
+ * (such as `InvalidSecret` or `InvalidAccountId` thrown by `retrieveAccount`)
+ * and translates them into clean `ConvexError` instances.
+ *
+ * This prevents unhandled `Uncaught Error: InvalidSecret on the server` crashes
+ * and ensures users receive an actionable "Invalid email or password" error.
+ */
+function SafePassword(config: Parameters<typeof Password>[0] = {}) {
+  const provider = Password(config);
+  const rawAuthorize =
+    (provider as any).options?.authorize ?? (provider as any).authorize;
+
+  const wrappedAuthorize = async (params: any, ctx: any) => {
+    try {
+      return await rawAuthorize(params, ctx);
+    } catch (error: any) {
+      const msg = error?.message;
+
+      // Handle invalid credentials cleanly
+      if (
+        msg === "InvalidSecret" ||
+        msg === "InvalidAccountId" ||
+        msg === "Invalid credentials"
+      ) {
+        throw new ConvexError("Invalid email or password");
+      }
+
+      // Handle rate limiting cleanly
+      if (msg === "TooManyFailedAttempts") {
+        throw new ConvexError(
+          "Too many failed login attempts. Please try again later.",
+        );
+      }
+
+      // Handle password requirements
+      if (msg === "Invalid password") {
+        throw new ConvexError("Password must be at least 8 characters long.");
+      }
+
+      if (msg && msg.includes("Missing `password` param")) {
+        throw new ConvexError("Password is required.");
+      }
+
+      // If it's already a ConvexError, let it propagate directly
+      if (error instanceof ConvexError) {
+        throw error;
+      }
+
+      // Wrap any other error in ConvexError so it never causes Uncaught Error on the server
+      throw new ConvexError(msg || "Invalid email or password");
+    }
+  };
+
+  (provider as any).authorize = wrappedAuthorize;
+  if ((provider as any).options) {
+    (provider as any).options.authorize = wrappedAuthorize;
+  }
+
+  return provider;
+}
 
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: [
-    Password({
+    SafePassword({
       profile(params) {
         const profile: Record<string, any> & { email: string } = {
           email: params.email as string,
@@ -27,7 +90,7 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
 
         const allowSignUps = setting !== null ? setting.value : true;
         if (!allowSignUps) {
-          throw new Error(
+          throw new ConvexError(
             "New user registration is currently disabled by application settings.",
           );
         }
@@ -48,7 +111,7 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
         const rawClaimToken = (args.profile as any)?.claimToken;
 
         if (isRegLinksEnabled && !rawClaimToken) {
-          throw new Error(
+          throw new ConvexError(
             "Public registration is closed. Please register using your personal registration link.",
           );
         }
@@ -62,18 +125,18 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
             .unique();
 
           if (!tokenDoc || tokenDoc.isUsed || Date.now() > tokenDoc.expiresAt) {
-            throw new Error(
+            throw new ConvexError(
               "Invalid or expired claim token. Please verify your student identity again.",
             );
           }
 
           const placeholderUser = await ctx.db.get("users", tokenDoc.userId);
           if (!placeholderUser) {
-            throw new Error("Target pre-registered student profile not found.");
+            throw new ConvexError("Target pre-registered student profile not found.");
           }
 
           if (placeholderUser.isClaimed === true || placeholderUser.email) {
-            throw new Error(
+            throw new ConvexError(
               "This pre-registered student profile has already been claimed.",
             );
           }
@@ -89,7 +152,7 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
               .first();
 
             if (existingWithEmail && existingWithEmail._id !== placeholderUser._id) {
-              throw new Error("An account with this email address already exists.");
+              throw new ConvexError("An account with this email address already exists.");
             }
           }
 
@@ -125,7 +188,7 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
         }
 
         if (isPreRegRequired) {
-          throw new Error(
+          throw new ConvexError(
             "Pre-registration identity verification is required to create an account.",
           );
         }

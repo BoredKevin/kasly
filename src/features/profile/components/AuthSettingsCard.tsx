@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation, useAction } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
+import { formatAuthError } from "../../auth/utils/authErrors";
 import {
   Card,
   CardHeader,
@@ -57,7 +58,7 @@ export function AuthSettingsCard({ email }: AuthSettingsCardProps) {
       setTimeout(() => setEmailSuccess(null), 3000);
     } catch (err: unknown) {
       setEmailError(
-        err instanceof Error ? err.message : "Failed to update email address.",
+        formatAuthError(err) || "Failed to update email address.",
       );
     } finally {
       setIsUpdatingEmail(false);
@@ -82,9 +83,7 @@ export function AuthSettingsCard({ email }: AuthSettingsCardProps) {
       setNewPassword("");
       setTimeout(() => setPasswordSuccess(null), 3000);
     } catch (err: unknown) {
-      setPasswordError(
-        err instanceof Error ? err.message : "Failed to change password.",
-      );
+      setPasswordError(formatAuthError(err));
     } finally {
       setIsChangingPassword(false);
     }

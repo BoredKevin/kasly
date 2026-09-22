@@ -3,6 +3,7 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { useMutation, useQuery } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
+import { formatAuthError } from "../utils/authErrors";
 import {
   Card,
   CardContent,
@@ -25,8 +26,8 @@ export function SignInForm() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const verifyIdentity = useMutation(api.preRegistration.verifyClaimIdentity);
 
@@ -34,9 +35,10 @@ export function SignInForm() {
   const isRegLinksEnabled = appSettings?.enableRegistrationLinks !== false;
   const allowSignUps = appSettings?.allowSignUps !== false && !isRegLinksEnabled;
   const isPreRegRequired = appSettings?.enablePreRegistration === true;
+
   const effectiveFlow = !allowSignUps ? "signIn" : flow;
 
-  const handleStep1Verify = async (e: React.FormEvent) => {
+  const handleStep1Verify = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     setIsVerifying(true);
@@ -52,8 +54,8 @@ export function SignInForm() {
       setEmail("");
       setPassword("");
       setSignUpStep(2);
-    } catch (err: any) {
-      setError(err?.message || "Identity verification failed. Please check your credentials.");
+    } catch (err: unknown) {
+      setError(formatAuthError(err));
     } finally {
       setIsVerifying(false);
     }
@@ -70,8 +72,8 @@ export function SignInForm() {
       formData.set("claimToken", claimToken);
     }
 
-    void signIn("password", formData).catch((err: Error) => {
-      setError(err.message);
+    void signIn("password", formData).catch((err: unknown) => {
+      setError(formatAuthError(err));
     });
   };
 
@@ -83,8 +85,8 @@ export function SignInForm() {
     formData.set("email", email.trim().toLowerCase());
     formData.set("password", password);
 
-    void signIn("password", formData).catch((err: Error) => {
-      setError(err.message);
+    void signIn("password", formData).catch((err: unknown) => {
+      setError(formatAuthError(err));
     });
   };
 

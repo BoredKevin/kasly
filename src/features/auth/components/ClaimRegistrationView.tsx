@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
 import { api } from "../../../../convex/_generated/api";
+import { formatAuthError } from "../utils/authErrors";
 import {
   Card,
   CardContent,
@@ -76,9 +77,9 @@ export function ClaimRegistrationView() {
       setClaimToken(res.claimToken);
       setClaimedName(res.displayName);
       setStep(2);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(
-        err?.message ||
+        formatAuthError(err) ||
           "Identity verification failed. Please check your NISN, birth year, and phone number.",
       );
     } finally {
@@ -104,9 +105,9 @@ export function ClaimRegistrationView() {
         // Redirection to profile/workspace will happen via authenticated state
         setLocation("/profile");
       })
-      .catch((err: Error) => {
+      .catch((err: unknown) => {
         setIsSigningUp(false);
-        setError(err.message || "Failed to create account.");
+        setError(formatAuthError(err));
       });
   };
 
