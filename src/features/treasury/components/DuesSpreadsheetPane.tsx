@@ -424,7 +424,7 @@ export function DuesSpreadsheetPane({
                 </button>
               </div>
 
-              {/* Export PDF Button */}
+              {/* Export Button */}
               <Button
                 type="button"
                 variant="outline"
@@ -433,11 +433,11 @@ export function DuesSpreadsheetPane({
                 onClick={() => setIsExportModalOpen(true)}
                 disabled={spreadsheet.events.length === 0}
                 className="h-8 text-xs flex items-center gap-1.5 cursor-pointer px-2.5 shadow-sm"
-                title={t("treasury.dues.exportPdf") || "Export PDF"}
+                title={t("treasury.dues.export") || "Export"}
               >
                 <Download className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">
-                  {t("treasury.dues.exportPdf") || "Export PDF"}
+                  {t("treasury.dues.export") || "Export"}
                 </span>
               </Button>
 
