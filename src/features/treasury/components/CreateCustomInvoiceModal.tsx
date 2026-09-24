@@ -1,20 +1,20 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useMutation } from "convex/react";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
   Button,
   Input,
 } from "@boredkevin/ui";
-import { Receipt, AlertCircle } from "lucide-react";
+import { Receipt, AlertCircle, X } from "lucide-react";
 
 interface CreateCustomInvoiceModalProps {
   isOpen: boolean;
@@ -43,6 +43,8 @@ export function CreateCustomInvoiceModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  if (!isOpen || typeof document === "undefined") return null;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || amount <= 0) return;
@@ -69,140 +71,157 @@ export function CreateCustomInvoiceModal({
     }
   };
 
-  return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md bg-card border-border shadow-2xl">
-        <DialogHeader>
-          <div className="flex items-center gap-2.5">
-            <div className="p-1.5 bg-primary/10 border border-primary/30 text-primary">
-              <Receipt className="w-5 h-5" />
-            </div>
-            <div>
-              <DialogTitle className="text-base font-semibold">
-                {t("treasury.invoices.customModalTitle")}
-              </DialogTitle>
-              <DialogDescription className="text-xs">
-                {t("treasury.invoices.customModalDesc")}
-              </DialogDescription>
-            </div>
-          </div>
-        </DialogHeader>
-
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            void handleSubmit(e);
-          }}
-          className="space-y-4 py-2"
-        >
-          {error && (
-            <div className="p-2.5 bg-destructive/15 border border-destructive/40 text-destructive-foreground text-xs font-mono flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-foreground block">
-              {t("treasury.invoices.itemTitle")}
-            </label>
-            <Input
-              type="text"
-              chamfer="dual"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={t("treasury.invoices.itemTitlePlaceholder")}
-              required
-              className="text-xs"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-foreground block">
-              {t("treasury.invoices.itemAmount")}
-            </label>
-            <Input
-              type="number"
-              chamfer="dual"
-              value={amount}
-              onChange={(e) => setAmount(Number(e.target.value))}
-              min={1000}
-              required
-              className="text-xs font-mono"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-foreground block">
-                {t("treasury.invoices.recipientName")}
-              </label>
-              <Input
-                type="text"
+  const modalContent = (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <Card telemetry="TREASURY.CUSTOM_INVOICE" cornerLines className="bg-card border-border shadow-2xl">
+          <CardHeader className="pb-4 border-b border-border">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 bg-primary/10 border border-primary/30 text-primary">
+                  <Receipt className="w-5 h-5" />
+                </div>
+                <div>
+                  <CardTitle className="text-base font-semibold">
+                    {t("treasury.invoices.customModalTitle")}
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    {t("treasury.invoices.customModalDesc")}
+                  </CardDescription>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
                 chamfer="dual"
-                value={payerName}
-                onChange={(e) => setPayerName(e.target.value)}
-                placeholder="e.g. John Doe"
-                className="text-xs"
-              />
+                onClick={onClose}
+                className="h-7 w-7 p-0 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </Button>
             </div>
+          </CardHeader>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-foreground block">
-                {t("treasury.invoices.recipientEmail")}
-              </label>
-              <Input
-                type="email"
-                chamfer="dual"
-                value={payerEmail}
-                onChange={(e) => setPayerEmail(e.target.value)}
-                placeholder="optional@example.com"
-                className="text-xs font-mono"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-foreground block">
-              {t("treasury.invoices.itemDesc")}
-            </label>
-            <Input
-              type="text"
-              chamfer="dual"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Additional notes for payer"
-              className="text-xs"
-            />
-          </div>
-
-          <DialogFooter className="gap-2 pt-2 border-t border-border/80">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              chamfer="dual"
-              onClick={onClose}
-              className="text-xs"
+          <CardContent className="pt-5">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void handleSubmit(e);
+              }}
+              className="space-y-4"
             >
-              {t("common.cancel")}
-            </Button>
+              {error && (
+                <div className="p-2.5 bg-destructive/15 border border-destructive/40 text-destructive-foreground text-xs font-mono flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
 
-            <Button
-              type="submit"
-              variant="cyber"
-              size="sm"
-              chamfer="dual"
-              disabled={isSubmitting || !title.trim() || amount <= 0}
-              className="text-xs"
-            >
-              {isSubmitting
-                ? t("treasury.invoices.creating")
-                : t("treasury.invoices.createBtn")}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground block">
+                  {t("treasury.invoices.itemTitle")}
+                </label>
+                <Input
+                  type="text"
+                  chamfer="dual"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder={t("treasury.invoices.itemTitlePlaceholder")}
+                  required
+                  className="text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground block">
+                  {t("treasury.invoices.itemAmount")}
+                </label>
+                <Input
+                  type="number"
+                  chamfer="dual"
+                  value={amount}
+                  onChange={(e) => setAmount(Number(e.target.value))}
+                  min={1000}
+                  required
+                  className="text-xs font-mono"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground block">
+                    {t("treasury.invoices.recipientName")}
+                  </label>
+                  <Input
+                    type="text"
+                    chamfer="dual"
+                    value={payerName}
+                    onChange={(e) => setPayerName(e.target.value)}
+                    placeholder="e.g. John Doe"
+                    className="text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground block">
+                    {t("treasury.invoices.recipientEmail")}
+                  </label>
+                  <Input
+                    type="email"
+                    chamfer="dual"
+                    value={payerEmail}
+                    onChange={(e) => setPayerEmail(e.target.value)}
+                    placeholder="optional@example.com"
+                    className="text-xs font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground block">
+                  {t("treasury.invoices.itemDesc")}
+                </label>
+                <Input
+                  type="text"
+                  chamfer="dual"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Additional notes for payer"
+                  className="text-xs"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/80">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  chamfer="dual"
+                  onClick={onClose}
+                  className="text-xs cursor-pointer"
+                >
+                  {t("common.cancel")}
+                </Button>
+
+                <Button
+                  type="submit"
+                  variant="cyber"
+                  size="sm"
+                  chamfer="dual"
+                  disabled={isSubmitting || !title.trim() || amount <= 0}
+                  className="text-xs cursor-pointer"
+                >
+                  {isSubmitting
+                    ? t("treasury.invoices.creating")
+                    : t("treasury.invoices.createBtn")}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
+
+  return createPortal(modalContent, document.body);
 }
