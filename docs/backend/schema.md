@@ -19,6 +19,11 @@ erDiagram
     organizations ||--o{ invites : "generates"
     organizations ||--o{ bans : "enforces"
     organizations ||--o{ numbers : "scopes"
+    organizations ||--o| organizationPaymentConfig : "configures"
+    organizations ||--o{ invoices : "issues"
+    funds ||--o{ invoices : "deposits into"
+    users ||--o{ invoices : "pays"
+    invoices ||--o| ledgerEntries : "settles as credit"
 
     roles ||--o{ members : "assigned to (array)"
     roles ||--o{ invites : "granted on join (optional)"
@@ -93,6 +98,34 @@ erDiagram
         number value
         Id_organizations organizationId "optional FK"
         Id_users createdBy "optional FK"
+        number _creationTime
+    }
+
+    organizationPaymentConfig {
+        Id_organizationPaymentConfig _id PK
+        Id_organizations organizationId FK
+        string mode "sandbox | production"
+        boolean isEnabled
+        string webhookToken
+        string gatewayKeyId
+        string gatewayPrivateKeyJwk "ECDSA P-256 private key JWK"
+        number _creationTime
+    }
+
+    invoices {
+        Id_invoices _id PK
+        Id_organizations organizationId FK
+        Id_funds fundId FK
+        string invoiceNumber "Unique INV-YYYYMMDD-XXXX"
+        string type "dues | custom"
+        Id_users userId "optional FK"
+        string payerName
+        string title
+        number subtotal
+        number gatewayFee
+        number totalAmount
+        string status "draft | pending | paid | expired | cancelled"
+        Id_ledgerEntries ledgerEntryId "optional FK"
         number _creationTime
     }
 ```
@@ -291,20 +324,70 @@ For exhaustive field specifications, cryptographic algorithms, hash chaining for
 * `ledgerCheckpoints` — Periodic running balance and entry hash snapshots for $O(1)$ fast balance replay.
 * `duesConfig` — Recurring dues schedule settings scoped per fund (`intervalType`, `intervalValue`, `amount`, `isEnabled`, `nextScheduledAt`).
 * `duesEvents` — Historical and active dues cycle snapshots per fund (`periodLabel`, `dueDate`, `amount`, `totalMembers`, `paidCount`).
-* `duesMemberships` — Member payment and waiver tracking per dues cycle (`duesEventId`, `fundId`, `userId`, `memberId`, `hasPaid`, `isWaived`, `paidAt`, `ledgerEntryId`). Indexed by `by_ledgerEntryId` for $O(1)$ reversal rollback.
+* `duesMemberships` — Member payment and waiver tracking per dues cycle (`duesEventId`, `fundId`, `userId`, `memberId`, `hasPaid`, `isWaived`, `paidAt`, `ledgerEntryId`, `invoiceId`, `paymentMethod`). Indexed by `by_ledgerEntryId` and `by_invoiceId` for $O(1)$ reversal rollback and invoice tracking.
 
+---
 
-### Role Deletion Cleanup
-When `roles.deleteRole` is called:
-1. System roles (`isDefault: true` or `isSystem: true`) are protected and throw `403 Forbidden`.
-2. All member documents in the organization are queried.
-3. Any member possessing the deleted `roleId` has their `roleIds` array updated via `filter` to strip the ID, preventing orphaned role references.
-4. The `roles` document is deleted from the database.
+## 5. Payment Gateway & Invoicing Tables
 
-### Member Ban Lifecycle
-When `members.ban` is executed:
-1. Target hierarchy is validated (moderator must outrank target member).
-2. Target cannot be the organization owner.
-3. A `bans` record is inserted with the target's `userId`, timestamp, and reason.
-4. The target's `members` record is permanently deleted.
-5. Any subsequent query or mutation by the banned user in that organization is blocked by `requireNotBanned`.
+For exhaustive gateway mechanics, webhook signature validation, upfront fee algorithms, and automated ECDSA signing protocols, see **[BorderPay Payment Gateway & Invoicing Architecture](borderpay-integration.md)**.
+
+### `organizationPaymentConfig`
+Stores organization-scoped payment gateway credentials, webhook secret token, channel toggle matrix, and the automated ECDSA P-256 gateway signing keypair.
+
+| Field | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `_id` | `Id<"organizationPaymentConfig">` | Yes | Primary document ID |
+| `organizationId` | `Id<"organizations">` | Yes | Target organization |
+| `apiKey` | `string` | No | Encrypted/masked BorderPay API key |
+| `mode` | `"sandbox" \| "production"` | Yes | Gateway environment mode |
+| `isEnabled` | `boolean` | Yes | Master toggle for payment gateway acceptance |
+| `webhookToken` | `string` | Yes | High-entropy CSPRNG bearer token for webhook verification (`x-borderpay-token`) |
+| `gatewayKeyId` | `string` | No | Identifier of the public key registered in `treasurerKeys` |
+| `gatewayPrivateKeyJwk` | `string` | No | Server-held ECDSA P-256 private key in JWK format |
+| `methodOverrides` | `object` | No | Channel toggle matrix (`qrisEnabled`, `enabledBanks`, `enabledWallets`) |
+| `lastSyncedAt` | `number` | No | Timestamp of most recent live methods sync from BorderPay |
+| `cachedMethods` | `object` | No | Cached response from `/api/v1/payment-methods` |
+| `updatedAt` | `number` | Yes | Timestamp of last config edit |
+
+**Indexes:**
+* `by_organizationId` on `["organizationId"]` — Unique 1:1 lookup of organization payment settings.
+
+---
+
+### `invoices`
+Represents an individual payable invoice for dues or ad-hoc custom charges with real-time reactive payment status.
+
+| Field | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `_id` | `Id<"invoices">` | Yes | Primary document ID |
+| `organizationId` | `Id<"organizations">` | Yes | Issuing organization |
+| `fundId` | `Id<"funds">` | Yes | Destination fund account for dues/receipts |
+| `invoiceNumber` | `string` | Yes | Unique human-readable invoice code (`INV-YYYYMMDD-XXXX`) |
+| `type` | `"dues" \| "custom"` | Yes | Origin and ledger commit classification |
+| `userId` | `Id<"users">` | No | Linked member user ID (required for dues invoices) |
+| `payerName` | `string` | Yes | Name of payer displayed on invoice and receipt |
+| `payerEmail` | `string` | No | Payer contact email |
+| `title` | `string` | Yes | Descriptive title for the invoice |
+| `lineItems` | `Array<object>` | Yes | Array of item lines (`description`, `amount`, `duesEventId`, `membershipId`) |
+| `subtotal` | `number` | Yes | Face value of due or custom amount |
+| `gatewayFee` | `number` | Yes | Upfront fee paid by customer (QRIS / VA / E-wallet) |
+| `totalAmount` | `number` | Yes | Gross amount charged to customer (`subtotal + gatewayFee`) |
+| `currency` | `string` | Yes | ISO currency code (default: `IDR`) |
+| `status` | `"draft" \| "pending" \| "paid" \| "expired" \| "cancelled"` | Yes | State machine status |
+| `selectedMethod` | `"qris" \| "va" \| "ewallet"` | No | Chosen payment channel |
+| `selectedBankCode` | `string` | No | Specific bank (VA) or e-wallet identifier |
+| `qrisString` | `string` | No | Dynamic QRIS payload string returned by BorderPay |
+| `vaNumber` | `string` | No | Virtual Account number returned by BorderPay |
+| `expiresAt` | `number` | No | Expiration timestamp ms |
+| `paidAt` | `number` | No | Settlement timestamp ms |
+| `borderpayOrderId` | `string` | No | BorderPay upstream order identifier |
+| `ledgerEntryId` | `Id<"ledgerEntries">` | No | Foreign key linking to CLE credit transaction upon payment |
+| `createdAt` | `number` | Yes | Timestamp of invoice creation |
+
+**Indexes:**
+* `by_invoiceNumber` on `["invoiceNumber"]` — Instant $O(1)$ public resolution for `/invoice/:invoiceNumber`.
+* `by_organizationId` on `["organizationId"]` — List invoices for organization administrative overview.
+* `by_organizationId_and_userId` on `["organizationId", "userId"]` — Fetch invoices belonging to a specific member.
+* `by_organizationId_and_status` on `["organizationId", "status"]` — Filter invoices by lifecycle state.
+* `by_borderpayOrderId` on `["borderpayOrderId"]` — Webhook resolution by upstream order ID.

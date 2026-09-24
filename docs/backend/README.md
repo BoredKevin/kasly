@@ -128,7 +128,9 @@ convex/
 ├── roles.ts             # Role creation, hierarchy position ordering, and permissions
 ├── schema.ts            # Database schema definitions and indexes
 ├── treasury/            # Cryptographic Treasury & Ledger Engine
+│   ├── borderpay.ts     # BorderPay payment gateway, invoicing & automated CLE signing
 │   ├── checkpoints.ts   # Fast balance snapshots and replay verification
+│   ├── dues.ts          # Automated dues scheduling and spreadsheet generation
 │   ├── funds.ts         # Fund accounts CRUD and derived balances
 │   ├── helpers.ts       # Web Crypto ECDSA, SHA-256 digests & canonical JSON
 │   ├── keys.ts          # Zero-trust key ceremony and public key registry
@@ -142,6 +144,7 @@ convex/
 
 For in-depth guides and references, consult:
 
+* **[BorderPay Payment Gateway & Invoicing Architecture](borderpay-integration.md)** — BorderPay payment integration, dynamic QRIS fee models, upstream Virtual Accounts/E-Wallets, automated gateway signing keys, and webhook idempotency.
 * **[Treasury & Cryptographic Ledger Engine](treasury.md)** — Append-only hash chain, Web Crypto ECDSA signing, zero-trust key ceremony, and balance derivation.
 * **[Database Schema & ERD](schema.md)** — Complete table specifications, relationships, and lifecycle cascade rules.
 * **[RBAC & Security Specification](rbac-security.md)** — Hierarchy calculations, permission sets, and owner superuser rules.
