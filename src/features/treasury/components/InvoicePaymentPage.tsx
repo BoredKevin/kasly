@@ -183,11 +183,16 @@ export function InvoicePaymentPage({ invoiceNumber }: InvoicePaymentPageProps) {
           ? selectedWallet
           : undefined;
 
+      const returnUrl =
+        window.location.protocol === "https:"
+          ? window.location.href
+          : undefined;
+
       await initiatePayment({
         invoiceNumber,
         method: selectedMethod,
         bankCode,
-        returnUrl: window.location.href,
+        returnUrl,
       });
     } catch (err: unknown) {
       setErrorMessage(err instanceof Error ? err.message : "Failed to initiate payment.");

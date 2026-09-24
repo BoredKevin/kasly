@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useMutation, useAction } from "convex/react";
+import { useQuery, useAction } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
@@ -37,7 +37,7 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
   const { t } = useTranslation();
 
   const config = useQuery(api.treasury.borderpay.getPaymentConfig, { organizationId });
-  const saveConfig = useMutation(api.treasury.borderpay.savePaymentConfig);
+  const saveConfig = useAction(api.treasury.borderpay.savePaymentConfig);
   const fetchMethods = useAction(api.treasury.borderpay.fetchAvailablePaymentMethods);
 
   const [apiKey, setApiKey] = useState("");
@@ -78,9 +78,15 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
     setHasInitialized(true);
   }
 
-  // Derive webhook URL based on current origin or convex site URL
-  const webhookUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/api/borderpay-webhook`
+  // Derive webhook URL from the Convex site HTTP actions URL
+  const rawSiteUrl =
+    (import.meta.env.VITE_CONVEX_SITE_URL as string | undefined) ||
+    (import.meta.env.VITE_CONVEX_URL
+      ? (import.meta.env.VITE_CONVEX_URL as string).replace(/\.convex\.cloud\/?$/, ".convex.site")
+      : "");
+  const cleanSiteUrl = rawSiteUrl ? rawSiteUrl.replace(/\/+$/, "") : "";
+  const webhookUrl = cleanSiteUrl
+    ? `${cleanSiteUrl}/api/borderpay-webhook`
     : "https://your-convex-site.convex.site/api/borderpay-webhook";
 
   const handleCopyWebhookUrl = () => {
