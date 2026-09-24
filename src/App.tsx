@@ -8,6 +8,7 @@ import {
   TreasuryView,
   TreasuryErrorBoundary,
   SharedEntryPage,
+  InvoicePaymentPage,
 } from "./features/treasury";
 import { ConstellationsBackground } from "@boredkevin/ui";
 
@@ -23,6 +24,7 @@ const RESERVED_ROOT_PATHS = new Set([
   "api",
   "settings",
   "docs",
+  "invoice",
 ]);
 
 function UnauthenticatedEntryView({ identifier }: { identifier: string }) {
@@ -98,6 +100,14 @@ export default function App() {
                 <TreasuryView />
               </TreasuryErrorBoundary>
             </Route>
+            <Route path="/treasury/invoices">
+              <TreasuryErrorBoundary>
+                <TreasuryView />
+              </TreasuryErrorBoundary>
+            </Route>
+            <Route path="/invoice/:invoiceNumber">
+              {(params) => <InvoicePaymentPage invoiceNumber={params.invoiceNumber} />}
+            </Route>
             {/* Canonical Transaction URL inside Workspace */}
             <Route path="/tx/:hash">
               {(params) => (
@@ -132,6 +142,11 @@ export default function App() {
       {/* Unauthenticated Flow (Centered Entry Card, No Navbar / Sidebar) */}
       <Unauthenticated>
         <Switch>
+          {/* Public Invoice Payment Route (No Auth Required) */}
+          <Route path="/invoice/:invoiceNumber">
+            {(params) => <InvoicePaymentPage invoiceNumber={params.invoiceNumber} />}
+          </Route>
+
           {/* Canonical Transaction URL (Centered, No Navbar/Sidebar) */}
           <Route path="/tx/:hash">
             {(params) => <UnauthenticatedEntryView identifier={params.hash} />}
