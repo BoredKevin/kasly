@@ -246,6 +246,8 @@ export default defineSchema({
     paidAt: v.optional(v.number()),
     ledgerEntryId: v.optional(v.id("ledgerEntries")), // Payment or waiver ledger entry
     recordedBy: v.optional(v.id("users")),
+    invoiceId: v.optional(v.id("invoices")),
+    paymentMethod: v.optional(v.string()), // e.g. "gateway_borderpay" | "manual_cle"
   })
     .index("by_duesEventId", ["duesEventId"])
     .index("by_duesEventId_and_memberId", ["duesEventId", "memberId"])
@@ -253,7 +255,92 @@ export default defineSchema({
     .index("by_fundId_and_hasPaid", ["fundId", "hasPaid"])
     .index("by_organizationId_and_userId", ["organizationId", "userId"])
     .index("by_organizationId_and_hasPaid", ["organizationId", "hasPaid"])
-    .index("by_ledgerEntryId", ["ledgerEntryId"]),
+    .index("by_ledgerEntryId", ["ledgerEntryId"])
+    .index("by_invoiceId", ["invoiceId"]),
+
+  // BorderPay organization payment gateway configuration
+  organizationPaymentConfig: defineTable({
+    organizationId: v.id("organizations"),
+    provider: v.literal("borderpay"),
+    apiKey: v.string(), // Server-side secret (bp_test_... or bp_live_...)
+    webhookToken: v.optional(v.string()), // bpt_... project verification token
+    gatewayKeyId: v.optional(v.string()), // SHA-256 fingerprint of registered CLE gateway signing key
+    gatewayPrivateKeyJwk: v.optional(v.string()), // Encrypted/server-held private key for automated CLE commits
+    isEnabled: v.boolean(),
+    isTestMode: v.boolean(),
+    rawFetchedMethods: v.optional(v.any()), // Cached GET /api/v1/payment-methods response
+    methodOverrides: v.optional(
+      v.object({
+        qrisEnabled: v.boolean(),
+        enabledBanks: v.array(v.string()),
+        enabledWallets: v.array(v.string()),
+      })
+    ),
+    lastFetchedAt: v.optional(v.number()),
+    updatedBy: v.id("users"),
+    updatedAt: v.number(),
+  }).index("by_organizationId", ["organizationId"]),
+
+  // Invoicing system for dues and custom charges
+  invoices: defineTable({
+    organizationId: v.id("organizations"),
+    fundId: v.id("funds"),
+    invoiceNumber: v.string(), // Unique reference_id (e.g. "INV-20260924-XXXX")
+    type: v.union(v.literal("dues"), v.literal("custom")),
+    title: v.string(),
+    description: v.optional(v.string()),
+
+    // Payer / Member identity
+    userId: v.optional(v.id("users")),
+    memberId: v.optional(v.id("members")),
+    payerName: v.string(),
+    payerEmail: v.optional(v.string()),
+
+    // Dues-specific links (for dues invoices)
+    duesMembershipIds: v.optional(v.array(v.id("duesMemberships"))),
+    periodLabels: v.optional(v.array(v.string())),
+
+    // Monetary amounts in IDR
+    subtotal: v.number(),
+    gatewayFee: v.number(),
+    totalAmount: v.number(), // subtotal + gatewayFee
+    currency: v.string(), // "IDR"
+
+    // Status lifecycle
+    status: v.union(
+      v.literal("draft"),
+      v.literal("pending"),
+      v.literal("paid"),
+      v.literal("expired"),
+      v.literal("cancelled")
+    ),
+
+    // Payment details
+    selectedMethod: v.optional(
+      v.union(v.literal("qris"), v.literal("va"), v.literal("ewallet"))
+    ),
+    selectedBankCode: v.optional(v.string()),
+    borderpayReferenceId: v.optional(v.string()),
+    payUrl: v.optional(v.string()),
+    qrString: v.optional(v.string()),
+    vaNumber: v.optional(v.string()),
+    vaBank: v.optional(v.string()),
+    checkoutUrl: v.optional(v.string()),
+    expiresAt: v.optional(v.number()),
+    paidAt: v.optional(v.number()),
+
+    // CLE Settlement link (populated upon webhook payment for dues invoices)
+    ledgerEntryId: v.optional(v.id("ledgerEntries")),
+
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_invoiceNumber", ["invoiceNumber"])
+    .index("by_organizationId", ["organizationId"])
+    .index("by_organizationId_and_userId", ["organizationId", "userId"])
+    .index("by_organizationId_and_status", ["organizationId", "status"])
+    .index("by_fundId", ["fundId"])
+    .index("by_status", ["status"]),
 });
 
 

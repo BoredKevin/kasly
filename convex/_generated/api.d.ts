@@ -19,6 +19,7 @@ import type * as organizations from "../organizations.js";
 import type * as permissions from "../permissions.js";
 import type * as preRegistration from "../preRegistration.js";
 import type * as roles from "../roles.js";
+import type * as treasury_borderpay from "../treasury/borderpay.js";
 import type * as treasury_checkpoints from "../treasury/checkpoints.js";
 import type * as treasury_dues from "../treasury/dues.js";
 import type * as treasury_funds from "../treasury/funds.js";
@@ -45,6 +46,7 @@ declare const fullApi: ApiFromModules<{
   permissions: typeof permissions;
   preRegistration: typeof preRegistration;
   roles: typeof roles;
+  "treasury/borderpay": typeof treasury_borderpay;
   "treasury/checkpoints": typeof treasury_checkpoints;
   "treasury/dues": typeof treasury_dues;
   "treasury/funds": typeof treasury_funds;
