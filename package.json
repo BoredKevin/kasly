@@ -14,8 +14,8 @@
   },
   "type": "module",
   "scripts": {
-    "dev": "convex dev --start 'npx vite'",
-    "predev": "convex init && node setup.mjs --once",
+    "dev": "npx convex dev --start 'npx vite'",
+    "predev": "npx convex init && node setup.mjs --once",
     "typecheck": "tsc -b",
     "build": "npm run typecheck && npx vite build",
     "lint": "npm run typecheck && eslint . --report-unused-disable-directives --max-warnings 0",
