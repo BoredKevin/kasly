@@ -5,7 +5,7 @@ import {
   action,
   internalMutation,
   internalQuery,
-  MutationCtx,
+  internalAction,
 } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { Doc, Id } from "../_generated/dataModel";
@@ -19,6 +19,34 @@ import {
 } from "./helpers";
 
 const BORDERPAY_API_BASE = "https://borderpay.id/api/v1";
+
+/**
+ * Safely extracts error details from BorderPay REST API responses,
+ * preventing '[object Object]' when error payloads contain nested validation maps.
+ */
+function parseBorderPayErrorMessage(errBody: string): string {
+  try {
+    const parsed = JSON.parse(errBody);
+    if (typeof parsed === "string") {
+      return parsed;
+    }
+    if (parsed && typeof parsed === "object") {
+      if (typeof parsed.message === "string") {
+        return parsed.message + (parsed.errors ? `: ${JSON.stringify(parsed.errors)}` : "");
+      }
+      if (typeof parsed.error === "string") {
+        return parsed.error + (parsed.errors ? `: ${JSON.stringify(parsed.errors)}` : "");
+      }
+      if (parsed.errors) {
+        return JSON.stringify(parsed.errors);
+      }
+      return JSON.stringify(parsed);
+    }
+  } catch {
+    // raw body
+  }
+  return errBody;
+}
 
 /**
  * Calculates the payment gateway fee based on method and live config.
@@ -132,67 +160,11 @@ export const getPaymentConfig = query({
 });
 
 /**
- * Generates an ECDSA P-256 key pair and registers it under treasurerKeys.
+ * Internal query to check permissions and get existing config for saving payment gateway.
  */
-async function provisionGatewaySigningKey(
-  ctx: MutationCtx,
-  organizationId: Id<"organizations">,
-  ownerId: Id<"users">
-): Promise<{ keyId: string; privateKeyJwk: string }> {
-  // Generate ECDSA P-256 key pair via Web Crypto
-  const keyPair = await crypto.subtle.generateKey(
-    { name: "ECDSA", namedCurve: "P-256" },
-    true,
-    ["sign", "verify"]
-  );
-
-  const publicJwk = await crypto.subtle.exportKey("jwk", keyPair.publicKey);
-  const privateJwk = await crypto.subtle.exportKey("jwk", keyPair.privateKey);
-
-  const publicJwkString = JSON.stringify(publicJwk);
-  const privateJwkString = JSON.stringify(privateJwk);
-
-  const keyId = await computeKeyIdFromJwk(publicJwkString);
-
-  // Register in treasurerKeys table
-  const existingKey = await ctx.db
-    .query("treasurerKeys")
-    .withIndex("by_organizationId_and_keyId", (q) =>
-      q.eq("organizationId", organizationId).eq("keyId", keyId)
-    )
-    .first();
-
-  if (!existingKey) {
-    await ctx.db.insert("treasurerKeys", {
-      organizationId,
-      userId: ownerId,
-      publicKeyJwk: publicJwkString,
-      keyId,
-      label: "BorderPay Gateway System Key",
-      registeredAt: Date.now(),
-      registeredBy: ownerId,
-    });
-  }
-
-  return { keyId, privateKeyJwk: privateJwkString };
-}
-
-/**
- * Creates or updates the BorderPay payment configuration for an organization.
- */
-export const savePaymentConfig = mutation({
+export const _getAuthAndExistingConfigForSave = internalQuery({
   args: {
     organizationId: v.id("organizations"),
-    apiKey: v.optional(v.string()), // Optional if not changing existing key
-    webhookToken: v.optional(v.string()),
-    isEnabled: v.boolean(),
-    methodOverrides: v.optional(
-      v.object({
-        qrisEnabled: v.boolean(),
-        enabledBanks: v.array(v.string()),
-        enabledWallets: v.array(v.string()),
-      })
-    ),
   },
   handler: async (ctx, args) => {
     const { user } = await requirePermission(
@@ -208,9 +180,134 @@ export const savePaymentConfig = mutation({
       )
       .first();
 
-    const apiKeyToUse = args.apiKey && args.apiKey.trim().length > 0
-      ? args.apiKey.trim()
-      : (existing?.apiKey ?? "");
+    return {
+      userId: user._id,
+      existing,
+    };
+  },
+});
+
+/**
+ * Internal mutation to save payment configuration and optionally insert a newly provisioned gateway key.
+ */
+export const _saveConfigMutation = internalMutation({
+  args: {
+    organizationId: v.id("organizations"),
+    apiKey: v.string(),
+    webhookToken: v.optional(v.string()),
+    isEnabled: v.boolean(),
+    isTestMode: v.boolean(),
+    gatewayKeyId: v.string(),
+    gatewayPrivateKeyJwk: v.string(),
+    methodOverrides: v.object({
+      qrisEnabled: v.boolean(),
+      enabledBanks: v.array(v.string()),
+      enabledWallets: v.array(v.string()),
+    }),
+    userId: v.id("users"),
+    newGatewayKey: v.optional(
+      v.object({
+        keyId: v.string(),
+        publicKeyJwk: v.string(),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    // If a new key was generated, register in treasurerKeys table
+    if (args.newGatewayKey) {
+      const existingKey = await ctx.db
+        .query("treasurerKeys")
+        .withIndex("by_organizationId_and_keyId", (q) =>
+          q.eq("organizationId", args.organizationId).eq("keyId", args.newGatewayKey!.keyId)
+        )
+        .first();
+
+      if (!existingKey) {
+        await ctx.db.insert("treasurerKeys", {
+          organizationId: args.organizationId,
+          userId: args.userId,
+          publicKeyJwk: args.newGatewayKey.publicKeyJwk,
+          keyId: args.newGatewayKey.keyId,
+          label: "BorderPay Gateway System Key",
+          registeredAt: Date.now(),
+          registeredBy: args.userId,
+        });
+      }
+    }
+
+    const existing = await ctx.db
+      .query("organizationPaymentConfig")
+      .withIndex("by_organizationId", (q) =>
+        q.eq("organizationId", args.organizationId)
+      )
+      .first();
+
+    const now = Date.now();
+
+    if (existing) {
+      await ctx.db.patch("organizationPaymentConfig", existing._id, {
+        apiKey: args.apiKey,
+        webhookToken: args.webhookToken,
+        isEnabled: args.isEnabled,
+        isTestMode: args.isTestMode,
+        gatewayKeyId: args.gatewayKeyId,
+        gatewayPrivateKeyJwk: args.gatewayPrivateKeyJwk,
+        methodOverrides: args.methodOverrides,
+        updatedBy: args.userId,
+        updatedAt: now,
+      });
+      return existing._id;
+    } else {
+      return await ctx.db.insert("organizationPaymentConfig", {
+        organizationId: args.organizationId,
+        provider: "borderpay",
+        apiKey: args.apiKey,
+        webhookToken: args.webhookToken,
+        gatewayKeyId: args.gatewayKeyId,
+        gatewayPrivateKeyJwk: args.gatewayPrivateKeyJwk,
+        isEnabled: args.isEnabled,
+        isTestMode: args.isTestMode,
+        methodOverrides: args.methodOverrides,
+        updatedBy: args.userId,
+        updatedAt: now,
+      });
+    }
+  },
+});
+
+/**
+ * Creates or updates the BorderPay payment configuration for an organization.
+ * Defined as an action to allow cryptographic key generation (ECDSA P-256) via Web Crypto.
+ */
+export const savePaymentConfig = action({
+  args: {
+    organizationId: v.id("organizations"),
+    apiKey: v.optional(v.string()), // Optional if not changing existing key
+    webhookToken: v.optional(v.string()),
+    isEnabled: v.boolean(),
+    methodOverrides: v.optional(
+      v.object({
+        qrisEnabled: v.boolean(),
+        enabledBanks: v.array(v.string()),
+        enabledWallets: v.array(v.string()),
+      })
+    ),
+  },
+  returns: v.id("organizationPaymentConfig"),
+  handler: async (ctx, args): Promise<Id<"organizationPaymentConfig">> => {
+    const authData: {
+      userId: Id<"users">;
+      existing: Doc<"organizationPaymentConfig"> | null;
+    } = await ctx.runQuery(
+      internal.treasury.borderpay._getAuthAndExistingConfigForSave,
+      { organizationId: args.organizationId }
+    );
+    const { userId, existing } = authData;
+
+    const apiKeyToUse =
+      args.apiKey && args.apiKey.trim().length > 0
+        ? args.apiKey.trim()
+        : (existing?.apiKey ?? "");
 
     if (!apiKeyToUse && args.isEnabled) {
       throw new Error("Cannot enable payment gateway without a valid BorderPay API key.");
@@ -220,53 +317,49 @@ export const savePaymentConfig = mutation({
 
     let gatewayKeyId = existing?.gatewayKeyId;
     let gatewayPrivateKeyJwk = existing?.gatewayPrivateKeyJwk;
+    let newGatewayKey: { keyId: string; publicKeyJwk: string } | undefined = undefined;
 
-    // Auto-provision CLE gateway signing key if not present
+    // Auto-provision CLE gateway signing key if not present (Web Crypto generation permitted in actions)
     if (!gatewayKeyId || !gatewayPrivateKeyJwk) {
-      const provisioned = await provisionGatewaySigningKey(
-        ctx,
-        args.organizationId,
-        user._id
+      const keyPair = await crypto.subtle.generateKey(
+        { name: "ECDSA", namedCurve: "P-256" },
+        true,
+        ["sign", "verify"]
       );
-      gatewayKeyId = provisioned.keyId;
-      gatewayPrivateKeyJwk = provisioned.privateKeyJwk;
+
+      const publicJwk = await crypto.subtle.exportKey("jwk", keyPair.publicKey);
+      const privateJwk = await crypto.subtle.exportKey("jwk", keyPair.privateKey);
+
+      const publicJwkString = JSON.stringify(publicJwk);
+      const privateJwkString = JSON.stringify(privateJwk);
+
+      const keyId = await computeKeyIdFromJwk(publicJwkString);
+      gatewayKeyId = keyId;
+      gatewayPrivateKeyJwk = privateJwkString;
+      newGatewayKey = { keyId, publicKeyJwk: publicJwkString };
     }
 
-    const now = Date.now();
     const overrides = args.methodOverrides ?? existing?.methodOverrides ?? {
       qrisEnabled: true,
       enabledBanks: ["BCA", "BNI", "MANDIRI", "BRI", "PERMATA", "CIMB"],
       enabledWallets: ["DANA", "SHOPEE", "OVO"],
     };
 
-    if (existing) {
-      await ctx.db.patch("organizationPaymentConfig", existing._id, {
-        apiKey: apiKeyToUse,
-        webhookToken: args.webhookToken !== undefined ? args.webhookToken.trim() : existing.webhookToken,
-        isEnabled: args.isEnabled,
-        isTestMode,
-        gatewayKeyId,
-        gatewayPrivateKeyJwk,
-        methodOverrides: overrides,
-        updatedBy: user._id,
-        updatedAt: now,
-      });
-      return existing._id;
-    } else {
-      return await ctx.db.insert("organizationPaymentConfig", {
-        organizationId: args.organizationId,
-        provider: "borderpay",
-        apiKey: apiKeyToUse,
-        webhookToken: args.webhookToken ? args.webhookToken.trim() : undefined,
-        gatewayKeyId,
-        gatewayPrivateKeyJwk,
-        isEnabled: args.isEnabled,
-        isTestMode,
-        methodOverrides: overrides,
-        updatedBy: user._id,
-        updatedAt: now,
-      });
-    }
+    const webhookTokenToSave =
+      args.webhookToken !== undefined ? args.webhookToken.trim() : existing?.webhookToken;
+
+    return await ctx.runMutation(internal.treasury.borderpay._saveConfigMutation, {
+      organizationId: args.organizationId,
+      apiKey: apiKeyToUse,
+      webhookToken: webhookTokenToSave,
+      isEnabled: args.isEnabled,
+      isTestMode,
+      gatewayKeyId,
+      gatewayPrivateKeyJwk,
+      methodOverrides: overrides,
+      userId,
+      newGatewayKey,
+    });
   },
 });
 
@@ -328,7 +421,8 @@ export const fetchAvailablePaymentMethods = action({
 
     if (!response.ok) {
       const errText = await response.text();
-      throw new Error(`Failed to fetch payment methods from BorderPay (${response.status}): ${errText}`);
+      const msg = parseBorderPayErrorMessage(errText);
+      throw new Error(`Failed to fetch payment methods from BorderPay (${response.status}): ${msg}`);
     }
 
     const data = await response.json();
@@ -724,7 +818,7 @@ export const initiatePayment = action({
     if (args.bankCode) {
       payload.bank_code = args.bankCode.toUpperCase();
     }
-    if (args.returnUrl) {
+    if (args.returnUrl && args.returnUrl.startsWith("https://")) {
       payload.return_url = args.returnUrl;
     }
 
@@ -739,13 +833,7 @@ export const initiatePayment = action({
 
     if (!res.ok) {
       const errBody = await res.text();
-      let msg = errBody;
-      try {
-        const parsed = JSON.parse(errBody);
-        msg = parsed.message || parsed.error || errBody;
-      } catch {
-        // use raw body
-      }
+      const msg = parseBorderPayErrorMessage(errBody);
       throw new Error(`BorderPay Error (${res.status}): ${msg}`);
     }
 
@@ -757,25 +845,25 @@ export const initiatePayment = action({
     await ctx.runMutation(internal.treasury.borderpay._updateInvoicePendingPayment, {
       invoiceId: invoice._id,
       selectedMethod: args.method,
-      selectedBankCode: args.bankCode?.toUpperCase(),
+      selectedBankCode: args.bankCode?.toUpperCase() || undefined,
       gatewayFee: fee,
       totalAmount,
-      borderpayReferenceId: bpRes.reference_id || invoice.invoiceNumber,
-      payUrl: bpRes.pay_url,
-      qrString: bpRes.qr_string,
-      vaNumber: bpRes.va_number,
-      vaBank: bpRes.va_bank || args.bankCode?.toUpperCase(),
-      checkoutUrl: bpRes.checkout_url,
-      expiresAt,
+      borderpayReferenceId: (bpRes.reference_id || invoice.invoiceNumber) ?? undefined,
+      payUrl: bpRes.pay_url || undefined,
+      qrString: bpRes.qr_string || undefined,
+      vaNumber: bpRes.va_number || undefined,
+      vaBank: (bpRes.va_bank || args.bankCode?.toUpperCase()) || undefined,
+      checkoutUrl: bpRes.checkout_url || undefined,
+      expiresAt: expiresAt ?? undefined,
     });
 
     return {
-      referenceId: bpRes.reference_id,
-      payUrl: bpRes.pay_url,
-      qrString: bpRes.qr_string,
-      vaNumber: bpRes.va_number,
-      vaBank: bpRes.va_bank || args.bankCode?.toUpperCase(),
-      checkoutUrl: bpRes.checkout_url,
+      referenceId: bpRes.reference_id || invoice.invoiceNumber,
+      payUrl: bpRes.pay_url || undefined,
+      qrString: bpRes.qr_string || undefined,
+      vaNumber: bpRes.va_number || undefined,
+      vaBank: (bpRes.va_bank || args.bankCode?.toUpperCase()) || undefined,
+      checkoutUrl: bpRes.checkout_url || undefined,
       expiresAt,
       fee,
       totalAmount,
@@ -787,31 +875,31 @@ export const _updateInvoicePendingPayment = internalMutation({
   args: {
     invoiceId: v.id("invoices"),
     selectedMethod: v.union(v.literal("qris"), v.literal("va"), v.literal("ewallet")),
-    selectedBankCode: v.optional(v.string()),
+    selectedBankCode: v.optional(v.union(v.string(), v.null())),
     gatewayFee: v.number(),
     totalAmount: v.number(),
-    borderpayReferenceId: v.optional(v.string()),
-    payUrl: v.optional(v.string()),
-    qrString: v.optional(v.string()),
-    vaNumber: v.optional(v.string()),
-    vaBank: v.optional(v.string()),
-    checkoutUrl: v.optional(v.string()),
-    expiresAt: v.optional(v.number()),
+    borderpayReferenceId: v.optional(v.union(v.string(), v.null())),
+    payUrl: v.optional(v.union(v.string(), v.null())),
+    qrString: v.optional(v.union(v.string(), v.null())),
+    vaNumber: v.optional(v.union(v.string(), v.null())),
+    vaBank: v.optional(v.union(v.string(), v.null())),
+    checkoutUrl: v.optional(v.union(v.string(), v.null())),
+    expiresAt: v.optional(v.union(v.number(), v.null())),
   },
   handler: async (ctx, args) => {
     await ctx.db.patch("invoices", args.invoiceId, {
       status: "pending",
       selectedMethod: args.selectedMethod,
-      selectedBankCode: args.selectedBankCode,
+      selectedBankCode: args.selectedBankCode || undefined,
       gatewayFee: args.gatewayFee,
       totalAmount: args.totalAmount,
-      borderpayReferenceId: args.borderpayReferenceId,
-      payUrl: args.payUrl,
-      qrString: args.qrString,
-      vaNumber: args.vaNumber,
-      vaBank: args.vaBank,
-      checkoutUrl: args.checkoutUrl,
-      expiresAt: args.expiresAt,
+      borderpayReferenceId: args.borderpayReferenceId || undefined,
+      payUrl: args.payUrl || undefined,
+      qrString: args.qrString || undefined,
+      vaNumber: args.vaNumber || undefined,
+      vaBank: args.vaBank || undefined,
+      checkoutUrl: args.checkoutUrl || undefined,
+      expiresAt: args.expiresAt || undefined,
     });
   },
 });
@@ -857,7 +945,8 @@ export const simulatePayment = action({
 
     if (!res.ok) {
       const errText = await res.text();
-      throw new Error(`Simulation failed (${res.status}): ${errText}`);
+      const msg = parseBorderPayErrorMessage(errText);
+      throw new Error(`Simulation failed (${res.status}): ${msg}`);
     }
 
     return await res.json();
@@ -1020,120 +1109,11 @@ export const listInvoices = query({
 });
 
 /**
- * Signs and commits an automated credit entry into Kasly's Cryptographic Ledger Engine (CLE)
- * using the organization's registered BorderPay Gateway System Key.
+ * Internal query to fetch invoice, fund, and payment configuration context for webhook processing.
  */
-async function commitGatewayLedgerEntry(
-  ctx: MutationCtx,
-  config: Doc<"organizationPaymentConfig">,
-  invoice: Doc<"invoices">
-): Promise<Id<"ledgerEntries"> | undefined> {
-  const fund = await ctx.db.get("funds", invoice.fundId);
-  if (!fund || fund.isArchived) {
-    console.warn(`Cannot commit gateway entry: fund ${invoice.fundId} is missing or archived.`);
-    return undefined;
-  }
-
-  if (!config.gatewayKeyId || !config.gatewayPrivateKeyJwk) {
-    console.warn("Gateway signing key is missing from organizationPaymentConfig.");
-    return undefined;
-  }
-
-  // Look up key in treasurerKeys
-  const gatewayKey = await ctx.db
-    .query("treasurerKeys")
-    .withIndex("by_organizationId_and_keyId", (q) =>
-      q.eq("organizationId", invoice.organizationId).eq("keyId", config.gatewayKeyId!)
-    )
-    .first();
-
-  if (!gatewayKey) {
-    console.warn(`Gateway key '${config.gatewayKeyId}' is not registered in treasurerKeys.`);
-    return undefined;
-  }
-
-  const ownerUser = await ctx.db.get("users", gatewayKey.userId);
-  if (!ownerUser) {
-    console.warn(`Owner user ${gatewayKey.userId} not found.`);
-    return undefined;
-  }
-
-  // Fetch current HEAD entry
-  const latest = await ctx.db
-    .query("ledgerEntries")
-    .withIndex("by_fundId_and_sequenceNumber", (q) => q.eq("fundId", fund._id))
-    .order("desc")
-    .first();
-
-  const sequenceNumber = latest ? latest.sequenceNumber + 1 : 1;
-  const previousHash = latest ? latest.entryHash : "GENESIS";
-  const memo = `BorderPay Dues Payment - ${invoice.invoiceNumber}`;
-
-  // Build canonical signing payload
-  const signingPayloadText = canonicalizeSigningPayload({
-    fundId: fund._id,
-    sequenceNumber,
-    previousHash,
-    direction: "credit",
-    amount: invoice.subtotal,
-    memo,
-    keyId: config.gatewayKeyId,
-  });
-
-  // Import private key and sign via Web Crypto
-  let privateKeyJwkParsed: JsonWebKey;
-  try {
-    privateKeyJwkParsed = JSON.parse(config.gatewayPrivateKeyJwk);
-  } catch (err) {
-    console.error("Failed to parse gateway private key JWK:", err);
-    return undefined;
-  }
-
-  const privateKey = await crypto.subtle.importKey(
-    "jwk",
-    privateKeyJwkParsed,
-    { name: "ECDSA", namedCurve: "P-256" },
-    false,
-    ["sign"]
-  );
-
-  const rawSignature = await crypto.subtle.sign(
-    { name: "ECDSA", hash: "SHA-256" },
-    privateKey,
-    new TextEncoder().encode(signingPayloadText)
-  );
-
-  const signature = bufferToBase64url(rawSignature);
-
-  // Commit entry via executeCommit
-  const firstDueEventId = invoice.duesMembershipIds && invoice.duesMembershipIds.length > 0
-    ? (await ctx.db.get("duesMemberships", invoice.duesMembershipIds[0]))?.duesEventId
-    : undefined;
-
-  const result = await executeCommit(ctx, ownerUser, fund, {
-    direction: "credit",
-    amount: invoice.subtotal,
-    memo,
-    keyId: config.gatewayKeyId,
-    previousHash,
-    signature,
-    entryType: "gateway_payment",
-    duesEventId: firstDueEventId,
-  });
-
-  return result.entryId;
-}
-
-/**
- * Internal mutation executed upon receiving a verified BorderPay webhook.
- * - Idempotently marks invoice as paid
- * - If dues invoice: commits credit entry to CLE, marks duesMemberships paid, updates duesEvents.paidCount
- */
-export const internalMarkInvoicePaid = internalMutation({
+export const _getInvoiceAndPaymentContext = internalQuery({
   args: {
     referenceId: v.string(),
-    paidAt: v.number(),
-    borderpayData: v.optional(v.any()),
   },
   handler: async (ctx, args) => {
     const invoice = await ctx.db
@@ -1143,15 +1123,7 @@ export const internalMarkInvoicePaid = internalMutation({
       )
       .first();
 
-    if (!invoice) {
-      console.warn(`Webhook received for unknown reference_id: ${args.referenceId}`);
-      return { success: false, reason: "Invoice not found" };
-    }
-
-    // Idempotency: if already paid, do not re-process
-    if (invoice.status === "paid") {
-      return { success: true, alreadyPaid: true };
-    }
+    if (!invoice) return null;
 
     const config = await ctx.db
       .query("organizationPaymentConfig")
@@ -1160,35 +1132,132 @@ export const internalMarkInvoicePaid = internalMutation({
       )
       .first();
 
+    if (invoice.type !== "dues") {
+      return {
+        invoice,
+        config: null,
+        fund: null,
+        latest: null,
+        firstDueEventId: undefined,
+        ownerUser: null,
+      };
+    }
+
+    const fund = await ctx.db.get("funds", invoice.fundId);
+    if (!fund || fund.isArchived || !config?.gatewayKeyId || !config?.gatewayPrivateKeyJwk) {
+      return {
+        invoice,
+        config,
+        fund: null,
+        latest: null,
+        firstDueEventId: undefined,
+        ownerUser: null,
+      };
+    }
+
+    const gatewayKey = await ctx.db
+      .query("treasurerKeys")
+      .withIndex("by_organizationId_and_keyId", (q) =>
+        q.eq("organizationId", invoice.organizationId).eq("keyId", config.gatewayKeyId!)
+      )
+      .first();
+
+    const ownerUser = gatewayKey ? await ctx.db.get("users", gatewayKey.userId) : null;
+
+    const latest = await ctx.db
+      .query("ledgerEntries")
+      .withIndex("by_fundId_and_sequenceNumber", (q) => q.eq("fundId", fund._id))
+      .order("desc")
+      .first();
+
+    const firstDueEventId =
+      invoice.duesMembershipIds && invoice.duesMembershipIds.length > 0
+        ? (await ctx.db.get("duesMemberships", invoice.duesMembershipIds[0]))?.duesEventId
+        : undefined;
+
+    return {
+      invoice,
+      config,
+      fund,
+      latest,
+      firstDueEventId,
+      ownerUser,
+    };
+  },
+});
+
+/**
+ * Internal mutation executed upon receiving a verified BorderPay webhook.
+ * Finalizes invoice payment, updates dues memberships, and commits verified ledger entry.
+ */
+export const _completeInvoicePaidMutation = internalMutation({
+  args: {
+    invoiceId: v.id("invoices"),
+    paidAt: v.number(),
+    signedCommit: v.optional(
+      v.object({
+        signature: v.string(),
+        previousHash: v.string(),
+        keyId: v.string(),
+        duesEventId: v.optional(v.id("duesEvents")),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const invoice = await ctx.db.get("invoices", args.invoiceId);
+    if (!invoice || invoice.status === "paid") {
+      return { success: true, alreadyPaid: true };
+    }
+
     let ledgerEntryId: Id<"ledgerEntries"> | undefined = undefined;
 
-    // Settle dues in Cryptographic Ledger Engine (CLE)
-    if (invoice.type === "dues" && config) {
-      try {
-        ledgerEntryId = await commitGatewayLedgerEntry(ctx, config, invoice);
-      } catch (err) {
-        console.error("Error committing gateway ledger entry for paid dues:", err);
+    if (args.signedCommit) {
+      const fund = await ctx.db.get("funds", invoice.fundId);
+      const gatewayKey = await ctx.db
+        .query("treasurerKeys")
+        .withIndex("by_organizationId_and_keyId", (q) =>
+          q.eq("organizationId", invoice.organizationId).eq("keyId", args.signedCommit!.keyId)
+        )
+        .first();
+
+      const ownerUser = gatewayKey ? await ctx.db.get("users", gatewayKey.userId) : null;
+
+      if (fund && ownerUser) {
+        try {
+          const result = await executeCommit(ctx, ownerUser, fund, {
+            direction: "credit",
+            amount: invoice.subtotal,
+            memo: `BorderPay Dues Payment - ${invoice.invoiceNumber}`,
+            keyId: args.signedCommit.keyId,
+            previousHash: args.signedCommit.previousHash,
+            signature: args.signedCommit.signature,
+            entryType: "gateway_payment",
+            duesEventId: args.signedCommit.duesEventId,
+          });
+          ledgerEntryId = result.entryId;
+        } catch (err) {
+          console.error("Error committing gateway ledger entry:", err);
+        }
       }
+    }
 
-      // Update linked dues memberships
-      if (invoice.duesMembershipIds) {
-        for (const mid of invoice.duesMembershipIds) {
-          const membership = await ctx.db.get("duesMemberships", mid);
-          if (membership && !membership.hasPaid) {
-            await ctx.db.patch("duesMemberships", mid, {
-              hasPaid: true,
-              paidAt: args.paidAt,
-              ledgerEntryId,
-              paymentMethod: "gateway_borderpay",
+    // Update linked dues memberships
+    if (invoice.duesMembershipIds) {
+      for (const mid of invoice.duesMembershipIds) {
+        const membership = await ctx.db.get("duesMemberships", mid);
+        if (membership && !membership.hasPaid) {
+          await ctx.db.patch("duesMemberships", mid, {
+            hasPaid: true,
+            paidAt: args.paidAt,
+            ledgerEntryId,
+            paymentMethod: "gateway_borderpay",
+          });
+
+          const event = await ctx.db.get("duesEvents", membership.duesEventId);
+          if (event) {
+            await ctx.db.patch("duesEvents", event._id, {
+              paidCount: event.paidCount + 1,
             });
-
-            // Increment event paid count
-            const event = await ctx.db.get("duesEvents", membership.duesEventId);
-            if (event) {
-              await ctx.db.patch("duesEvents", event._id, {
-                paidCount: event.paidCount + 1,
-              });
-            }
           }
         }
       }
@@ -1202,5 +1271,101 @@ export const internalMarkInvoicePaid = internalMutation({
     });
 
     return { success: true, invoiceId: invoice._id, ledgerEntryId };
+  },
+});
+
+/**
+ * Internal action executed upon receiving a verified BorderPay webhook.
+ * Signs the CLE ledger commit using the gateway private key in action runtime (where crypto.subtle.sign is allowed),
+ * then runs an internal mutation to atomically commit the ledger entry and mark the invoice paid.
+ */
+export const internalMarkInvoicePaid = internalAction({
+  args: {
+    referenceId: v.string(),
+    paidAt: v.number(),
+    borderpayData: v.optional(v.any()),
+  },
+  handler: async (ctx, args): Promise<any> => {
+    const ctxData: any = await ctx.runQuery(
+      internal.treasury.borderpay._getInvoiceAndPaymentContext,
+      { referenceId: args.referenceId }
+    );
+
+    if (!ctxData || !ctxData.invoice) {
+      console.warn(`Webhook received for unknown reference_id: ${args.referenceId}`);
+      return { success: false, reason: "Invoice not found" };
+    }
+
+    const { invoice, config, fund, latest, firstDueEventId, ownerUser } = ctxData;
+
+    if (invoice.status === "paid") {
+      return { success: true, alreadyPaid: true };
+    }
+
+    let signedCommit:
+      | {
+          signature: string;
+          previousHash: string;
+          keyId: string;
+          duesEventId?: Id<"duesEvents">;
+        }
+      | undefined = undefined;
+
+    if (
+      invoice.type === "dues" &&
+      fund &&
+      config?.gatewayKeyId &&
+      config?.gatewayPrivateKeyJwk &&
+      ownerUser
+    ) {
+      const sequenceNumber = latest ? latest.sequenceNumber + 1 : 1;
+      const previousHash = latest ? latest.entryHash : "GENESIS";
+      const memo = `BorderPay Dues Payment - ${invoice.invoiceNumber}`;
+
+      const signingPayloadText = canonicalizeSigningPayload({
+        fundId: fund._id,
+        sequenceNumber,
+        previousHash,
+        direction: "credit",
+        amount: invoice.subtotal,
+        memo,
+        keyId: config.gatewayKeyId,
+      });
+
+      try {
+        const privateKeyJwkParsed: JsonWebKey = JSON.parse(config.gatewayPrivateKeyJwk);
+        const privateKey = await crypto.subtle.importKey(
+          "jwk",
+          privateKeyJwkParsed,
+          { name: "ECDSA", namedCurve: "P-256" },
+          false,
+          ["sign"]
+        );
+
+        const rawSignature = await crypto.subtle.sign(
+          { name: "ECDSA", hash: "SHA-256" },
+          privateKey,
+          new TextEncoder().encode(signingPayloadText)
+        );
+
+        signedCommit = {
+          signature: bufferToBase64url(rawSignature),
+          previousHash,
+          keyId: config.gatewayKeyId,
+          duesEventId: firstDueEventId || undefined,
+        };
+      } catch (err) {
+        console.error("Failed to sign gateway ledger entry in action:", err);
+      }
+    }
+
+    return await ctx.runMutation(
+      internal.treasury.borderpay._completeInvoicePaidMutation,
+      {
+        invoiceId: invoice._id,
+        paidAt: args.paidAt,
+        signedCommit,
+      }
+    );
   },
 });

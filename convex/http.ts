@@ -52,7 +52,7 @@ http.route({
 
     // Process payment.paid event
     if (data?.reference_id && (data.status === "paid" || event === "payment.paid")) {
-      await ctx.runMutation(internal.treasury.borderpay.internalMarkInvoicePaid, {
+      await ctx.runAction(internal.treasury.borderpay.internalMarkInvoicePaid, {
         referenceId: data.reference_id,
         paidAt: Date.now(),
         borderpayData: data,
