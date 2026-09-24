@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
@@ -17,8 +18,10 @@ import {
   PenLine,
   Wallet,
   ShieldAlert,
+  CreditCard,
 } from "lucide-react";
 import { LedgerTimeline } from "./LedgerTimeline";
+import { CreateInvoiceModal } from "./CreateInvoiceModal";
 
 interface FundOverviewPaneProps {
   fundId: Id<"funds"> | null;
@@ -36,6 +39,7 @@ export function FundOverviewPane({
   onOpenKeyGen,
 }: FundOverviewPaneProps) {
   const { t } = useTranslation();
+  const [isCreateInvoiceOpen, setIsCreateInvoiceOpen] = useState(false);
   const fund = useQuery(
     api.treasury.funds.get,
     fundId ? { fundId } : "skip"
@@ -184,20 +188,36 @@ export function FundOverviewPane({
               </div>
             </div>
 
-            {canSign && !fund?.isArchived && (
-              <Button
-                type="button"
-                variant={isFrozen ? "destructive" : "cyber"}
-                chamfer="dual"
-                size="sm"
-                disabled={isFrozen}
-                onClick={onOpenRecordPayment}
-                className="text-xs flex items-center gap-1.5 cursor-pointer shrink-0 disabled:opacity-50"
-              >
-                <PenLine className="w-3.5 h-3.5" />
-                <span>{isFrozen ? "Ledger Frozen" : t("nav.recordPayment")}</span>
-              </Button>
-            )}
+            <div className="flex flex-wrap items-center gap-2">
+              {myUnpaidPeriods && myUnpaidPeriods.length > 0 && !fund?.isArchived && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  chamfer="dual"
+                  size="sm"
+                  onClick={() => setIsCreateInvoiceOpen(true)}
+                  className="text-xs flex items-center gap-1.5 cursor-pointer shrink-0 border-primary/40 text-primary hover:bg-primary/10"
+                >
+                  <CreditCard className="w-3.5 h-3.5" />
+                  <span>{t("nav.payDues")}</span>
+                </Button>
+              )}
+
+              {canSign && !fund?.isArchived && (
+                <Button
+                  type="button"
+                  variant={isFrozen ? "destructive" : "cyber"}
+                  chamfer="dual"
+                  size="sm"
+                  disabled={isFrozen}
+                  onClick={onOpenRecordPayment}
+                  className="text-xs flex items-center gap-1.5 cursor-pointer shrink-0 disabled:opacity-50"
+                >
+                  <PenLine className="w-3.5 h-3.5" />
+                  <span>{isFrozen ? "Ledger Frozen" : t("nav.recordPayment")}</span>
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Fund Details Strip */}
@@ -233,7 +253,7 @@ export function FundOverviewPane({
                   <span>{t("treasury.overview.allPaid")}</span>
                 </p>
               ) : (
-                <div className="space-y-0.5">
+                <div className="space-y-1.5">
                   <p className="font-mono font-bold text-amber-400">
                     {fund?.currency ?? "IDR"}{" "}
                     {myUnpaidPeriods
@@ -245,6 +265,17 @@ export function FundOverviewPane({
                       count: myUnpaidPeriods.length,
                     })}
                   </p>
+                  <Button
+                    type="button"
+                    variant="cyber"
+                    size="sm"
+                    chamfer="dual"
+                    onClick={() => setIsCreateInvoiceOpen(true)}
+                    className="w-full h-6 text-[10px] flex items-center justify-center gap-1 mt-1 cursor-pointer"
+                  >
+                    <CreditCard className="w-3 h-3" />
+                    <span>{t("nav.payDues")}</span>
+                  </Button>
                 </div>
               )}
             </div>
@@ -299,6 +330,15 @@ export function FundOverviewPane({
           />
         </CardContent>
       </Card>
+
+      {fundId && (
+        <CreateInvoiceModal
+          isOpen={isCreateInvoiceOpen}
+          onClose={() => setIsCreateInvoiceOpen(false)}
+          organizationId={organizationId}
+          fundId={fundId}
+        />
+      )}
     </div>
   );
 }

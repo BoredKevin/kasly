@@ -10,6 +10,7 @@ import { LedgerPane } from "./LedgerPane";
 import { DuesSpreadsheetPane } from "./DuesSpreadsheetPane";
 import { MyKeysPane } from "./MyKeysPane";
 import { AdminPane } from "./AdminPane";
+import { InvoicesPane } from "./InvoicesPane";
 import { RecordPaymentModal } from "./RecordPaymentModal";
 import { CreateDueEventModal } from "./CreateDueEventModal";
 import { CreateManualDuesModal } from "./CreateManualDuesModal";
@@ -76,6 +77,7 @@ export function TreasuryView({
     if (loc.startsWith("/tx/") || entryIdentifier) return "entry";
     if (loc === "/treasury/ledger") return "ledger";
     if (loc === "/treasury/dues") return "dues";
+    if (loc === "/treasury/invoices") return "invoices";
     if (loc === "/treasury/keys") return "keys";
     if (loc === "/treasury/admin") return "admin";
     return "overview";
@@ -273,6 +275,7 @@ export function TreasuryView({
               if (tab === "overview") setLocation("/treasury");
               if (tab === "ledger") setLocation("/treasury/ledger");
               if (tab === "dues") setLocation("/treasury/dues");
+              if (tab === "invoices") setLocation("/treasury/invoices");
               if (tab === "keys") setLocation("/treasury/keys");
               if (tab === "admin") setLocation("/treasury/admin");
             }}
@@ -331,6 +334,15 @@ export function TreasuryView({
                   onOpenEntryDetails={handleInspectEntryById}
                   onOpenAdminTab={() => setLocation("/treasury/admin")}
                   onOpenCreateDues={() => setIsCreateDuesModalOpen(true)}
+                />
+              </div>
+            )}
+
+            {safeCurrentTab === "invoices" && (
+              <div>
+                <InvoicesPane
+                  organizationId={effectiveOrgId}
+                  activeFundId={activeFundId}
                 />
               </div>
             )}
