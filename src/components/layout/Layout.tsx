@@ -25,10 +25,11 @@ import {
   KeyRound,
   ShieldCheck,
   CalendarDays,
+  Receipt,
 } from "lucide-react";
 
 export type OrgTab = "overview" | "roles" | "invites" | "members";
-export type TreasuryTab = "overview" | "ledger" | "dues" | "keys" | "admin";
+export type TreasuryTab = "overview" | "ledger" | "dues" | "invoices" | "keys" | "admin";
 
 interface LayoutProps {
   children: ReactNode;
@@ -97,6 +98,7 @@ function AuthenticatedDrawerContent({ onClose }: { onClose: () => void }) {
         { tab: "overview", label: t("nav.overview"), href: "/treasury", icon: Landmark },
         { tab: "ledger", label: t("nav.ledger"), href: "/treasury/ledger", icon: ScrollText },
         { tab: "dues", label: t("nav.duesAndPayments"), href: "/treasury/dues", icon: CalendarDays },
+        { tab: "invoices", label: t("nav.invoices"), href: "/treasury/invoices", icon: Receipt },
         ...(canSignTreasury
           ? [{ tab: "keys" as TreasuryTab, label: t("nav.myKeys"), href: "/treasury/keys", icon: KeyRound }]
           : []),

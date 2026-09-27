@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "convex/react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
+import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import { useActiveWorkspace } from "../../../contexts";
@@ -22,6 +23,11 @@ import {
   ChevronDown,
   Plus,
   PenLine,
+  ScrollText,
+  CalendarDays,
+  Receipt,
+  KeyRound,
+  ShieldCheck,
 } from "lucide-react";
 import { Button, Badge } from "@boredkevin/ui";
 
@@ -38,6 +44,7 @@ export function TreasuryView({
   onTabChange: controlledOnTabChange,
   entryIdentifier,
 }: TreasuryViewProps = {}) {
+  const { t } = useTranslation();
   const [location, setLocation] = useLocation();
   const orgs = useQuery(api.organizations.listMine);
   const { activeOrgId, setActiveOrgId } = useActiveWorkspace();
@@ -260,6 +267,86 @@ export function TreasuryView({
               </Button>
             )}
           </div>
+        </div>
+
+        {/* Mobile Treasury Tab Navigation Bar */}
+        <div className="md:hidden flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none font-mono text-xs">
+          <Link
+            href="/treasury"
+            onClick={() => handleSelectTab("overview")}
+            className={`px-3 py-1.5 border whitespace-nowrap flex items-center gap-1.5 transition-colors cursor-pointer ${
+              safeCurrentTab === "overview"
+                ? "bg-primary/20 border-primary text-primary font-bold shadow-sm"
+                : "bg-muted/20 border-border/60 text-muted-foreground hover:text-foreground hover:bg-white/5"
+            }`}
+          >
+            <Landmark className="w-3.5 h-3.5" />
+            <span>{t("nav.overview")}</span>
+          </Link>
+          <Link
+            href="/treasury/ledger"
+            onClick={() => handleSelectTab("ledger")}
+            className={`px-3 py-1.5 border whitespace-nowrap flex items-center gap-1.5 transition-colors cursor-pointer ${
+              safeCurrentTab === "ledger"
+                ? "bg-primary/20 border-primary text-primary font-bold shadow-sm"
+                : "bg-muted/20 border-border/60 text-muted-foreground hover:text-foreground hover:bg-white/5"
+            }`}
+          >
+            <ScrollText className="w-3.5 h-3.5" />
+            <span>{t("nav.ledger")}</span>
+          </Link>
+          <Link
+            href="/treasury/dues"
+            onClick={() => handleSelectTab("dues")}
+            className={`px-3 py-1.5 border whitespace-nowrap flex items-center gap-1.5 transition-colors cursor-pointer ${
+              safeCurrentTab === "dues"
+                ? "bg-primary/20 border-primary text-primary font-bold shadow-sm"
+                : "bg-muted/20 border-border/60 text-muted-foreground hover:text-foreground hover:bg-white/5"
+            }`}
+          >
+            <CalendarDays className="w-3.5 h-3.5" />
+            <span>{t("nav.duesAndPayments")}</span>
+          </Link>
+          <Link
+            href="/treasury/invoices"
+            onClick={() => handleSelectTab("invoices")}
+            className={`px-3 py-1.5 border whitespace-nowrap flex items-center gap-1.5 transition-colors cursor-pointer ${
+              safeCurrentTab === "invoices"
+                ? "bg-primary/20 border-primary text-primary font-bold shadow-sm"
+                : "bg-muted/20 border-border/60 text-muted-foreground hover:text-foreground hover:bg-white/5"
+            }`}
+          >
+            <Receipt className="w-3.5 h-3.5" />
+            <span>{t("nav.invoices")}</span>
+          </Link>
+          {canSign && (
+            <Link
+              href="/treasury/keys"
+              onClick={() => handleSelectTab("keys")}
+              className={`px-3 py-1.5 border whitespace-nowrap flex items-center gap-1.5 transition-colors cursor-pointer ${
+                safeCurrentTab === "keys"
+                  ? "bg-primary/20 border-primary text-primary font-bold shadow-sm"
+                  : "bg-muted/20 border-border/60 text-muted-foreground hover:text-foreground hover:bg-white/5"
+              }`}
+            >
+              <KeyRound className="w-3.5 h-3.5" />
+              <span>{t("nav.myKeys")}</span>
+            </Link>
+          )}
+          {canAdmin && (
+            <Link
+              href="/treasury/admin"
+              onClick={() => handleSelectTab("admin")}
+              className={`px-3 py-1.5 border whitespace-nowrap flex items-center gap-1.5 transition-colors cursor-pointer ${
+                safeCurrentTab === "admin"
+                  ? "bg-primary/20 border-primary text-primary font-bold shadow-sm"
+                  : "bg-muted/20 border-border/60 text-muted-foreground hover:text-foreground hover:bg-white/5"
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>{t("nav.adminPanel")}</span>
+            </Link>
+          )}
         </div>
       </div>
 

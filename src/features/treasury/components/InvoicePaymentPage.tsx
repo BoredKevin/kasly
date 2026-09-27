@@ -180,8 +180,8 @@ export function InvoicePaymentPage({ invoiceNumber }: InvoicePaymentPageProps) {
         selectedMethod === "va"
           ? selectedBank
           : selectedMethod === "ewallet"
-          ? selectedWallet
-          : undefined;
+            ? selectedWallet
+            : undefined;
 
       const returnUrl =
         window.location.protocol === "https:"
@@ -313,7 +313,7 @@ export function InvoicePaymentPage({ invoiceNumber }: InvoicePaymentPageProps) {
 
               <div>
                 {isPaid && (
-                  <Badge variant="success" className="font-mono text-xs px-2.5 py-1 font-bold animate-pulse">
+                  <Badge variant="success" className="font-mono text-xs px-2.5 py-1 font-bold">
                     {t("treasury.invoices.checkout.paid")}
                   </Badge>
                 )}
@@ -571,11 +571,10 @@ export function InvoicePaymentPage({ invoiceNumber }: InvoicePaymentPageProps) {
                 <div className="grid grid-cols-3 gap-2">
                   <div
                     onClick={() => setSelectedMethod("qris")}
-                    className={`p-3 border text-center transition-all cursor-pointer space-y-1 ${
-                      selectedMethod === "qris"
+                    className={`p-3 border text-center transition-all cursor-pointer space-y-1 ${selectedMethod === "qris"
                         ? "bg-primary/20 border-primary text-foreground"
                         : "bg-muted/20 border-border/60 text-muted-foreground hover:border-border"
-                    }`}
+                      }`}
                   >
                     <QrCode className="w-5 h-5 mx-auto text-primary" />
                     <span className="text-xs font-semibold block">QRIS</span>
@@ -583,11 +582,10 @@ export function InvoicePaymentPage({ invoiceNumber }: InvoicePaymentPageProps) {
 
                   <div
                     onClick={() => setSelectedMethod("va")}
-                    className={`p-3 border text-center transition-all cursor-pointer space-y-1 ${
-                      selectedMethod === "va"
+                    className={`p-3 border text-center transition-all cursor-pointer space-y-1 ${selectedMethod === "va"
                         ? "bg-primary/20 border-primary text-foreground"
                         : "bg-muted/20 border-border/60 text-muted-foreground hover:border-border"
-                    }`}
+                      }`}
                   >
                     <Building className="w-5 h-5 mx-auto text-primary" />
                     <span className="text-xs font-semibold block">Virtual Account</span>
@@ -595,11 +593,10 @@ export function InvoicePaymentPage({ invoiceNumber }: InvoicePaymentPageProps) {
 
                   <div
                     onClick={() => setSelectedMethod("ewallet")}
-                    className={`p-3 border text-center transition-all cursor-pointer space-y-1 ${
-                      selectedMethod === "ewallet"
+                    className={`p-3 border text-center transition-all cursor-pointer space-y-1 ${selectedMethod === "ewallet"
                         ? "bg-primary/20 border-primary text-foreground"
                         : "bg-muted/20 border-border/60 text-muted-foreground hover:border-border"
-                    }`}
+                      }`}
                   >
                     <Wallet className="w-5 h-5 mx-auto text-primary" />
                     <span className="text-xs font-semibold block">E-Wallet</span>
@@ -669,8 +666,8 @@ export function InvoicePaymentPage({ invoiceNumber }: InvoicePaymentPageProps) {
                   {isInitiating
                     ? t("treasury.invoices.checkout.generating")
                     : t("treasury.invoices.checkout.generatePayment", {
-                        method: selectedMethod.toUpperCase(),
-                      })}
+                      method: selectedMethod.toUpperCase(),
+                    })}
                 </Button>
               </div>
             )}
