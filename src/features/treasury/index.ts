@@ -21,6 +21,8 @@ export * from "./components/InvoicePaymentPage";
 export * from "./components/PaymentGatewayCard";
 export * from "./components/CreateInvoiceModal";
 export * from "./components/CreateCustomInvoiceModal";
+export * from "./components/MemberDuesBanner";
+export * from "./components/CompactBalanceBanner";
 export * from "./utils/revertUtils";
 
 if (typeof window !== "undefined" && window.__updateAppProgress) {

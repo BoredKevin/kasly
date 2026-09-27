@@ -20,11 +20,11 @@ export function Header({ activeTab: explicitTab }: HeaderProps = {}) {
   const [location] = useLocation();
 
   const isProfileActive =
-    explicitTab === "profile" || location === "/profile" || location === "/";
+    explicitTab === "profile" || location === "/profile";
   const isOrgActive =
     explicitTab === "organization" || location.startsWith("/organization");
   const isTreasuryActive =
-    explicitTab === "treasury" || location.startsWith("/treasury");
+    explicitTab === "treasury" || location.startsWith("/treasury") || location === "/";
 
   return (
     <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-md px-4 sm:px-6 py-3 border-b border-border/80 shadow-md flex justify-between items-center">
@@ -52,7 +52,7 @@ export function Header({ activeTab: explicitTab }: HeaderProps = {}) {
         </Authenticated>
 
         {/* Kasly Brand Logo */}
-        <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
+        <Link href="/treasury" className="flex items-center gap-2 cursor-pointer">
           <div className="p-1.5 bg-primary/10 border border-primary/30 text-primary font-bold font-mono text-xs">
             K
           </div>
@@ -65,14 +65,14 @@ export function Header({ activeTab: explicitTab }: HeaderProps = {}) {
         <Authenticated>
           <nav className="hidden md:flex items-center gap-1 bg-muted/30 p-1 border border-border">
             <Link
-              href="/profile"
-              className={`px-3 py-1 text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${isProfileActive
+              href="/treasury"
+              className={`px-3 py-1 text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${isTreasuryActive
                 ? "bg-background text-foreground shadow-sm font-semibold"
                 : "text-muted-foreground hover:text-foreground"
                 }`}
             >
-              <User className="w-3.5 h-3.5" />
-              <span>{t("nav.userProfile")}</span>
+              <Landmark className="w-3.5 h-3.5" />
+              <span>{t("nav.treasury")}</span>
             </Link>
 
             <Link
@@ -87,14 +87,14 @@ export function Header({ activeTab: explicitTab }: HeaderProps = {}) {
             </Link>
 
             <Link
-              href="/treasury"
-              className={`px-3 py-1 text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${isTreasuryActive
+              href="/profile"
+              className={`px-3 py-1 text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer ${isProfileActive
                 ? "bg-background text-foreground shadow-sm font-semibold"
                 : "text-muted-foreground hover:text-foreground"
                 }`}
             >
-              <Landmark className="w-3.5 h-3.5" />
-              <span>{t("nav.treasury")}</span>
+              <User className="w-3.5 h-3.5" />
+              <span>{t("nav.userProfile")}</span>
             </Link>
           </nav>
         </Authenticated>

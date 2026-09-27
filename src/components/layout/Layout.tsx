@@ -112,8 +112,8 @@ function AuthenticatedDrawerContent({ onClose }: { onClose: () => void }) {
   const [treasuryDropdownManualState, setTreasuryDropdownManualState] = useState<boolean | null>(null);
 
   const isOrgActive = location.startsWith("/organization");
-  const isTreasuryActive = location.startsWith("/treasury");
-  const isProfileActive = location === "/profile" || location === "/";
+  const isTreasuryActive = location.startsWith("/treasury") || location === "/";
+  const isProfileActive = location === "/profile";
 
   const isOrgDropdownOpen =
     hasOrgs && (orgDropdownManualState !== null ? orgDropdownManualState : isOrgActive);
@@ -162,34 +162,88 @@ function AuthenticatedDrawerContent({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="space-y-1.5">
-          {/* User Profile Link */}
-          <Link
-            href="/profile"
-            onClick={onClose}
-            style={{
-              backgroundColor: isProfileActive
-                ? "rgba(255, 255, 255, 0.08)"
-                : "rgba(255, 255, 255, 0.03)",
-            }}
-            className={`w-full p-3 flex items-center justify-between border transition-all text-left cursor-pointer ${
-              isProfileActive
-                ? "border-primary/60 text-foreground font-semibold shadow-md"
-                : "border-border/70 text-muted-foreground hover:text-foreground hover:border-border hover:bg-white/5"
-            }`}
-          >
-            <div className="flex items-center gap-3">
+          {/* Treasury Item with Dropdown (Primary Workspace) */}
+          {hasOrgs && canViewTreasury && (
+            <div className="space-y-1">
               <div
-                className={`p-2 border ${
-                  isProfileActive
-                    ? "bg-primary/20 border-primary/40 text-primary"
-                    : "bg-muted/40 border-border/60 text-muted-foreground"
+                style={{
+                  backgroundColor: isTreasuryActive
+                    ? "rgba(255, 255, 255, 0.08)"
+                    : "rgba(255, 255, 255, 0.03)",
+                }}
+                className={`w-full flex items-center justify-between border transition-all ${
+                  isTreasuryActive
+                    ? "border-primary/60 text-foreground font-semibold shadow-md"
+                    : "border-border/70 text-muted-foreground hover:text-foreground hover:border-border hover:bg-white/5"
                 }`}
               >
-                <User className="w-4 h-4" />
+                <Link
+                  href="/treasury"
+                  onClick={() => {
+                    setTreasuryDropdownManualState(true);
+                    onClose();
+                  }}
+                  className="flex-1 p-3 flex items-center gap-3 text-left cursor-pointer"
+                >
+                  <div
+                    className={`p-2 border ${
+                      isTreasuryActive
+                        ? "bg-primary/20 border-primary/40 text-primary"
+                        : "bg-muted/40 border-border/60 text-muted-foreground"
+                    }`}
+                  >
+                    <Landmark className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs font-medium">{t("nav.treasury")}</span>
+                </Link>
+
+                {treasurySubTabs.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleToggleTreasuryDropdown}
+                    className="p-3 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                    aria-label="Toggle treasury pages dropdown"
+                  >
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        isTreasuryDropdownOpen ? "rotate-180 text-primary" : ""
+                      }`}
+                    />
+                  </button>
+                )}
               </div>
-              <span className="text-xs font-medium">{t("nav.userProfile")}</span>
+
+              {/* Treasury Page Navigation Dropdown Sub-menu */}
+              {isTreasuryDropdownOpen && treasurySubTabs.length > 0 && (
+                <div className="pl-3 pr-1 py-1 space-y-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <div className="border-l-2 border-primary/30 pl-2 space-y-1">
+                    {treasurySubTabs.map(({ tab, label, href, icon: SubIcon }) => {
+                      const isSubActive =
+                        (tab === "overview" && location === "/treasury") ||
+                        (tab !== "overview" && location === href);
+                      return (
+                        <Link
+                          key={tab}
+                          href={href}
+                          onClick={onClose}
+                          className={`w-full px-2.5 py-2 flex items-center justify-between text-left text-xs transition-all cursor-pointer ${
+                            isSubActive
+                              ? "bg-primary/15 text-primary border border-primary/40 font-medium"
+                              : "text-muted-foreground hover:text-foreground hover:bg-white/5 border border-transparent"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <SubIcon className="w-3.5 h-3.5" />
+                            <span>{label}</span>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
-          </Link>
+          )}
 
           {/* Organization Item with Dropdown */}
           <div className="space-y-1">
@@ -274,88 +328,34 @@ function AuthenticatedDrawerContent({ onClose }: { onClose: () => void }) {
             )}
           </div>
 
-          {/* Treasury Item with Dropdown */}
-          {hasOrgs && canViewTreasury && (
-            <div className="space-y-1">
+          {/* User Profile Link */}
+          <Link
+            href="/profile"
+            onClick={onClose}
+            style={{
+              backgroundColor: isProfileActive
+                ? "rgba(255, 255, 255, 0.08)"
+                : "rgba(255, 255, 255, 0.03)",
+            }}
+            className={`w-full p-3 flex items-center justify-between border transition-all text-left cursor-pointer ${
+              isProfileActive
+                ? "border-primary/60 text-foreground font-semibold shadow-md"
+                : "border-border/70 text-muted-foreground hover:text-foreground hover:border-border hover:bg-white/5"
+            }`}
+          >
+            <div className="flex items-center gap-3">
               <div
-                style={{
-                  backgroundColor: isTreasuryActive
-                    ? "rgba(255, 255, 255, 0.08)"
-                    : "rgba(255, 255, 255, 0.03)",
-                }}
-                className={`w-full flex items-center justify-between border transition-all ${
-                  isTreasuryActive
-                    ? "border-primary/60 text-foreground font-semibold shadow-md"
-                    : "border-border/70 text-muted-foreground hover:text-foreground hover:border-border hover:bg-white/5"
+                className={`p-2 border ${
+                  isProfileActive
+                    ? "bg-primary/20 border-primary/40 text-primary"
+                    : "bg-muted/40 border-border/60 text-muted-foreground"
                 }`}
               >
-                <Link
-                  href="/treasury"
-                  onClick={() => {
-                    setTreasuryDropdownManualState(true);
-                    onClose();
-                  }}
-                  className="flex-1 p-3 flex items-center gap-3 text-left cursor-pointer"
-                >
-                  <div
-                    className={`p-2 border ${
-                      isTreasuryActive
-                        ? "bg-primary/20 border-primary/40 text-primary"
-                        : "bg-muted/40 border-border/60 text-muted-foreground"
-                    }`}
-                  >
-                    <Landmark className="w-4 h-4" />
-                  </div>
-                  <span className="text-xs font-medium">{t("nav.treasury")}</span>
-                </Link>
-
-                {treasurySubTabs.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={handleToggleTreasuryDropdown}
-                    className="p-3 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                    aria-label="Toggle treasury pages dropdown"
-                  >
-                    <ChevronDown
-                      className={`w-4 h-4 transition-transform duration-200 ${
-                        isTreasuryDropdownOpen ? "rotate-180 text-primary" : ""
-                      }`}
-                    />
-                  </button>
-                )}
+                <User className="w-4 h-4" />
               </div>
-
-              {/* Treasury Page Navigation Dropdown Sub-menu */}
-              {isTreasuryDropdownOpen && treasurySubTabs.length > 0 && (
-                <div className="pl-3 pr-1 py-1 space-y-1 animate-in fade-in slide-in-from-top-1 duration-200">
-                  <div className="border-l-2 border-primary/30 pl-2 space-y-1">
-                    {treasurySubTabs.map(({ tab, label, href, icon: SubIcon }) => {
-                      const isSubActive =
-                        (tab === "overview" && location === "/treasury") ||
-                        (tab !== "overview" && location === href);
-                      return (
-                        <Link
-                          key={tab}
-                          href={href}
-                          onClick={onClose}
-                          className={`w-full px-2.5 py-2 flex items-center justify-between text-left text-xs transition-all cursor-pointer ${
-                            isSubActive
-                              ? "bg-primary/15 text-primary border border-primary/40 font-medium"
-                              : "text-muted-foreground hover:text-foreground hover:bg-white/5 border border-transparent"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <SubIcon className="w-3.5 h-3.5" />
-                            <span>{label}</span>
-                          </div>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+              <span className="text-xs font-medium">{t("nav.userProfile")}</span>
             </div>
-          )}
+          </Link>
         </div>
       </div>
 

@@ -194,8 +194,9 @@ export function TreasuryView({
           </p>
         </div>
 
-        {/* Mobile Fund Switcher Bar */}
-        <div className="md:hidden p-3 bg-card/80 backdrop-blur-md border border-border/80 space-y-2">
+        {/* Mobile Fund Switcher Bar (Only on non-overview tabs where CompactBalanceBanner is not shown) */}
+        {safeCurrentTab !== "overview" && (
+          <div className="md:hidden p-3 bg-card/80 backdrop-blur-md border border-border/80 space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="p-1 bg-primary/20 border border-primary/40 text-primary">
@@ -268,6 +269,7 @@ export function TreasuryView({
             )}
           </div>
         </div>
+        )}
 
         {/* Mobile Treasury Tab Navigation Bar */}
         <div className="md:hidden flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none font-mono text-xs">
@@ -391,9 +393,12 @@ export function TreasuryView({
                 <FundOverviewPane
                   fundId={activeFundId}
                   organizationId={effectiveOrgId}
+                  funds={funds}
+                  onSelectFund={setSelectedFundId}
                   onNavigateToLedger={() => setLocation("/treasury/ledger")}
                   onOpenRecordPayment={() => handleOpenRecordPayment()}
                   onOpenKeyGen={() => setIsKeyGenOpen(true)}
+                  onOpenCreateFund={() => setIsCreateFundOpen(true)}
                 />
               </div>
             )}

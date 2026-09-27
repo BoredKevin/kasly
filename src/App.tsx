@@ -52,7 +52,7 @@ export default function App() {
         <Layout>
           <Switch>
             <Route path="/">
-              <Redirect to="/profile" />
+              <Redirect to="/treasury" />
             </Route>
             <Route path="/claim">
               <ClaimRegistrationView />
@@ -120,7 +120,7 @@ export default function App() {
             <Route path="/:identifier">
               {(params) => {
                 if (RESERVED_ROOT_PATHS.has(params.identifier.toLowerCase())) {
-                  return <Redirect to="/profile" />;
+                  return <Redirect to="/treasury" />;
                 }
                 return (
                   <TreasuryErrorBoundary>
@@ -133,7 +133,7 @@ export default function App() {
               }}
             </Route>
             <Route>
-              <Redirect to="/profile" />
+              <Redirect to="/treasury" />
             </Route>
           </Switch>
         </Layout>

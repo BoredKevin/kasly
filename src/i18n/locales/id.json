@@ -225,7 +225,19 @@
       "recentActivity": "Aktivitas Terkini",
       "yourDues": "Tunggakan Anda",
       "allPaid": "Semua Lunas",
-      "unpaidDues": "{{count}} periode belum lunas"
+      "unpaidDues": "{{count}} periode belum lunas",
+      "outstandingDuesTitle": "Tagihan Kas Anda",
+      "allDuesPaidTitle": "Kas Lunas",
+      "allDuesPaidSubtitle": "Tidak ada tagihan kas tertunggak untuk kas ini. Status Anda aman.",
+      "inGoodStanding": "STATUS AMAN",
+      "noDuesCycle": "Belum ada siklus penarikan uang kas untuk kas ini.",
+      "payDuesNow": "Bayar Kas Sekarang",
+      "viewCycles": "Lihat Rincian",
+      "hideCycles": "Tutup Rincian",
+      "treasuryBalance": "Saldo Kas",
+      "chainVerified": "Rantai Terverifikasi",
+      "chainFrozen": "Peringatan Manipulasi",
+      "viewFullLedger": "Buku Kas Lengkap"
     },
     "ledger": {
       "title": "Ledger",

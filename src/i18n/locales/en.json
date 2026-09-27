@@ -225,7 +225,19 @@
       "recentActivity": "Recent Activity",
       "yourDues": "Your Dues",
       "allPaid": "All Paid",
-      "unpaidDues": "{{count}} period(s) unpaid"
+      "unpaidDues": "{{count}} period(s) unpaid",
+      "outstandingDuesTitle": "Outstanding Dues",
+      "allDuesPaidTitle": "All Dues Paid",
+      "allDuesPaidSubtitle": "You have no outstanding dues for this fund. You are in good standing.",
+      "inGoodStanding": "IN GOOD STANDING",
+      "noDuesCycle": "No active dues collection cycle configured for this fund.",
+      "payDuesNow": "Pay Dues Now",
+      "viewCycles": "View Cycles",
+      "hideCycles": "Hide Cycles",
+      "treasuryBalance": "Treasury Balance",
+      "chainVerified": "Chain Verified",
+      "chainFrozen": "Tamper Alert",
+      "viewFullLedger": "Full Ledger"
     },
     "ledger": {
       "title": "Cryptographic Ledger",
