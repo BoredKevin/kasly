@@ -105,6 +105,14 @@ export default function App() {
                 <TreasuryView />
               </TreasuryErrorBoundary>
             </Route>
+            <Route path="/invoice/:invoiceNumber/pay">
+              {(params) => (
+                <InvoicePaymentPage
+                  invoiceNumber={params.invoiceNumber}
+                  initialView="payment"
+                />
+              )}
+            </Route>
             <Route path="/invoice/:invoiceNumber">
               {(params) => <InvoicePaymentPage invoiceNumber={params.invoiceNumber} />}
             </Route>
@@ -143,6 +151,14 @@ export default function App() {
       <Unauthenticated>
         <Switch>
           {/* Public Invoice Payment Route (No Auth Required) */}
+          <Route path="/invoice/:invoiceNumber/pay">
+            {(params) => (
+              <InvoicePaymentPage
+                invoiceNumber={params.invoiceNumber}
+                initialView="payment"
+              />
+            )}
+          </Route>
           <Route path="/invoice/:invoiceNumber">
             {(params) => <InvoicePaymentPage invoiceNumber={params.invoiceNumber} />}
           </Route>
