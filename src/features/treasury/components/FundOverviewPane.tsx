@@ -24,6 +24,7 @@ import { LedgerTimeline } from "./LedgerTimeline";
 import { CreateInvoiceModal } from "./CreateInvoiceModal";
 import { MemberDuesBanner } from "./MemberDuesBanner";
 import { CompactBalanceBanner } from "./CompactBalanceBanner";
+import { UnifiedMobileFinancialHero } from "./UnifiedMobileFinancialHero";
 
 interface FundOverviewPaneProps {
   fundId: Id<"funds"> | null;
@@ -136,30 +137,31 @@ export function FundOverviewPane({
         </Card>
       )}
 
-      {/* 1. Big Current Dues Banner (Immediate action & clarity for mobile and desktop) */}
-      <MemberDuesBanner
-        organizationId={organizationId}
-        fundId={fundId}
-        currency={fund?.currency}
-        onOpenPayDues={() => setIsCreateInvoiceOpen(true)}
-      />
-
-      {/* 2. Mobile: Small Info Banner with Current Treasury Balance */}
+      {/* 1. Mobile: Unified Financial Hero Card (Balance + Dues Status in one clean card without clutter) */}
       <div className="md:hidden">
-        <CompactBalanceBanner
+        <UnifiedMobileFinancialHero
           fund={fund}
           funds={funds}
           activeFundId={fundId}
           onSelectFund={onSelectFund ?? (() => {})}
+          unpaidPeriods={myUnpaidPeriods}
           canSign={canSign}
           canAdmin={canAdmin}
+          onOpenPayDues={() => setIsCreateInvoiceOpen(true)}
           onOpenRecordPayment={onOpenRecordPayment}
           onOpenCreateFund={onOpenCreateFund}
         />
       </div>
 
-      {/* 2b. Desktop: Detailed Fund Balance Card */}
-      <div className="hidden md:block">
+      {/* 1b. Desktop: Rich HUD Experience (Dues Banner + Full Balance Card) */}
+      <div className="hidden md:block space-y-6">
+        <MemberDuesBanner
+          organizationId={organizationId}
+          fundId={fundId}
+          currency={fund?.currency}
+          onOpenPayDues={() => setIsCreateInvoiceOpen(true)}
+        />
+
         <Card telemetry="TREASURY.BALANCE_CARD" cornerLines className="bg-card border-border shadow-lg">
           <CardHeader className="pb-4 border-b border-border/80">
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -324,44 +326,87 @@ export function FundOverviewPane({
         </Card>
       </div>
 
-      {/* 3. Recent Ledger Activity Preview (Unified LedgerTimeline component) */}
-      <Card telemetry="TREASURY.RECENT_ACTIVITY" cornerLines className="bg-card border-border shadow-lg">
-        <CardHeader className="pb-3 border-b border-border/80">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="p-1 bg-primary/10 border border-primary/20 text-primary">
-                <ScrollText className="w-4 h-4" />
+      {/* 2. Mobile: Flat & Clean Recent Activity Card (No corner lines, no telemetry clutter) */}
+      <div className="md:hidden">
+        <Card cornerLines={false} className="bg-card/80 backdrop-blur-md border border-border/70 shadow-sm">
+          <CardHeader className="py-2.5 px-3.5 border-b border-border/60">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-1 bg-primary/10 border border-primary/20 text-primary">
+                  <ScrollText className="w-3.5 h-3.5" />
+                </div>
+                <CardTitle className="text-xs font-semibold">
+                  {t("treasury.overview.recentActivity")}
+                </CardTitle>
               </div>
-              <CardTitle className="text-sm font-semibold">
-                {t("treasury.overview.recentActivity")}
-              </CardTitle>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                chamfer="dual"
+                onClick={onNavigateToLedger}
+                className="h-6 text-[11px] text-primary hover:underline flex items-center gap-1 cursor-pointer font-mono px-1.5"
+              >
+                <span>{t("treasury.overview.viewFullLedger")}</span>
+                <ArrowRight className="w-3 h-3" />
+              </Button>
             </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              chamfer="dual"
-              onClick={onNavigateToLedger}
-              className="h-7 text-xs text-primary hover:underline flex items-center gap-1 cursor-pointer font-mono px-2"
-            >
-              <span>{t("treasury.overview.viewFullLedger")}</span>
-              <ArrowRight className="w-3 h-3" />
-            </Button>
-          </div>
-        </CardHeader>
+          </CardHeader>
+          <CardContent className="p-2">
+            <LedgerTimeline
+              fundId={fundId}
+              organizationId={organizationId}
+              limit={5}
+              variant="compact"
+              showPagination={false}
+              onOpenRecordPayment={onOpenRecordPayment}
+              onOpenKeyGen={onOpenKeyGen}
+              emptyMessage="No ledger entries recorded for this fund yet."
+            />
+          </CardContent>
+        </Card>
+      </div>
 
-        <CardContent className="pt-4 pb-4">
-          <LedgerTimeline
-            fundId={fundId}
-            organizationId={organizationId}
-            limit={5}
-            showPagination={false}
-            onOpenRecordPayment={onOpenRecordPayment}
-            onOpenKeyGen={onOpenKeyGen}
-            emptyMessage="No ledger entries recorded for this fund yet."
-          />
-        </CardContent>
-      </Card>
+      {/* 2b. Desktop: Rich HUD Recent Ledger Activity Preview */}
+      <div className="hidden md:block">
+        <Card telemetry="TREASURY.RECENT_ACTIVITY" cornerLines className="bg-card border-border shadow-lg">
+          <CardHeader className="pb-3 border-b border-border/80">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-1 bg-primary/10 border border-primary/20 text-primary">
+                  <ScrollText className="w-4 h-4" />
+                </div>
+                <CardTitle className="text-sm font-semibold">
+                  {t("treasury.overview.recentActivity")}
+                </CardTitle>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                chamfer="dual"
+                onClick={onNavigateToLedger}
+                className="h-7 text-xs text-primary hover:underline flex items-center gap-1 cursor-pointer font-mono px-2"
+              >
+                <span>{t("treasury.overview.viewFullLedger")}</span>
+                <ArrowRight className="w-3 h-3" />
+              </Button>
+            </div>
+          </CardHeader>
+
+          <CardContent className="pt-4 pb-4">
+            <LedgerTimeline
+              fundId={fundId}
+              organizationId={organizationId}
+              limit={5}
+              showPagination={false}
+              onOpenRecordPayment={onOpenRecordPayment}
+              onOpenKeyGen={onOpenKeyGen}
+              emptyMessage="No ledger entries recorded for this fund yet."
+            />
+          </CardContent>
+        </Card>
+      </div>
 
       {fundId && (
         <CreateInvoiceModal
