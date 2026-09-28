@@ -11,6 +11,7 @@
 import type * as appSettings from "../appSettings.js";
 import type * as auth from "../auth.js";
 import type * as authz from "../authz.js";
+import type * as email_brevoPasswordReset from "../email/brevoPasswordReset.js";
 import type * as http from "../http.js";
 import type * as invites from "../invites.js";
 import type * as members from "../members.js";
@@ -38,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   appSettings: typeof appSettings;
   auth: typeof auth;
   authz: typeof authz;
+  "email/brevoPasswordReset": typeof email_brevoPasswordReset;
   http: typeof http;
   invites: typeof invites;
   members: typeof members;
