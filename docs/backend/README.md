@@ -120,6 +120,8 @@ convex/
 ├── auth.config.ts       # Convex Auth configuration & OAuth provider definitions
 ├── auth.ts              # Convex Auth server entry point
 ├── authz.ts             # Central RBAC calculation, hierarchy guards & auth helpers
+├── email/               # Transactional email providers
+│   └── brevoPasswordReset.ts # Brevo REST API password reset email delivery
 ├── http.ts              # HTTP router for auth endpoints and webhooks
 ├── invites.ts           # Organization invitation management and consumption
 ├── members.ts           # Member profiles, role assignment, kick/ban actions
@@ -144,6 +146,7 @@ convex/
 
 For in-depth guides and references, consult:
 
+* **[Brevo Email & Password Reset Setup Guide](email-brevo.md)** — Brevo API key configuration, verified senders, link-based reset workflow, anti-enumeration security, and local dev fallback.
 * **[BorderPay Payment Gateway & Invoicing Architecture](borderpay-integration.md)** — BorderPay payment integration, dynamic QRIS fee models, upstream Virtual Accounts/E-Wallets, automated gateway signing keys, and webhook idempotency.
 * **[Treasury & Cryptographic Ledger Engine](treasury.md)** — Append-only hash chain, Web Crypto ECDSA signing, zero-trust key ceremony, and balance derivation.
 * **[Database Schema & ERD](schema.md)** — Complete table specifications, relationships, and lifecycle cascade rules.
