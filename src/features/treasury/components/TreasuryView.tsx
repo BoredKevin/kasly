@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "convex/react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
+import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import { useActiveWorkspace } from "../../../contexts";
@@ -10,6 +11,7 @@ import { LedgerPane } from "./LedgerPane";
 import { DuesSpreadsheetPane } from "./DuesSpreadsheetPane";
 import { MyKeysPane } from "./MyKeysPane";
 import { AdminPane } from "./AdminPane";
+import { InvoicesPane } from "./InvoicesPane";
 import { RecordPaymentModal } from "./RecordPaymentModal";
 import { CreateDueEventModal } from "./CreateDueEventModal";
 import { CreateManualDuesModal } from "./CreateManualDuesModal";
@@ -21,6 +23,11 @@ import {
   ChevronDown,
   Plus,
   PenLine,
+  ScrollText,
+  CalendarDays,
+  Receipt,
+  KeyRound,
+  ShieldCheck,
 } from "lucide-react";
 import { Button, Badge } from "@boredkevin/ui";
 
@@ -37,6 +44,7 @@ export function TreasuryView({
   onTabChange: controlledOnTabChange,
   entryIdentifier,
 }: TreasuryViewProps = {}) {
+  const { t } = useTranslation();
   const [location, setLocation] = useLocation();
   const orgs = useQuery(api.organizations.listMine);
   const { activeOrgId, setActiveOrgId } = useActiveWorkspace();
@@ -76,6 +84,7 @@ export function TreasuryView({
     if (loc.startsWith("/tx/") || entryIdentifier) return "entry";
     if (loc === "/treasury/ledger") return "ledger";
     if (loc === "/treasury/dues") return "dues";
+    if (loc === "/treasury/invoices") return "invoices";
     if (loc === "/treasury/keys") return "keys";
     if (loc === "/treasury/admin") return "admin";
     return "overview";
@@ -175,89 +184,171 @@ export function TreasuryView({
   return (
     <div className="w-full space-y-6">
       {/* Treasury Header & Mobile Fund Switcher */}
-      <div className="flex flex-col gap-4">
-        <div className="space-y-1">
-          <h2 className="text-2xl font-bold tracking-tight text-foreground">
+      <div className="flex flex-col gap-3">
+        <div className="space-y-0.5">
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
             Treasury & Ledger
           </h2>
-          <p className="text-xs text-muted-foreground">
+          <p className="hidden md:block text-xs text-muted-foreground">
             Secure chained ledger, automated member dues, and treasury information
           </p>
         </div>
 
-        {/* Mobile Fund Switcher Bar */}
-        <div className="md:hidden p-3 bg-card/80 backdrop-blur-md border border-border/80 space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="p-1 bg-primary/20 border border-primary/40 text-primary">
-                <Landmark className="w-3.5 h-3.5" />
+        {/* Mobile Fund Switcher Bar (Only on non-overview tabs where CompactBalanceBanner is not shown) */}
+        {safeCurrentTab !== "overview" && (
+          <div className="md:hidden p-2.5 bg-card/80 backdrop-blur-md border border-border/60 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-1 bg-primary/20 border border-primary/40 text-primary">
+                  <Landmark className="w-3.5 h-3.5" />
+                </div>
+                <span className="text-[10px] font-mono tracking-wider text-muted-foreground uppercase">
+                  Active Fund
+                </span>
               </div>
-              <span className="text-[10px] font-mono tracking-wider text-muted-foreground uppercase">
-                Active Fund
-              </span>
-            </div>
-            {activeFund && (
-              <Badge
-                variant="secondary"
-                className="text-[9px] font-mono px-1.5 py-0.5 bg-primary/15 text-primary border-primary/30"
-              >
-                {activeFund.currency}
-              </Badge>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            {funds && funds.length > 0 ? (
-              <div className="relative flex-1 min-w-0">
-                <select
-                  value={activeFundId ?? ""}
-                  onChange={(e) => {
-                    setSelectedFundId(e.target.value as Id<"funds">);
-                  }}
-                  className="w-full h-8 px-2.5 pr-8 bg-background border border-border text-xs text-foreground font-semibold font-mono focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer truncate"
+              {activeFund && (
+                <Badge
+                  variant="secondary"
+                  className="text-[9px] font-mono px-1.5 py-0.5 bg-primary/15 text-primary border-primary/30"
                 >
-                  {funds.map((fund) => (
-                    <option key={fund._id} value={fund._id}>
-                      {fund.name} ({fund.currency})
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-2.5 pointer-events-none text-muted-foreground" />
-              </div>
-            ) : (
-              <div className="text-xs text-muted-foreground italic py-1 font-mono flex-1">
-                No funds
-              </div>
-            )}
+                  {activeFund.currency}
+                </Badge>
+              )}
+            </div>
 
-            {canSign && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                chamfer="dual"
-                onClick={() => handleOpenRecordPayment()}
-                className="h-8 text-xs px-2.5 flex items-center gap-1 cursor-pointer shrink-0"
-              >
-                <PenLine className="w-3.5 h-3.5" />
-                <span>Record</span>
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {funds && funds.length > 0 ? (
+                <div className="relative flex-1 min-w-0">
+                  <select
+                    value={activeFundId ?? ""}
+                    onChange={(e) => {
+                      setSelectedFundId(e.target.value as Id<"funds">);
+                    }}
+                    className="w-full h-8 px-2 pr-7 bg-background border border-border text-xs text-foreground font-semibold font-mono focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer truncate"
+                  >
+                    {funds.map((fund) => (
+                      <option key={fund._id} value={fund._id}>
+                        {fund.name} ({fund.currency})
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-2.5 pointer-events-none text-muted-foreground" />
+                </div>
+              ) : (
+                <div className="text-xs text-muted-foreground italic py-1 font-mono flex-1">
+                  No funds
+                </div>
+              )}
 
-            {canAdmin && (
-              <Button
-                type="button"
-                variant="cyber"
-                size="sm"
-                chamfer="dual"
-                onClick={() => setIsCreateFundOpen(true)}
-                className="h-8 text-xs px-2.5 flex items-center gap-1 cursor-pointer shrink-0"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>New</span>
-              </Button>
-            )}
+              {canSign && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  chamfer="dual"
+                  onClick={() => handleOpenRecordPayment()}
+                  className="h-8 text-xs px-2.5 flex items-center gap-1 cursor-pointer shrink-0"
+                >
+                  <PenLine className="w-3.5 h-3.5" />
+                  <span>Record</span>
+                </Button>
+              )}
+
+              {canAdmin && (
+                <Button
+                  type="button"
+                  variant="cyber"
+                  size="sm"
+                  chamfer="dual"
+                  onClick={() => setIsCreateFundOpen(true)}
+                  className="h-8 text-xs px-2.5 flex items-center gap-1 cursor-pointer shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>New</span>
+                </Button>
+              )}
+            </div>
           </div>
+        )}
+
+        {/* Mobile Treasury Tab Navigation Bar (Sleek Segmented Style) */}
+        <div className="md:hidden flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none font-mono text-[11px]">
+          <Link
+            href="/treasury"
+            onClick={() => handleSelectTab("overview")}
+            className={`px-2.5 py-1 whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
+              safeCurrentTab === "overview"
+                ? "bg-primary/20 border border-primary/60 text-primary font-bold shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-white/5 border border-transparent"
+            }`}
+          >
+            <Landmark className="w-3 h-3" />
+            <span>{t("nav.overview")}</span>
+          </Link>
+          <Link
+            href="/treasury/ledger"
+            onClick={() => handleSelectTab("ledger")}
+            className={`px-2.5 py-1 whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
+              safeCurrentTab === "ledger"
+                ? "bg-primary/20 border border-primary/60 text-primary font-bold shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-white/5 border border-transparent"
+            }`}
+          >
+            <ScrollText className="w-3 h-3" />
+            <span>{t("nav.ledger")}</span>
+          </Link>
+          <Link
+            href="/treasury/dues"
+            onClick={() => handleSelectTab("dues")}
+            className={`px-2.5 py-1 whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
+              safeCurrentTab === "dues"
+                ? "bg-primary/20 border border-primary/60 text-primary font-bold shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-white/5 border border-transparent"
+            }`}
+          >
+            <CalendarDays className="w-3 h-3" />
+            <span>{t("nav.duesAndPayments")}</span>
+          </Link>
+          <Link
+            href="/treasury/invoices"
+            onClick={() => handleSelectTab("invoices")}
+            className={`px-2.5 py-1 whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
+              safeCurrentTab === "invoices"
+                ? "bg-primary/20 border border-primary/60 text-primary font-bold shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-white/5 border border-transparent"
+            }`}
+          >
+            <Receipt className="w-3 h-3" />
+            <span>{t("nav.invoices")}</span>
+          </Link>
+          {canSign && (
+            <Link
+              href="/treasury/keys"
+              onClick={() => handleSelectTab("keys")}
+              className={`px-2.5 py-1 whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
+                safeCurrentTab === "keys"
+                  ? "bg-primary/20 border border-primary/60 text-primary font-bold shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-white/5 border border-transparent"
+              }`}
+            >
+              <KeyRound className="w-3 h-3" />
+              <span>{t("nav.myKeys")}</span>
+            </Link>
+          )}
+          {canAdmin && (
+            <Link
+              href="/treasury/admin"
+              onClick={() => handleSelectTab("admin")}
+              className={`px-2.5 py-1 whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
+                safeCurrentTab === "admin"
+                  ? "bg-primary/20 border border-primary/60 text-primary font-bold shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-white/5 border border-transparent"
+              }`}
+            >
+              <ShieldCheck className="w-3 h-3" />
+              <span>{t("nav.adminPanel")}</span>
+            </Link>
+          )}
         </div>
       </div>
 
@@ -273,6 +364,7 @@ export function TreasuryView({
               if (tab === "overview") setLocation("/treasury");
               if (tab === "ledger") setLocation("/treasury/ledger");
               if (tab === "dues") setLocation("/treasury/dues");
+              if (tab === "invoices") setLocation("/treasury/invoices");
               if (tab === "keys") setLocation("/treasury/keys");
               if (tab === "admin") setLocation("/treasury/admin");
             }}
@@ -301,9 +393,12 @@ export function TreasuryView({
                 <FundOverviewPane
                   fundId={activeFundId}
                   organizationId={effectiveOrgId}
+                  funds={funds}
+                  onSelectFund={setSelectedFundId}
                   onNavigateToLedger={() => setLocation("/treasury/ledger")}
                   onOpenRecordPayment={() => handleOpenRecordPayment()}
                   onOpenKeyGen={() => setIsKeyGenOpen(true)}
+                  onOpenCreateFund={() => setIsCreateFundOpen(true)}
                 />
               </div>
             )}
@@ -331,6 +426,15 @@ export function TreasuryView({
                   onOpenEntryDetails={handleInspectEntryById}
                   onOpenAdminTab={() => setLocation("/treasury/admin")}
                   onOpenCreateDues={() => setIsCreateDuesModalOpen(true)}
+                />
+              </div>
+            )}
+
+            {safeCurrentTab === "invoices" && (
+              <div>
+                <InvoicesPane
+                  organizationId={effectiveOrgId}
+                  activeFundId={activeFundId}
                 />
               </div>
             )}

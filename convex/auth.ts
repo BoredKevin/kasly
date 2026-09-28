@@ -2,6 +2,7 @@ import { convexAuth } from "@convex-dev/auth/server";
 import { Password } from "@convex-dev/auth/providers/Password";
 import { MutationCtx } from "./_generated/server";
 import { ConvexError } from "convex/values";
+import { BrevoPasswordReset } from "./email/brevoPasswordReset";
 
 /**
  * Enhanced Password provider wrapper that intercepts low-level credential errors
@@ -17,6 +18,26 @@ function SafePassword(config: Parameters<typeof Password>[0] = {}) {
     (provider as any).options?.authorize ?? (provider as any).authorize;
 
   const wrappedAuthorize = async (params: any, ctx: any) => {
+    // For flow === "reset", rawAuthorize generates the OTP code and sends the email.
+    // If the account does not exist, retrieveAccount throws "InvalidAccountId".
+    // We intercept and return null (which signs in null, meaning started without error)
+    // to prevent email enumeration and satisfy handleCredentials without missing userId errors.
+    if (params?.flow === "reset") {
+      try {
+        await rawAuthorize(params, ctx);
+      } catch (error: any) {
+        const msg = error?.message;
+        if (msg === "InvalidAccountId" || msg === "Invalid credentials") {
+          return null;
+        }
+        if (error instanceof ConvexError) {
+          throw error;
+        }
+        throw new ConvexError(msg || "Failed to dispatch password reset request.");
+      }
+      return null;
+    }
+
     try {
       return await rawAuthorize(params, ctx);
     } catch (error: any) {
@@ -47,6 +68,18 @@ function SafePassword(config: Parameters<typeof Password>[0] = {}) {
         throw new ConvexError("Password is required.");
       }
 
+      if (msg && msg.includes("Missing `newPassword` param")) {
+        throw new ConvexError("New password is required.");
+      }
+
+      // Handle verification code errors during reset-verification
+      if (
+        msg === "Invalid code" ||
+        (msg && msg.includes("Could not verify code"))
+      ) {
+        throw new ConvexError("Invalid or expired verification code.");
+      }
+
       // If it's already a ConvexError, let it propagate directly
       if (error instanceof ConvexError) {
         throw error;
@@ -68,6 +101,7 @@ function SafePassword(config: Parameters<typeof Password>[0] = {}) {
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: [
     SafePassword({
+      reset: BrevoPasswordReset,
       profile(params) {
         const profile: Record<string, any> & { email: string } = {
           email: params.email as string,

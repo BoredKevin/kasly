@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { CreateManualDuesModal } from "./CreateManualDuesModal";
 import { PreRegistrationAdminModal } from "./PreRegistrationAdminModal";
+import { PaymentGatewayCard } from "./PaymentGatewayCard";
 
 interface AdminPaneProps {
   organizationId: Id<"organizations">;
@@ -125,6 +126,9 @@ export function AdminPane({ organizationId, activeFundId, onOpenCreateFund }: Ad
           {error}
         </div>
       )}
+
+      {/* Payment Gateway Configuration */}
+      <PaymentGatewayCard organizationId={organizationId} />
 
       {/* Section 1: Pending Key Approvals */}
       <Card telemetry="TREASURY.PENDING_KEYS" cornerLines className="bg-card border-border shadow-lg">

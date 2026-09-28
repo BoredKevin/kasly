@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useMutation, useQuery } from "convex/react";
 import { useTranslation } from "react-i18next";
@@ -14,10 +14,12 @@ import {
   Badge,
 } from "@boredkevin/ui";
 
+type AuthFlow = "signIn" | "signUp" | "forgotPassword" | "linkSent";
+
 export function SignInForm() {
   const { t } = useTranslation();
   const { signIn } = useAuthActions();
-  const [flow, setFlow] = useState<"signIn" | "signUp">("signIn");
+  const [flow, setFlow] = useState<AuthFlow>("signIn");
   const [signUpStep, setSignUpStep] = useState<1 | 2>(1);
   const [claimToken, setClaimToken] = useState<string | null>(null);
   const [claimedName, setClaimedName] = useState<string | null>(null);
@@ -27,7 +29,10 @@ export function SignInForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isSubmittingReset, setIsSubmittingReset] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   const verifyIdentity = useMutation(api.preRegistration.verifyClaimIdentity);
 
@@ -36,7 +41,18 @@ export function SignInForm() {
   const allowSignUps = appSettings?.allowSignUps !== false && !isRegLinksEnabled;
   const isPreRegRequired = appSettings?.enablePreRegistration === true;
 
-  const effectiveFlow = !allowSignUps ? "signIn" : flow;
+  // Signups can be disabled by settings, but password resets should always be permitted
+  const effectiveFlow: AuthFlow =
+    !allowSignUps && flow === "signUp" ? "signIn" : flow;
+
+  // Countdown timer for resend link cooldown
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   const handleStep1Verify = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -90,8 +106,59 @@ export function SignInForm() {
     });
   };
 
+  const handleRequestResetSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError(null);
+    setNotice(null);
+    setIsSubmittingReset(true);
+
+    const targetEmail = email.trim().toLowerCase();
+
+    void signIn("password", {
+      email: targetEmail,
+      flow: "reset",
+    })
+      .then(() => {
+        setResendCooldown(60);
+        setFlow("linkSent");
+      })
+      .catch((err: unknown) => {
+        setError(formatAuthError(err));
+      })
+      .finally(() => {
+        setIsSubmittingReset(false);
+      });
+  };
+
+  const handleResendLink = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (resendCooldown > 0 || isSubmittingReset) return;
+
+    setError(null);
+    setNotice(null);
+    setIsSubmittingReset(true);
+
+    const targetEmail = email.trim().toLowerCase();
+
+    void signIn("password", {
+      email: targetEmail,
+      flow: "reset",
+    })
+      .then(() => {
+        setResendCooldown(60);
+        setNotice(t("auth.reset.linkResent"));
+      })
+      .catch((err: unknown) => {
+        setError(formatAuthError(err));
+      })
+      .finally(() => {
+        setIsSubmittingReset(false);
+      });
+  };
+
   const handleToggleFlow = () => {
     setError(null);
+    setNotice(null);
     setSignUpStep(1);
     setClaimToken(null);
     setClaimedName(null);
@@ -104,11 +171,19 @@ export function SignInForm() {
     e.preventDefault();
     e.stopPropagation();
     setError(null);
+    setNotice(null);
     setEmail("");
     setPassword("");
     setClaimToken(null);
     setClaimedName(null);
     setSignUpStep(1);
+  };
+
+  const handleBackToSignIn = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setError(null);
+    setNotice(null);
+    setFlow("signIn");
   };
 
   return (
@@ -120,12 +195,26 @@ export function SignInForm() {
               <p>
                 {effectiveFlow === "signIn"
                   ? t("auth.signInTitle")
-                  : isPreRegRequired && signUpStep === 1
-                    ? t("auth.preReg.step1Title")
-                    : isPreRegRequired && signUpStep === 2
-                      ? t("auth.preReg.step2Title")
-                      : t("auth.signUpTitle")}
+                  : effectiveFlow === "forgotPassword"
+                    ? t("auth.reset.requestTitle")
+                    : effectiveFlow === "linkSent"
+                      ? t("auth.reset.linkSentTitle")
+                      : isPreRegRequired && signUpStep === 1
+                        ? t("auth.preReg.step1Title")
+                        : isPreRegRequired && signUpStep === 2
+                          ? t("auth.preReg.step2Title")
+                          : t("auth.signUpTitle")}
               </p>
+              {effectiveFlow === "forgotPassword" && (
+                <p className="text-xs text-muted-foreground font-normal">
+                  {t("auth.reset.requestSubtitle")}
+                </p>
+              )}
+              {effectiveFlow === "linkSent" && (
+                <p className="text-xs text-muted-foreground font-normal">
+                  {t("auth.reset.linkSentDesc", { email })}
+                </p>
+              )}
               {effectiveFlow === "signUp" && isPreRegRequired && (
                 <p className="text-xs text-muted-foreground font-normal">
                   {signUpStep === 1
@@ -151,17 +240,32 @@ export function SignInForm() {
                 autoComplete="email"
                 required
               />
-              <Input
-                key="signin-password"
-                type="password"
-                name="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={t("auth.passwordPlaceholder")}
-                chamfer="dual"
-                autoComplete="current-password"
-                required
-              />
+              <div className="flex flex-col gap-1.5">
+                <Input
+                  key="signin-password"
+                  type="password"
+                  name="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={t("auth.passwordPlaceholder")}
+                  chamfer="dual"
+                  autoComplete="current-password"
+                  required
+                />
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setError(null);
+                      setNotice(null);
+                      setFlow("forgotPassword");
+                    }}
+                    className="text-xs text-muted-foreground hover:text-foreground underline cursor-pointer transition-colors"
+                  >
+                    {t("auth.forgotPassword")}
+                  </button>
+                </div>
+              </div>
               <Button
                 variant="cyber"
                 chamfer="dual"
@@ -171,6 +275,95 @@ export function SignInForm() {
                 {t("auth.signInBtn")}
               </Button>
             </form>
+          ) : effectiveFlow === "forgotPassword" ? (
+            /* Forgot Password: Step 1 (Request Reset Link) */
+            <form
+              key="forgot-form"
+              className="flex flex-col gap-4"
+              onSubmit={handleRequestResetSubmit}
+            >
+              <Input
+                key="reset-email"
+                type="email"
+                name="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder={t("auth.emailPlaceholder")}
+                chamfer="dual"
+                autoComplete="email"
+                required
+              />
+              <Button
+                variant="cyber"
+                chamfer="dual"
+                type="submit"
+                disabled={isSubmittingReset}
+                className="w-full mt-2 cursor-pointer"
+              >
+                {isSubmittingReset
+                  ? t("auth.reset.sendingLink")
+                  : t("auth.reset.sendLinkBtn")}
+              </Button>
+              <Button
+                variant="outline"
+                type="button"
+                onClick={handleBackToSignIn}
+                className="w-full text-xs cursor-pointer"
+              >
+                {t("auth.reset.backToSignIn")}
+              </Button>
+            </form>
+          ) : effectiveFlow === "linkSent" ? (
+            /* Forgot Password: Step 2 (Reset Link Sent Confirmation) */
+            <div key="link-sent-view" className="flex flex-col gap-4">
+              <div className="bg-primary/10 border border-primary/30 p-3 chamfer-dual flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono text-foreground truncate max-w-[200px]">
+                    {email}
+                  </span>
+                  <Badge variant="outline" className="text-[10px] font-mono">
+                    SENT
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {t("auth.reset.linkSentCheckSpam")}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between px-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setError(null);
+                    setNotice(null);
+                    setFlow("forgotPassword");
+                  }}
+                  className="text-muted-foreground hover:text-foreground underline cursor-pointer"
+                >
+                  {t("auth.reset.changeEmail")}
+                </button>
+                <button
+                  type="button"
+                  disabled={resendCooldown > 0 || isSubmittingReset}
+                  onClick={handleResendLink}
+                  className="text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed underline cursor-pointer transition-colors"
+                >
+                  {resendCooldown > 0
+                    ? t("auth.reset.resendCooldown", { seconds: resendCooldown })
+                    : t("auth.reset.resendLink")}
+                </button>
+              </div>
+
+              <Button
+                variant="outline"
+                chamfer="dual"
+                type="button"
+                onClick={handleBackToSignIn}
+                className="w-full mt-2 cursor-pointer"
+              >
+                {t("auth.reset.backToSignIn")}
+              </Button>
+            </div>
           ) : isPreRegRequired && signUpStep === 1 ? (
             /* Pre-Registration Step 1 Form */
             <form key="step1-verify-form" className="flex flex-col gap-4" onSubmit={handleStep1Verify}>
@@ -289,28 +482,39 @@ export function SignInForm() {
             </div>
           )}
 
-          {/* Toggle Flow Switcher */}
-          {allowSignUps ? (
-            <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 text-xs sm:text-sm items-center justify-center text-center mt-4">
-              <span className="text-muted-foreground">
-                {effectiveFlow === "signIn"
-                  ? t("auth.dontHaveAccount")
-                  : t("auth.alreadyHaveAccount")}
-              </span>
-              <span
-                className="text-foreground underline hover:no-underline cursor-pointer font-medium"
-                onClick={handleToggleFlow}
-              >
-                {effectiveFlow === "signIn"
-                  ? t("auth.signUpInstead")
-                  : t("auth.signInInstead")}
-              </span>
-            </div>
-          ) : (
-            <div className="text-center text-xs text-muted-foreground pt-3 font-mono">
-              {isRegLinksEnabled
-                ? t("auth.registrationLinkRequired")
-                : t("auth.registrationsDisabled")}
+          {/* Toggle Flow Switcher between Sign In & Sign Up */}
+          {effectiveFlow === "signIn" || effectiveFlow === "signUp" ? (
+            allowSignUps ? (
+              <div className="flex flex-col sm:flex-row gap-1 sm:gap-2 text-xs sm:text-sm items-center justify-center text-center mt-4">
+                <span className="text-muted-foreground">
+                  {effectiveFlow === "signIn"
+                    ? t("auth.dontHaveAccount")
+                    : t("auth.alreadyHaveAccount")}
+                </span>
+                <span
+                  className="text-foreground underline hover:no-underline cursor-pointer font-medium"
+                  onClick={handleToggleFlow}
+                >
+                  {effectiveFlow === "signIn"
+                    ? t("auth.signUpInstead")
+                    : t("auth.signInInstead")}
+                </span>
+              </div>
+            ) : (
+              <div className="text-center text-xs text-muted-foreground pt-3 font-mono">
+                {isRegLinksEnabled
+                  ? t("auth.registrationLinkRequired")
+                  : t("auth.registrationsDisabled")}
+              </div>
+            )
+          ) : null}
+
+          {/* Notice Banner */}
+          {notice && (
+            <div className="bg-primary/20 border border-primary/50 rounded-none p-3 chamfer-dual mt-4">
+              <p className="text-foreground font-mono text-xs">
+                {notice}
+              </p>
             </div>
           )}
 
@@ -327,4 +531,3 @@ export function SignInForm() {
     </div>
   );
 }
-

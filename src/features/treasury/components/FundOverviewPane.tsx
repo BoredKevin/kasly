@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
@@ -9,33 +10,45 @@ import {
   CardDescription,
   CardContent,
   Button,
-  Badge,
 } from "@boredkevin/ui";
 import {
   ScrollText,
   ArrowRight,
-  PenLine,
   Wallet,
   ShieldAlert,
 } from "lucide-react";
 import { LedgerTimeline } from "./LedgerTimeline";
+import { CreateInvoiceModal } from "./CreateInvoiceModal";
+import { UnifiedMobileFinancialHero } from "./UnifiedMobileFinancialHero";
 
 interface FundOverviewPaneProps {
   fundId: Id<"funds"> | null;
   organizationId: Id<"organizations">;
+  funds?: Array<{
+    _id: Id<"funds">;
+    name: string;
+    currency: string;
+    isArchived?: boolean;
+  }>;
+  onSelectFund?: (fundId: Id<"funds">) => void;
   onNavigateToLedger: () => void;
   onOpenRecordPayment: () => void;
   onOpenKeyGen?: () => void;
+  onOpenCreateFund?: () => void;
 }
 
 export function FundOverviewPane({
   fundId,
   organizationId,
+  funds,
+  onSelectFund,
   onNavigateToLedger,
   onOpenRecordPayment,
   onOpenKeyGen,
+  onOpenCreateFund,
 }: FundOverviewPaneProps) {
   const { t } = useTranslation();
+  const [isCreateInvoiceOpen, setIsCreateInvoiceOpen] = useState(false);
   const fund = useQuery(
     api.treasury.funds.get,
     fundId ? { fundId } : "skip"
@@ -59,6 +72,12 @@ export function FundOverviewPane({
     myMembership?.permissions.includes("SIGN_TREASURY")
   );
 
+  const canAdmin = Boolean(
+    myMembership?.isOwner ||
+    myMembership?.permissions.includes("ADMINISTRATOR") ||
+    myMembership?.permissions.includes("MANAGE_TREASURY")
+  );
+
   if (!fundId) {
     return (
       <Card telemetry="TREASURY.NO_FUND" cornerLines className="bg-card border-border">
@@ -78,9 +97,6 @@ export function FundOverviewPane({
   }
 
   const isFrozen = Boolean(fund?.isFrozen);
-  const balance = fund?.balance ?? 0;
-  const isPositive = balance > 0;
-  const isNegative = balance < 0;
 
   return (
     <div className="space-y-6">
@@ -113,163 +129,29 @@ export function FundOverviewPane({
         </Card>
       )}
 
-      {/* Primary Fund Balance Card */}
-      <Card telemetry="TREASURY.BALANCE_CARD" cornerLines className="bg-card border-border shadow-lg">
-        <CardHeader className="pb-4 border-b border-border/80">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <div className="p-1.5 bg-primary/10 border border-primary/20 text-primary">
-                <Wallet className="w-5 h-5" />
-              </div>
-              <div>
-                <CardTitle className="text-base font-semibold">
-                  {fund?.name ?? t("treasury.overview.title")}
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  {fund?.description || t("treasury.overview.totalBalance")}
-                </CardDescription>
-              </div>
-            </div>
+      {/* 1. Unified Financial Hero Card (Dues Hero + Compact Saldo Kas) */}
+      <UnifiedMobileFinancialHero
+        fund={fund}
+        funds={funds}
+        activeFundId={fundId}
+        onSelectFund={onSelectFund ?? (() => {})}
+        unpaidPeriods={myUnpaidPeriods}
+        canSign={canSign}
+        canAdmin={canAdmin}
+        onOpenPayDues={() => setIsCreateInvoiceOpen(true)}
+        onOpenRecordPayment={onOpenRecordPayment}
+        onOpenCreateFund={onOpenCreateFund}
+      />
 
-            <div className="flex items-center gap-2">
-              <Badge
-                variant="outline"
-                className="font-mono text-xs px-2 py-0.5 border-primary/40 text-primary bg-primary/10"
-              >
-                {fund?.currency ?? "---"}
-              </Badge>
-              {isFrozen && (
-                <Badge
-                  variant="destructive"
-                  className="font-mono text-xs px-2 py-0.5 border-destructive/40 text-red-400 bg-destructive/20 font-bold animate-pulse"
-                >
-                  CHAIN FROZEN
-                </Badge>
-              )}
-              {fund?.isArchived && (
-                <Badge
-                  variant="secondary"
-                  className="font-mono text-xs px-2 py-0.5 border-amber-500/40 text-amber-400 bg-amber-500/10"
-                >
-                  ARCHIVED
-                </Badge>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent className="pt-6 pb-6 space-y-6">
-          {/* Large Balance Display */}
-          <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 p-5 bg-background/50 border border-border/70">
-            <div className="space-y-1">
-              <span className="text-[10px] font-mono tracking-wider uppercase text-muted-foreground">
-                {t("treasury.overview.totalBalance")}
-              </span>
-              <div className="flex items-baseline gap-2">
-                <span className="text-xs font-mono text-muted-foreground font-semibold">
-                  {fund?.currency}
-                </span>
-                <span
-                  className={`text-3xl sm:text-4xl font-bold font-mono tracking-tight ${isFrozen
-                    ? "text-red-400 opacity-60"
-                    : isPositive
-                      ? "text-emerald-400"
-                      : isNegative
-                        ? "text-red-400"
-                        : "text-foreground"
-                    }`}
-                >
-                  {balance.toLocaleString()}
-                </span>
-              </div>
-            </div>
-
-            {canSign && !fund?.isArchived && (
-              <Button
-                type="button"
-                variant={isFrozen ? "destructive" : "cyber"}
-                chamfer="dual"
-                size="sm"
-                disabled={isFrozen}
-                onClick={onOpenRecordPayment}
-                className="text-xs flex items-center gap-1.5 cursor-pointer shrink-0 disabled:opacity-50"
-              >
-                <PenLine className="w-3.5 h-3.5" />
-                <span>{isFrozen ? "Ledger Frozen" : t("nav.recordPayment")}</span>
-              </Button>
-            )}
-          </div>
-
-          {/* Fund Details Strip */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-            <div className="p-3 bg-muted/20 border border-border/50 space-y-1">
-              <span className="text-[10px] font-mono uppercase text-muted-foreground">
-                {t("common.status")}
-              </span>
-              {isFrozen ? (
-                <p className="font-mono font-semibold text-red-400 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-ping" />
-                  <span>Frozen (Tamper Detected)</span>
-                </p>
-              ) : (
-                <p className="font-mono font-semibold text-emerald-400 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>Active</span>
-                </p>
-              )}
-            </div>
-
-            <div className="p-3 bg-muted/20 border border-border/50 space-y-1">
-              <span className="text-[10px] font-mono uppercase text-muted-foreground">
-                {t("treasury.overview.yourDues")}
-              </span>
-              {myUnpaidPeriods === undefined ? (
-                <p className="font-mono font-semibold text-muted-foreground animate-pulse">
-                  ---
-                </p>
-              ) : myUnpaidPeriods.length === 0 ? (
-                <p className="font-mono font-semibold text-emerald-400 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>{t("treasury.overview.allPaid")}</span>
-                </p>
-              ) : (
-                <div className="space-y-0.5">
-                  <p className="font-mono font-bold text-amber-400">
-                    {fund?.currency ?? "IDR"}{" "}
-                    {myUnpaidPeriods
-                      .reduce((sum, p) => sum + p.amount, 0)
-                      .toLocaleString()}
-                  </p>
-                  <p className="text-[10px] font-mono text-muted-foreground">
-                    {t("treasury.overview.unpaidDues", {
-                      count: myUnpaidPeriods.length,
-                    })}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="p-3 bg-muted/20 border border-border/50 space-y-1">
-              <span className="text-[10px] font-mono uppercase text-muted-foreground">
-                {t("treasury.keys.registeredAt")}
-              </span>
-              <p className="font-mono font-semibold text-foreground">
-                {fund ? new Date(fund._creationTime).toLocaleDateString() : "---"}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Recent Ledger Activity Preview (Unified LedgerTimeline component) */}
-      <Card telemetry="TREASURY.RECENT_ACTIVITY" cornerLines className="bg-card border-border shadow-lg">
-        <CardHeader className="pb-3 border-b border-border/80">
+      {/* 2. Flat & Clean Recent Activity Card (Compact Ledger Feed) */}
+      <Card cornerLines={false} className="bg-card/80 backdrop-blur-md border border-border/70 shadow-sm">
+        <CardHeader className="py-2.5 px-3.5 sm:py-3 sm:px-4 border-b border-border/60">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="p-1 bg-primary/10 border border-primary/20 text-primary">
-                <ScrollText className="w-4 h-4" />
+                <ScrollText className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
-              <CardTitle className="text-sm font-semibold">
+              <CardTitle className="text-xs sm:text-sm font-semibold">
                 {t("treasury.overview.recentActivity")}
               </CardTitle>
             </div>
@@ -279,19 +161,19 @@ export function FundOverviewPane({
               size="sm"
               chamfer="dual"
               onClick={onNavigateToLedger}
-              className="h-7 text-xs text-primary hover:underline flex items-center gap-1 cursor-pointer font-mono px-2"
+              className="h-6 sm:h-7 text-[11px] sm:text-xs text-primary hover:underline flex items-center gap-1 cursor-pointer font-mono px-1.5 sm:px-2"
             >
-              <span>{t("common.view")}</span>
-              <ArrowRight className="w-3 h-3" />
+              <span>{t("treasury.overview.viewFullLedger")}</span>
+              <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
             </Button>
           </div>
         </CardHeader>
-
-        <CardContent className="pt-4 pb-4">
+        <CardContent className="p-2 sm:p-3">
           <LedgerTimeline
             fundId={fundId}
             organizationId={organizationId}
             limit={5}
+            variant="compact"
             showPagination={false}
             onOpenRecordPayment={onOpenRecordPayment}
             onOpenKeyGen={onOpenKeyGen}
@@ -299,6 +181,15 @@ export function FundOverviewPane({
           />
         </CardContent>
       </Card>
+
+      {fundId && (
+        <CreateInvoiceModal
+          isOpen={isCreateInvoiceOpen}
+          onClose={() => setIsCreateInvoiceOpen(false)}
+          organizationId={organizationId}
+          fundId={fundId}
+        />
+      )}
     </div>
   );
 }

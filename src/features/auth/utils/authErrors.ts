@@ -33,6 +33,19 @@ export function formatAuthError(err: unknown): string {
   // 3. Inspect message
   const rawMessage = typeof candidate.message === "string" ? candidate.message : "";
 
+  // If the raw error mentions verification codes
+  if (
+    /invalid code/i.test(rawMessage) ||
+    /could not verify code/i.test(rawMessage) ||
+    /expired verification code/i.test(rawMessage)
+  ) {
+    return "Invalid or expired verification code.";
+  }
+
+  if (/missing `newpassword`/i.test(rawMessage)) {
+    return "New password is required.";
+  }
+
   // If the raw error mentions low-level credential codes
   if (
     /invalidsecret/i.test(rawMessage) ||
@@ -44,7 +57,7 @@ export function formatAuthError(err: unknown): string {
   }
 
   if (/toomanyfailedattempts/i.test(rawMessage)) {
-    return "Too many failed login attempts. Please try again later.";
+    return "Too many failed attempts. Please try again later.";
   }
 
   // Extract from ConvexError trace format: e.g. "[CONVEX A(auth:signIn)] ConvexError: <message>\n"

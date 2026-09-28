@@ -2,12 +2,13 @@ import { Authenticated, Unauthenticated } from "convex/react";
 import { Route, Switch, Redirect } from "wouter";
 import { useTranslation } from "react-i18next";
 import { Layout } from "./components/layout";
-import { SignInForm, ClaimRegistrationView } from "./features/auth";
+import { SignInForm, ClaimRegistrationView, ResetPasswordPage } from "./features/auth";
 import { UserProfileView, OrganizationView } from "./features/profile";
 import {
   TreasuryView,
   TreasuryErrorBoundary,
   SharedEntryPage,
+  InvoicePaymentPage,
 } from "./features/treasury";
 import { ConstellationsBackground } from "@boredkevin/ui";
 
@@ -18,11 +19,13 @@ const RESERVED_ROOT_PATHS = new Set([
   "treasury",
   "claim",
   "register",
+  "reset-password",
   "login",
   "auth",
   "api",
   "settings",
   "docs",
+  "invoice",
 ]);
 
 function UnauthenticatedEntryView({ identifier }: { identifier: string }) {
@@ -50,7 +53,7 @@ export default function App() {
         <Layout>
           <Switch>
             <Route path="/">
-              <Redirect to="/profile" />
+              <Redirect to="/treasury" />
             </Route>
             <Route path="/claim">
               <ClaimRegistrationView />
@@ -98,6 +101,22 @@ export default function App() {
                 <TreasuryView />
               </TreasuryErrorBoundary>
             </Route>
+            <Route path="/treasury/invoices">
+              <TreasuryErrorBoundary>
+                <TreasuryView />
+              </TreasuryErrorBoundary>
+            </Route>
+            <Route path="/invoice/:invoiceNumber/pay">
+              {(params) => (
+                <InvoicePaymentPage
+                  invoiceNumber={params.invoiceNumber}
+                  initialView="payment"
+                />
+              )}
+            </Route>
+            <Route path="/invoice/:invoiceNumber">
+              {(params) => <InvoicePaymentPage invoiceNumber={params.invoiceNumber} />}
+            </Route>
             {/* Canonical Transaction URL inside Workspace */}
             <Route path="/tx/:hash">
               {(params) => (
@@ -110,7 +129,7 @@ export default function App() {
             <Route path="/:identifier">
               {(params) => {
                 if (RESERVED_ROOT_PATHS.has(params.identifier.toLowerCase())) {
-                  return <Redirect to="/profile" />;
+                  return <Redirect to="/treasury" />;
                 }
                 return (
                   <TreasuryErrorBoundary>
@@ -123,7 +142,7 @@ export default function App() {
               }}
             </Route>
             <Route>
-              <Redirect to="/profile" />
+              <Redirect to="/treasury" />
             </Route>
           </Switch>
         </Layout>
@@ -132,9 +151,50 @@ export default function App() {
       {/* Unauthenticated Flow (Centered Entry Card, No Navbar / Sidebar) */}
       <Unauthenticated>
         <Switch>
+          {/* Public Invoice Payment Route (No Auth Required) */}
+          <Route path="/invoice/:invoiceNumber/pay">
+            {(params) => (
+              <InvoicePaymentPage
+                invoiceNumber={params.invoiceNumber}
+                initialView="payment"
+              />
+            )}
+          </Route>
+          <Route path="/invoice/:invoiceNumber">
+            {(params) => <InvoicePaymentPage invoiceNumber={params.invoiceNumber} />}
+          </Route>
+
           {/* Canonical Transaction URL (Centered, No Navbar/Sidebar) */}
           <Route path="/tx/:hash">
             {(params) => <UnauthenticatedEntryView identifier={params.hash} />}
+          </Route>
+
+          <Route path="/claim">
+            <Layout>
+              <ClaimRegistrationView />
+            </Layout>
+          </Route>
+
+          <Route path="/register">
+            <Layout>
+              <ClaimRegistrationView />
+            </Layout>
+          </Route>
+
+          <Route path="/reset-password">
+            <Layout>
+              <div className="space-y-8 max-w-sm mx-auto w-full">
+                <div className="text-center space-y-2">
+                  <h1 className="text-3xl font-bold tracking-tight text-foreground">
+                    {t("auth.welcomeTitle")}
+                  </h1>
+                  <p className="text-xs text-muted-foreground">
+                    {t("auth.welcomeSubtitle")}
+                  </p>
+                </div>
+                <ResetPasswordPage />
+              </div>
+            </Layout>
           </Route>
 
           {/* Root Short URL or Fallback (Centered, No Navbar/Sidebar) */}
@@ -147,6 +207,23 @@ export default function App() {
                 return (
                   <Layout>
                     <ClaimRegistrationView />
+                  </Layout>
+                );
+              }
+              if (params.identifier === "reset-password") {
+                return (
+                  <Layout>
+                    <div className="space-y-8 max-w-sm mx-auto w-full">
+                      <div className="text-center space-y-2">
+                        <h1 className="text-3xl font-bold tracking-tight text-foreground">
+                          {t("auth.welcomeTitle")}
+                        </h1>
+                        <p className="text-xs text-muted-foreground">
+                          {t("auth.welcomeSubtitle")}
+                        </p>
+                      </div>
+                      <ResetPasswordPage />
+                    </div>
                   </Layout>
                 );
               }
@@ -173,16 +250,6 @@ export default function App() {
             }}
           </Route>
 
-          <Route path="/claim">
-            <Layout>
-              <ClaimRegistrationView />
-            </Layout>
-          </Route>
-          <Route path="/register">
-            <Layout>
-              <ClaimRegistrationView />
-            </Layout>
-          </Route>
           <Route>
             <Layout>
               <div className="space-y-8 max-w-sm mx-auto w-full">

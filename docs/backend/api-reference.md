@@ -474,5 +474,156 @@ For the exhaustive cryptographic specifications, payload canonicalization, signa
 * `treasury.checkpoints.listCheckpoints` *(Query)*: Lists all snapshots created for a fund. Requires `MANAGE_TREASURY`.
 * `treasury.checkpoints.verifyCheckpoint` *(Query)*: Validates checkpoint balance and hash integrity by replaying from genesis. Requires `VIEW_TREASURY`.
 
+---
+
+## 10. Payment Gateway & Invoicing API (`convex/treasury/borderpay.ts` & `convex/http.ts`)
+
+For comprehensive architecture, cryptographic key generation, webhook idempotency, and upfront fee formulas, see **[BorderPay Payment Gateway & Invoicing Architecture](borderpay-integration.md)**.
+
+### `treasury.borderpay.getPaymentConfig`
+* **Type**: `query`
+* **Security**: `MANAGE_TREASURY` permission or Organization Owner.
+* **Description**: Retrieves gateway credentials (masked API key), mode, webhook URL, token, and channel toggle matrix.
+* **Arguments**:
+  * `organizationId` (`Id<"organizations">`)
+* **Returns**: Object with `isEnabled`, `mode`, `hasApiKey`, `maskedApiKey`, `webhookToken`, `methodOverrides`, `cachedMethods`, `lastSyncedAt`, `gatewayKeyId`, or `null`.
+
+---
+
+### `treasury.borderpay.savePaymentConfig`
+* **Type**: `mutation`
+* **Security**: `MANAGE_TREASURY` permission or Organization Owner.
+* **Description**: Saves API credentials, mode, and channel overrides. If not already provisioned, automatically generates an ECDSA P-256 keypair, registers the public key in `treasurerKeys` ("BorderPay Gateway System"), and securely saves the private key in `organizationPaymentConfig`.
+* **Arguments**:
+  * `organizationId` (`Id<"organizations">`)
+  * `apiKey` (`string`, optional)
+  * `mode` (`"sandbox" | "production"`)
+  * `isEnabled` (`boolean`)
+  * `methodOverrides` (`object`, optional)
+* **Returns**: Object with `success: true`.
+
+---
+
+### `treasury.borderpay.fetchAvailablePaymentMethods`
+* **Type**: `action`
+* **Security**: `MANAGE_TREASURY` permission or Organization Owner.
+* **Description**: Calls BorderPay `/api/v1/payment-methods` upstream with bearer API key, caches active channels/banks/fees, and updates `cachedMethods` on the organization payment config.
+* **Arguments**:
+  * `organizationId` (`Id<"organizations">`)
+* **Returns**: The live BorderPay payment methods catalog.
+
+---
+
+### `treasury.borderpay.getPublicPaymentMethods`
+* **Type**: `query`
+* **Security**: Public / Unauthenticated.
+* **Description**: Returns sanitized, active payment methods and fee metadata for payers on the checkout page, respecting organization channel toggle overrides.
+* **Arguments**:
+  * `organizationId` (`Id<"organizations">`)
+* **Returns**: Sanitized payment method matrix (`qris`, `va`, `ewallet`).
+
+---
+
+### `treasury.borderpay.createDuesInvoice`
+* **Type**: `mutation`
+* **Security**: Organization Member (`requireMember`).
+* **Description**: Creates a new invoice for sequential $N$ oldest unpaid dues periods for the caller or target member. Cancels any stale pending invoices for the same cycles.
+* **Arguments**:
+  * `organizationId` (`Id<"organizations">`)
+  * `fundId` (`Id<"funds">`)
+  * `targetUserId` (`Id<"users">`, optional)
+  * `periodCount` (`number`)
+* **Returns**: `{ invoiceId: Id<"invoices">, invoiceNumber: string }`.
+
+---
+
+### `treasury.borderpay.createCustomInvoice`
+* **Type**: `mutation`
+* **Security**: `MANAGE_TREASURY` permission or Organization Owner.
+* **Description**: Generates an ad-hoc custom invoice with arbitrary title, payer name, and line items.
+* **Arguments**:
+  * `organizationId` (`Id<"organizations">`)
+  * `fundId` (`Id<"funds">`)
+  * `title` (`string`)
+  * `payerName` (`string`)
+  * `payerEmail` (`string`, optional)
+  * `subtotal` (`number`)
+  * `description` (`string`, optional)
+* **Returns**: `{ invoiceId: Id<"invoices">, invoiceNumber: string }`.
+
+---
+
+### `treasury.borderpay.initiatePayment`
+* **Type**: `action`
+* **Security**: Public / Payer.
+* **Description**: Locks the selected payment method, computes upfront customer fee, and calls upstream BorderPay `/api/v1/payment/*` (QRIS, VA, or E-wallet) to generate dynamic QR strings or virtual account numbers.
+* **Arguments**:
+  * `invoiceNumber` (`string`)
+  * `method` (`"qris" | "va" | "ewallet"`)
+  * `bankCode` (`string`, optional)
+  * `phoneNumber` (`string`, optional)
+* **Returns**: `{ success: true, method, qrString, vaNumber, expiresAt, totalAmount, gatewayFee }`.
+
+---
+
+### `treasury.borderpay.simulatePayment`
+* **Type**: `action`
+* **Security**: `MANAGE_TREASURY` permission, Organization Owner, or Sandbox Invoice Payer.
+* **Description**: Simulates payment settlement in sandbox mode by calling BorderPay `/api/v1/payment/simulate` and invoking `internalMarkInvoicePaid`.
+* **Arguments**:
+  * `invoiceNumber` (`string`)
+* **Returns**: `{ success: true, message: string }`.
+
+---
+
+### `treasury.borderpay.cancelInvoice`
+* **Type**: `mutation`
+* **Security**: Invoice owner or `MANAGE_TREASURY` permission.
+* **Description**: Voids an unpaid `draft` or `pending` invoice.
+* **Arguments**:
+  * `invoiceNumber` (`string`)
+* **Returns**: `{ success: true }`.
+
+---
+
+### `treasury.borderpay.getInvoice`
+* **Type**: `query`
+* **Security**: Public.
+* **Description**: Fetches real-time invoice details, items, fee, status, and generated payment credentials (QRIS string, VA number) for `/invoice/:invoiceNumber`.
+* **Arguments**:
+  * `invoiceNumber` (`string`)
+* **Returns**: Invoice document or `null`.
+
+---
+
+### `treasury.borderpay.listInvoices`
+* **Type**: `query`
+* **Security**: Member of organization (`requireMember`).
+* **Description**: Returns recent invoices for the organization with optional fund or status filtering.
+* **Arguments**:
+  * `organizationId` (`Id<"organizations">`)
+  * `fundId` (`Id<"funds">`, optional)
+  * `status` (`string`, optional)
+* **Returns**: `Array<Invoice>`.
+
+---
+
+### HTTP Webhook: `POST /api/borderpay-webhook`
+* **Type**: `httpAction`
+* **Security**: Bearer token in header `x-borderpay-token` matching `organizationPaymentConfig.webhookToken`.
+* **Description**: Ingests asynchronous `payment.paid` notifications from BorderPay rails. Updates invoice status to `paid`, satisfies associated member dues in `duesMemberships`, signs a canonical credit entry with the gateway ECDSA P-256 key, and commits the entry to the fund's ledger chain.
+* **Payload**:
+  ```json
+  {
+    "event": "payment.paid",
+    "order_id": "INV-20260924-XXXX",
+    "status": "paid",
+    "amount": 50500,
+    "paid_at": "2026-09-24T08:00:00Z"
+  }
+  ```
+* **Returns**: `200 OK {"received": true}`.
+
+
 
 

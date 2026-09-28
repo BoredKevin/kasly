@@ -123,6 +123,23 @@ You will need:
 * **Production Deployment URL**: e.g., `https://your-deployment-name.convex.cloud`
 * **Production Site URL**: e.g., `https://your-deployment-name.convex.site`
 
+### 1.7 Configure Brevo Transactional Email (Password Resets)
+
+Kasly uses [Brevo](https://www.brevo.com/) for delivering transactional password reset links via its REST API.
+
+1. Generate an API Key in your Brevo dashboard under **SMTP & API** > **API Keys** (begins with `xkeysib-...`).
+2. Add and verify a sender email address in Brevo under **Senders, Domains & Dedicated IPs** > **Senders** (e.g. `noreply@yourdomain.com`).
+3. Set the environment variables on your Convex production deployment:
+
+```bash
+npx convex env set BREVO_API_KEY "xkeysib-..." --prod
+npx convex env set BREVO_SENDER_EMAIL "noreply@yourdomain.com" --prod
+npx convex env set BREVO_SENDER_NAME "Kasly Platform" --prod
+```
+
+> [!NOTE]
+> For detailed instructions, domain authentication, and local development fallback behavior, see the **[Brevo Email & Password Reset Setup Guide](./backend/email-brevo.md)**.
+
 ---
 
 ## Step 2: Deploy Frontend to Cloudflare Pages
@@ -362,7 +379,10 @@ Set via `npx convex env set <KEY> <VALUE> --prod` or Convex Dashboard:
 | :--- | :--- | :--- | :--- |
 | `JWT_PRIVATE_KEY` | **Yes** | `npx @convex-dev/auth --prod` | Signs JWT session tokens |
 | `JWKS` | **Yes** | `npx @convex-dev/auth --prod` | Public keys for JWT validation |
-| `SITE_URL` | **Yes** | CLI / Manual | Origin domain of the frontend app |
+| `SITE_URL` | **Yes** | CLI / Manual | Origin domain of frontend app (used for auth session redirects & reset links) |
+| `BREVO_API_KEY` | **Yes** | Brevo Dashboard | API key for sending transactional password reset emails |
+| `BREVO_SENDER_EMAIL` | **Yes** | Brevo Dashboard | Verified sender email address |
+| `BREVO_SENDER_NAME` | No | CLI / Manual | Display name on transactional emails (default: `Kasly Platform`) |
 
 ---
 
@@ -399,6 +419,7 @@ Set via `npx convex env set <KEY> <VALUE> --prod` or Convex Dashboard:
 - [ ] Run `npx convex deploy`
 - [ ] Run `npx @convex-dev/auth --prod`
 - [ ] Set `SITE_URL` in Convex (`npx convex env set SITE_URL https://... --prod`)
+- [ ] Set Brevo email variables in Convex (`npx convex env set BREVO_API_KEY ... --prod`)
 - [ ] Link GitHub repository to Cloudflare Pages with build command `npm run build` and directory `dist`
 - [ ] Set `VITE_CONVEX_URL`, `VITE_CONVEX_SITE_URL`, and `NODE_VERSION=20` in Cloudflare Pages
 - [ ] Run `npx convex run appSettings:populate --prod`

@@ -11,6 +11,7 @@ A modern full-stack web application built with:
 - **Frontend:** [React 19](https://react.dev/) + [Vite](https://vitejs.dev/) + [Tailwind CSS v4](https://tailwindcss.com/)
 - **Backend & Database:** [Convex](https://convex.dev/)
 - **Authentication:** [Convex Auth](https://labs.convex.dev/auth)
+- **Transactional Email:** [Brevo](https://www.brevo.com/) (Password Resets via REST API)
 - **Icons & UI:** [Lucide Icons](https://lucide.dev/) + [@boredkevin/ui](https://www.npmjs.com/package/@boredkevin/ui)
 
 ---
@@ -57,6 +58,7 @@ A modern full-stack web application built with:
 ## Documentation & Guides
 
 - **[Deployment Guide (Cloudflare Pages + Convex)](./docs/DEPLOYMENT.md)** — Production setup, environment variables, SPA routing, and CI/CD.
+- **[Brevo Email & Password Reset Setup](./docs/backend/email-brevo.md)** — Brevo API key configuration, verified senders, link-based reset workflow, and dev fallback.
 - **[Backend Architecture & Guides](./docs/backend/README.md)** — RBAC, zero-trust cryptographic treasury ledger, schema, and API reference.
 
 ---

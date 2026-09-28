@@ -38,6 +38,7 @@ export interface LedgerTimelineProps {
   onOpenRecordPayment?: () => void;
   onOpenKeyGen?: () => void;
   emptyMessage?: string;
+  variant?: "standard" | "compact";
 }
 
 function formatRelativeTime(timestamp: number): string {
@@ -87,8 +88,10 @@ export function LedgerTimeline({
   limit,
   pageSize = 20,
   showPagination,
+  onOpenRecordPayment,
   onOpenKeyGen,
   emptyMessage = "No ledger entries recorded for this fund yet.",
+  variant = "standard",
 }: LedgerTimelineProps) {
   const [, setLocation] = useLocation();
   const [currentPage, setCurrentPage] = useState(1);
@@ -158,6 +161,63 @@ export function LedgerTimeline({
       <div className="py-8 text-center space-y-2">
         <Clock className="w-6 h-6 text-muted-foreground mx-auto opacity-50" />
         <p className="text-xs text-muted-foreground font-mono">{emptyMessage}</p>
+      </div>
+    );
+  }
+
+  if (variant === "compact") {
+    return (
+      <div className="divide-y divide-border/30">
+        {entriesList.map((entry) => {
+          const isCredit = entry.direction === "credit";
+          return (
+            <div
+              key={entry._id}
+              onClick={() => setLocation(`/tx/${entry.entryHash}`)}
+              className="py-2.5 px-1 flex items-center justify-between gap-3 hover:bg-white/5 cursor-pointer transition-colors"
+            >
+              {/* Left: Direction Icon + Memo & Metadata */}
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div
+                  className={`p-1.5 border shrink-0 ${
+                    isCredit
+                      ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-400"
+                      : "bg-red-500/15 border-red-500/30 text-red-400"
+                  }`}
+                >
+                  {isCredit ? (
+                    <ArrowDownLeft className="w-3.5 h-3.5" />
+                  ) : (
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                  )}
+                </div>
+
+                <div className="min-w-0">
+                  <span className="text-xs font-semibold text-foreground truncate block">
+                    {entry.memo}
+                  </span>
+                  <span className="text-[10px] font-mono text-muted-foreground truncate block">
+                    #{entry.sequenceNumber} • {entry.signerName || "Treasurer"} • {formatRelativeTime(entry.timestamp)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Right: Amount & Direction */}
+              <div className="text-right shrink-0 font-mono">
+                <span
+                  className={`text-xs sm:text-sm font-bold block ${
+                    isCredit ? "text-emerald-400" : "text-foreground"
+                  }`}
+                >
+                  {isCredit ? "+" : "-"}{fund?.currency} {entry.amount.toLocaleString()}
+                </span>
+                <span className="text-[9px] text-muted-foreground uppercase tracking-wider block">
+                  {isCredit ? "Credit" : "Debit"}
+                </span>
+              </div>
+            </div>
+          );
+        })}
       </div>
     );
   }

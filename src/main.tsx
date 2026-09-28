@@ -25,7 +25,13 @@ if (typeof window !== "undefined" && window.__updateAppProgress) {
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <ConvexAuthProvider client={convex}>
+    <ConvexAuthProvider
+      client={convex}
+      shouldHandleCode={() =>
+        typeof window !== "undefined" &&
+        !window.location.pathname.startsWith("/reset-password")
+      }
+    >
       <ThemeProvider>
         <App />
       </ThemeProvider>

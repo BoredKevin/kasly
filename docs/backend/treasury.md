@@ -574,3 +574,16 @@ When a ledger entry associated with a dues payment or waiver is reverted via `tr
 2. **Atomic Dues Rollback**: In the same atomic mutation transaction, the system queries `duesMemberships` using the `by_ledgerEntryId` index and resets `hasPaid: false`, `isWaived: false`, `paidAt: undefined`, `ledgerEntryId: undefined`, and `recordedBy: undefined`.
 3. **Event Paid Count Decrement**: For each impacted dues cycle event, `duesEvents.paidCount` is decremented by 1, instantly updating the real-time collection ratios across all client spreadsheets and dashboards.
 
+---
+
+## 10. Automated Gateway Settlement & Organization Signing Key
+
+For online fiat transactions processed through the **BorderPay Payment Gateway**, human treasurers are not present at the moment of payment settlement. To maintain non-repudiation and cryptographic ledger continuity without human intervention:
+
+1. **Auto-Provisioned Gateway Keypair**: When an administrator configures BorderPay in Treasury Settings, Convex provisions a dedicated ECDSA P-256 key pair. The public key is registered in `treasurerKeys` with the label `"BorderPay Gateway System"`. The private key is held non-extractably in `organizationPaymentConfig`.
+2. **Automated Webhook Signing**: Upon validating an asynchronous `payment.paid` webhook from BorderPay (`x-borderpay-token`), Convex constructs the canonical ledger payload, cryptographically signs it with the gateway's private key, and commits the credit transaction directly to the fund ledger chain via `executeCommit`.
+3. **Dues Satisfaction Linkage**: When an invoice settles dues, the resulting `ledgerEntryId` is linked to the relevant `duesMemberships` records, preserving full reversibility via `treasury.ledger.revertEntry`.
+
+For the complete technical specification of the gateway integration, fee models, and webhook pipeline, see **[BorderPay Payment Gateway & Invoicing Architecture](borderpay-integration.md)**.
+
+
