@@ -88,7 +88,6 @@ export function LedgerTimeline({
   limit,
   pageSize = 20,
   showPagination,
-  onOpenRecordPayment,
   onOpenKeyGen,
   emptyMessage = "No ledger entries recorded for this fund yet.",
   variant = "standard",

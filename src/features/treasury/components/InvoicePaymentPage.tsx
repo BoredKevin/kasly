@@ -87,7 +87,6 @@ export function InvoicePaymentPage({
   const [isSimulating, setIsSimulating] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isCopiedVa, setIsCopiedVa] = useState(false);
-  const [isCopiedAmount, setIsCopiedAmount] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [remainingTime, setRemainingTime] = useState<string>("");
 
@@ -215,13 +214,6 @@ export function InvoicePaymentPage({
     }
   };
 
-  const handleCopyAmount = () => {
-    const amountToCopy = invoice.totalAmount || previewTotal;
-    void navigator.clipboard.writeText(String(amountToCopy));
-    setIsCopiedAmount(true);
-    setTimeout(() => setIsCopiedAmount(false), 2000);
-  };
-
   const handleInitiatePayment = async () => {
     setIsInitiating(true);
     setErrorMessage(null);
@@ -341,8 +333,6 @@ export function InvoicePaymentPage({
   const isPending = invoice.status === "pending";
   const isPaid = invoice.status === "paid";
   const isDraft = invoice.status === "draft";
-  const isCancelled = invoice.status === "cancelled";
-  const isExpired = invoice.status === "expired";
 
   const qrImageUrl = invoice.qrString
     ? `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(invoice.qrString)}`
