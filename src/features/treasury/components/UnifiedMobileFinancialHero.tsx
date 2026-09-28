@@ -54,7 +54,6 @@ export function UnifiedMobileFinancialHero({
   onSelectFund,
   unpaidPeriods,
   canSign,
-  canAdmin,
   onOpenPayDues,
   onOpenRecordPayment,
 }: UnifiedMobileFinancialHeroProps) {

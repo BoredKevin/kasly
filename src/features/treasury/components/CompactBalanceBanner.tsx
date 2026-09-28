@@ -11,7 +11,6 @@ import {
   ChevronDown,
   PenLine,
   Plus,
-  ShieldCheck,
   ShieldAlert,
 } from "lucide-react";
 

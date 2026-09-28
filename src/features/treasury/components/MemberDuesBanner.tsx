@@ -16,7 +16,6 @@ import {
   ChevronDown,
   ChevronUp,
   Calendar,
-  AlertCircle,
   Sparkles,
 } from "lucide-react";
 
