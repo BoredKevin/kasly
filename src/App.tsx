@@ -2,7 +2,7 @@ import { Authenticated, Unauthenticated } from "convex/react";
 import { Route, Switch, Redirect } from "wouter";
 import { useTranslation } from "react-i18next";
 import { Layout } from "./components/layout";
-import { SignInForm, ClaimRegistrationView } from "./features/auth";
+import { SignInForm, ClaimRegistrationView, ResetPasswordPage } from "./features/auth";
 import { UserProfileView, OrganizationView } from "./features/profile";
 import {
   TreasuryView,
@@ -19,6 +19,7 @@ const RESERVED_ROOT_PATHS = new Set([
   "treasury",
   "claim",
   "register",
+  "reset-password",
   "login",
   "auth",
   "api",
@@ -168,6 +169,34 @@ export default function App() {
             {(params) => <UnauthenticatedEntryView identifier={params.hash} />}
           </Route>
 
+          <Route path="/claim">
+            <Layout>
+              <ClaimRegistrationView />
+            </Layout>
+          </Route>
+
+          <Route path="/register">
+            <Layout>
+              <ClaimRegistrationView />
+            </Layout>
+          </Route>
+
+          <Route path="/reset-password">
+            <Layout>
+              <div className="space-y-8 max-w-sm mx-auto w-full">
+                <div className="text-center space-y-2">
+                  <h1 className="text-3xl font-bold tracking-tight text-foreground">
+                    {t("auth.welcomeTitle")}
+                  </h1>
+                  <p className="text-xs text-muted-foreground">
+                    {t("auth.welcomeSubtitle")}
+                  </p>
+                </div>
+                <ResetPasswordPage />
+              </div>
+            </Layout>
+          </Route>
+
           {/* Root Short URL or Fallback (Centered, No Navbar/Sidebar) */}
           <Route path="/:identifier">
             {(params) => {
@@ -178,6 +207,23 @@ export default function App() {
                 return (
                   <Layout>
                     <ClaimRegistrationView />
+                  </Layout>
+                );
+              }
+              if (params.identifier === "reset-password") {
+                return (
+                  <Layout>
+                    <div className="space-y-8 max-w-sm mx-auto w-full">
+                      <div className="text-center space-y-2">
+                        <h1 className="text-3xl font-bold tracking-tight text-foreground">
+                          {t("auth.welcomeTitle")}
+                        </h1>
+                        <p className="text-xs text-muted-foreground">
+                          {t("auth.welcomeSubtitle")}
+                        </p>
+                      </div>
+                      <ResetPasswordPage />
+                    </div>
                   </Layout>
                 );
               }
@@ -204,16 +250,6 @@ export default function App() {
             }}
           </Route>
 
-          <Route path="/claim">
-            <Layout>
-              <ClaimRegistrationView />
-            </Layout>
-          </Route>
-          <Route path="/register">
-            <Layout>
-              <ClaimRegistrationView />
-            </Layout>
-          </Route>
           <Route>
             <Layout>
               <div className="space-y-8 max-w-sm mx-auto w-full">
