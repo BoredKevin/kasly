@@ -65,7 +65,7 @@ export const list = query({
       const user = await ctx.db.get("users", member.userId);
       const roles = (
         await Promise.all(
-          member.roleIds.map((roleId) => ctx.db.get("roles", roleId)),
+          (member.roleIds ?? []).map((roleId) => ctx.db.get("roles", roleId)),
         )
       )
         .filter((r): r is NonNullable<typeof r> => r !== null)
@@ -154,7 +154,7 @@ export const get = query({
     const user = await ctx.db.get("users", member.userId);
     const roles = (
       await Promise.all(
-        member.roleIds.map((roleId) => ctx.db.get("roles", roleId)),
+        (member.roleIds ?? []).map((roleId) => ctx.db.get("roles", roleId)),
       )
     )
       .filter((r): r is NonNullable<typeof r> => r !== null)
@@ -178,7 +178,7 @@ export const get = query({
         color: r.color,
         position: r.position,
       })),
-      permissions: Array.from(perms),
+      permissions: Array.from(perms ?? []),
       isOwner: member.userId === organization.ownerId,
     };
   },
@@ -233,7 +233,7 @@ export const getMyMembership = query({
 
     const roles = (
       await Promise.all(
-        member.roleIds.map((roleId) => ctx.db.get("roles", roleId)),
+        (member.roleIds ?? []).map((roleId) => ctx.db.get("roles", roleId)),
       )
     )
       .filter((r): r is NonNullable<typeof r> => r !== null)
@@ -259,7 +259,7 @@ export const getMyMembership = query({
         color: r.color,
         position: r.position,
       })),
-      permissions: Array.from(perms),
+      permissions: Array.from(perms ?? []),
       isOwner: member.userId === organization.ownerId,
       highestRolePosition: highestPos === Infinity ? 999999 : highestPos,
     };

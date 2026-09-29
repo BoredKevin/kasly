@@ -89,19 +89,19 @@ export async function resolveMemberPermissions(
     .unique();
 
   if (defaultRole) {
-    for (const perm of defaultRole.permissions) {
+    for (const perm of defaultRole.permissions ?? []) {
       permissions.add(perm as Permission);
     }
   }
 
   // Fetch assigned member roles
   const roles = await Promise.all(
-    member.roleIds.map((roleId) => ctx.db.get("roles", roleId)),
+    (member.roleIds ?? []).map((roleId) => ctx.db.get("roles", roleId)),
   );
 
   for (const role of roles) {
     if (role && role.organizationId === organization._id) {
-      for (const perm of role.permissions) {
+      for (const perm of role.permissions ?? []) {
         permissions.add(perm as Permission);
       }
     }
@@ -175,7 +175,7 @@ export async function getHighestRolePosition(
   let highest = 0; // Default @everyone position
 
   const roles = await Promise.all(
-    member.roleIds.map((roleId) => ctx.db.get("roles", roleId)),
+    (member.roleIds ?? []).map((roleId) => ctx.db.get("roles", roleId)),
   );
 
   for (const role of roles) {

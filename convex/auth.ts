@@ -33,6 +33,18 @@ function SafePassword(config: Parameters<typeof Password>[0] = {}) {
         if (error instanceof ConvexError) {
           throw error;
         }
+        console.error("[SafePassword flow=reset error]", error);
+        if (
+          typeof msg === "string" &&
+          (msg.includes("iterable") ||
+            msg.includes("Cannot read") ||
+            msg.includes("Missing environment variable") ||
+            msg.includes("TypeError"))
+        ) {
+          throw new ConvexError(
+            "Failed to dispatch password reset. Please check server email configuration.",
+          );
+        }
         throw new ConvexError(msg || "Failed to dispatch password reset request.");
       }
       return null;
@@ -83,6 +95,27 @@ function SafePassword(config: Parameters<typeof Password>[0] = {}) {
       // If it's already a ConvexError, let it propagate directly
       if (error instanceof ConvexError) {
         throw error;
+      }
+
+      console.error("[SafePassword authorize error]", error);
+
+      // Handle missing backend environment variables gracefully
+      if (msg && msg.includes("Missing environment variable")) {
+        throw new ConvexError(
+          "Server configuration error: Authentication keys are missing on this deployment.",
+        );
+      }
+
+      // Handle raw JavaScript engine errors (like iterable or property errors)
+      if (
+        msg &&
+        (msg.includes("is not iterable") ||
+          msg.includes("Cannot read") ||
+          msg.includes("TypeError"))
+      ) {
+        throw new ConvexError(
+          "Unable to complete authentication request. Please verify server configuration.",
+        );
       }
 
       // Wrap any other error in ConvexError so it never causes Uncaught Error on the server

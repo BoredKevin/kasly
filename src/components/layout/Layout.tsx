@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 
 export type OrgTab = "overview" | "roles" | "invites" | "members";
-export type TreasuryTab = "overview" | "ledger" | "dues" | "invoices" | "keys" | "admin";
+export type TreasuryTab = "overview" | "ledger" | "dues" | "invoices" | "keys" | "admin" | "bulk-dues";
 
 interface LayoutProps {
   children: ReactNode;
