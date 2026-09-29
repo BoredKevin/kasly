@@ -91,6 +91,16 @@ export default function App() {
                 <TreasuryView />
               </TreasuryErrorBoundary>
             </Route>
+            <Route path="/treasury/bulk-dues">
+              <TreasuryErrorBoundary>
+                <TreasuryView />
+              </TreasuryErrorBoundary>
+            </Route>
+            <Route path="/treasury/dues/bulk">
+              <TreasuryErrorBoundary>
+                <TreasuryView />
+              </TreasuryErrorBoundary>
+            </Route>
             <Route path="/treasury/keys">
               <TreasuryErrorBoundary>
                 <TreasuryView />

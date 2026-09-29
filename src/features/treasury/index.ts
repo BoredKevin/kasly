@@ -24,6 +24,7 @@ export * from "./components/CreateCustomInvoiceModal";
 export * from "./components/MemberDuesBanner";
 export * from "./components/CompactBalanceBanner";
 export * from "./components/UnifiedMobileFinancialHero";
+export * from "./components/BulkDuesEntryPane";
 export * from "./utils/revertUtils";
 
 if (typeof window !== "undefined" && window.__updateAppProgress) {

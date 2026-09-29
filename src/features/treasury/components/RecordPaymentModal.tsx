@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useMutation, useQuery, useConvex } from "convex/react";
 import { useTranslation } from "react-i18next";
@@ -23,11 +23,12 @@ import {
   Lock,
   CalendarDays,
   CheckCircle2,
+  AlertTriangle,
   Minus,
   Plus,
   Sparkles,
 } from "lucide-react";
-import { loadKeypair, signLedgerPayload, SigningPayload } from "../../../lib/treasury-crypto";
+import { loadKeypair, listStoredKeys, signLedgerPayload, SigningPayload } from "../../../lib/treasury-crypto";
 import { MemberSearchSelect } from "./MemberSearchSelect";
 
 interface RecordPaymentModalProps {
@@ -77,8 +78,48 @@ export function RecordPaymentModal({
     defaultFundId ?? null
   );
 
+  // Local keys present in IndexedDB on this browser/device
+  const [localKeyIds, setLocalKeyIds] = useState<string[]>([]);
+  const [isLoadingLocalKeys, setIsLoadingLocalKeys] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (isOpen) {
+      listStoredKeys()
+        .then((stored) => {
+          if (isMounted) {
+            setLocalKeyIds(stored.map((s) => s.keyId));
+            setIsLoadingLocalKeys(false);
+          }
+        })
+        .catch(() => {
+          if (isMounted) {
+            setLocalKeyIds([]);
+            setIsLoadingLocalKeys(false);
+          }
+        });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen]);
+
   // Active (non-revoked) keys belonging to current user
-  const activeKeys = myKeys?.filter((k) => !k.revokedAt) ?? [];
+  const activeKeys = useMemo(
+    () =>
+      myKeys?.filter(
+        (k: { keyId: string; label?: string; revokedAt?: number }) => !k.revokedAt
+      ) ?? [],
+    [myKeys]
+  );
+  const availableKeysOnDevice = useMemo(
+    () => activeKeys.filter((k) => localKeyIds.includes(k.keyId)),
+    [activeKeys, localKeyIds]
+  );
+  const otherDeviceKeys = useMemo(
+    () => activeKeys.filter((k) => !localKeyIds.includes(k.keyId)),
+    [activeKeys, localKeyIds]
+  );
 
   // Derived effective fund and key IDs
   const selectedFundId = selectedFundIdState ?? defaultFundId ?? funds?.[0]?._id ?? null;
@@ -89,12 +130,20 @@ export function RecordPaymentModal({
   const [memo, setMemo] = useState<string>("");
 
   // Dues payment state
-  const [duesUserId, setDuesUserId] = useState<string>(prefillUserId ?? "");
+  const [manualDuesUserId, setManualDuesUserId] = useState<string>("");
+  const duesUserId = prefillUserId ?? manualDuesUserId;
+
   const [duesPeriodCount, setDuesPeriodCount] = useState<number>(prefillPeriodCount);
   const [customDuesMemo, setCustomDuesMemo] = useState<string>("");
 
   const [selectedKeyIdState, setSelectedKeyIdState] = useState<string>("");
-  const selectedKeyId = selectedKeyIdState || activeKeys[0]?.keyId || "";
+  const selectedKeyId =
+    (selectedKeyIdState && localKeyIds.includes(selectedKeyIdState) ? selectedKeyIdState : null) ||
+    availableKeysOnDevice[0]?.keyId ||
+    activeKeys[0]?.keyId ||
+    "";
+
+  const isKeyAvailableOnDevice = Boolean(selectedKeyId && localKeyIds.includes(selectedKeyId));
 
   const [isSigning, setIsSigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -138,23 +187,11 @@ export function RecordPaymentModal({
     };
   }, []);
 
-  // Sync prefilled state when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      if (prefillUserId) {
-        setDuesUserId(prefillUserId);
-        setPaymentMode("dues");
-      }
-      if (prefillPeriodCount) {
-        setDuesPeriodCount(prefillPeriodCount);
-      }
-    }
-  }, [isOpen, prefillUserId, prefillPeriodCount]);
-
   const isSubmitDisabled = Boolean(
     isSigning ||
     !selectedFundId ||
     !selectedKeyId ||
+    !isKeyAvailableOnDevice ||
     (paymentMode === "manual" ? !amountInput || !memo.trim() : !duesUserId || duesCalculatedAmount <= 0)
   );
 
@@ -432,6 +469,49 @@ export function RecordPaymentModal({
                   )}
                 </div>
               </div>
+            ) : availableKeysOnDevice.length === 0 && !isLoadingLocalKeys ? (
+              <div className="space-y-4">
+                <div className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-start gap-2.5">
+                  <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <p className="font-semibold text-foreground">
+                      No Signing Key Found on This Device
+                    </p>
+                    <p className="text-muted-foreground text-[11px] leading-relaxed">
+                      You have {activeKeys.length} approved key(s) registered in this organization, but their private keys are stored on another device or browser. Because private keys are non-extractable, you need to generate a keypair on this device to sign transactions here.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    chamfer="dual"
+                    onClick={onClose}
+                    size="sm"
+                    className="text-xs cursor-pointer"
+                  >
+                    Cancel
+                  </Button>
+                  {onOpenKeyGen && (
+                    <Button
+                      type="button"
+                      variant="cyber"
+                      chamfer="dual"
+                      size="sm"
+                      onClick={() => {
+                        onClose();
+                        onOpenKeyGen();
+                      }}
+                      className="text-xs flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <KeyRound className="w-3.5 h-3.5" />
+                      <span>Generate Keypair on This Device</span>
+                    </Button>
+                  )}
+                </div>
+              </div>
             ) : (
               <form
                 onSubmit={(e) => {
@@ -535,7 +615,7 @@ export function RecordPaymentModal({
                         members={members}
                         value={duesUserId}
                         onChange={(userId) => {
-                          setDuesUserId(userId);
+                          setManualDuesUserId(userId);
                           setDuesPeriodCount(1);
                         }}
                         disabled={isSigning}
@@ -657,9 +737,16 @@ export function RecordPaymentModal({
 
                 {/* Target Destination Fund Selector */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground">
-                    Destination Fund *
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-foreground">
+                      Destination Fund *
+                    </label>
+                    {selectedFundId === defaultFundId && defaultFundId && (
+                      <span className="text-[10px] font-mono text-primary px-1.5 py-0.5 bg-primary/10 border border-primary/20">
+                        Auto-selected from active view
+                      </span>
+                    )}
+                  </div>
                   {funds && funds.length > 0 ? (
                     <select
                       value={selectedFundId ?? ""}
@@ -696,12 +783,36 @@ export function RecordPaymentModal({
                     className="w-full h-9 px-2.5 bg-background border border-border text-xs text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
                     required
                   >
-                    {activeKeys.map((k) => (
-                      <option key={k.keyId} value={k.keyId}>
-                        {k.label ? `${k.label} (${k.keyId.slice(0, 10)}...)` : `Key (${k.keyId.slice(0, 10)}...)`}
-                      </option>
-                    ))}
+                    {availableKeysOnDevice.length > 0 && (
+                      <optgroup label="Available on this device">
+                        {availableKeysOnDevice.map((k) => (
+                          <option key={k.keyId} value={k.keyId}>
+                            ● {k.label ? `${k.label} (${k.keyId.slice(0, 10)}...)` : `Key (${k.keyId.slice(0, 10)}...)`} [Ready]
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {otherDeviceKeys.length > 0 && (
+                      <optgroup label="Other devices (Missing private key)">
+                        {otherDeviceKeys.map((k) => (
+                          <option key={k.keyId} value={k.keyId}>
+                            ⚠ {k.label ? `${k.label} (${k.keyId.slice(0, 10)}...)` : `Key (${k.keyId.slice(0, 10)}...)`} [No private key]
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
                   </select>
+                  {isKeyAvailableOnDevice ? (
+                    <div className="flex items-center gap-1.5 text-emerald-400 text-[11px] font-mono">
+                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                      <span>Signing key is ready in browser storage</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-amber-400 text-[11px] font-mono">
+                      <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                      <span>Private key not found on this device. Switch to a ready key or generate one.</span>
+                    </div>
+                  )}
                 </div>
 
                 {error && (

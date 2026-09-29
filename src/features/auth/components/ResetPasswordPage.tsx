@@ -18,12 +18,25 @@ export function ResetPasswordPage() {
   const { signIn } = useAuthActions();
   const [, setLocation] = useLocation();
 
-  const searchParams = new URLSearchParams(window.location.search);
-  const code =
-    searchParams.get("token")?.trim() ||
-    searchParams.get("code")?.trim() ||
-    "";
-  const email = searchParams.get("email")?.trim() || "";
+  const getParam = (key: string): string => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const searchVal = searchParams.get(key);
+    if (searchVal) return searchVal.trim();
+
+    if (window.location.hash && window.location.hash.includes("?")) {
+      const hashQuery = window.location.hash.slice(
+        window.location.hash.indexOf("?") + 1,
+      );
+      const hashParams = new URLSearchParams(hashQuery);
+      const hashVal = hashParams.get(key);
+      if (hashVal) return hashVal.trim();
+    }
+
+    return "";
+  };
+
+  const code = getParam("token") || getParam("code");
+  const email = getParam("email");
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");

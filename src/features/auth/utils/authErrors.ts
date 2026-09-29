@@ -9,25 +9,40 @@ export function formatAuthError(err: unknown): string {
     return "An unexpected error occurred. Please try again.";
   }
 
+  const sanitize = (msg: string): string => {
+    const trimmed = msg.trim();
+    if (
+      /is not iterable/i.test(trimmed) ||
+      /cannot read propert/i.test(trimmed) ||
+      /typeerror/i.test(trimmed)
+    ) {
+      return "Unable to complete request due to a server configuration issue. Please contact support or try again.";
+    }
+    if (/missing environment variable/i.test(trimmed)) {
+      return "Authentication keys are not configured on this server.";
+    }
+    return trimmed;
+  };
+
   // 1. ConvexError instance
   if (err instanceof ConvexError) {
     if (typeof err.data === "string" && err.data.trim()) {
-      return err.data.trim();
+      return sanitize(err.data);
     }
     const dataObj = err.data as Record<string, unknown> | null | undefined;
     if (dataObj && typeof dataObj.message === "string" && dataObj.message.trim()) {
-      return dataObj.message.trim();
+      return sanitize(dataObj.message);
     }
   }
 
   // 2. Duck-typed ConvexError or object with data
   const candidate = err as { data?: unknown; message?: unknown };
   if (typeof candidate.data === "string" && candidate.data.trim()) {
-    return candidate.data.trim();
+    return sanitize(candidate.data);
   }
   const candidateDataObj = candidate.data as Record<string, unknown> | null | undefined;
   if (candidateDataObj && typeof candidateDataObj.message === "string" && candidateDataObj.message.trim()) {
-    return candidateDataObj.message.trim();
+    return sanitize(candidateDataObj.message);
   }
 
   // 3. Inspect message

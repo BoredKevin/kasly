@@ -42,10 +42,12 @@ interface DuesSpreadsheetPaneProps {
     userId?: Id<"users">;
     duesEventId?: Id<"duesEvents">;
     periodCount?: number;
+    fundId?: Id<"funds">;
   }) => void;
   onOpenEntryDetails?: (entryId: Id<"ledgerEntries">) => void;
   onOpenAdminTab?: () => void;
   onOpenCreateDues?: () => void;
+  onOpenBulkDues?: () => void;
 }
 
 const WEEKS_PER_PAGE = 4;
@@ -60,6 +62,7 @@ export function DuesSpreadsheetPane({
   onOpenEntryDetails,
   onOpenAdminTab,
   onOpenCreateDues,
+  onOpenBulkDues,
 }: DuesSpreadsheetPaneProps) {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
@@ -441,6 +444,22 @@ export function DuesSpreadsheetPane({
                 </span>
               </Button>
 
+              {/* Bulk Entry Button */}
+              {canSign && onOpenBulkDues && (
+                <Button
+                  type="button"
+                  variant="cyber"
+                  chamfer="dual"
+                  size="sm"
+                  onClick={onOpenBulkDues}
+                  className="h-8 text-xs flex items-center gap-1.5 cursor-pointer px-2.5 shadow-sm font-semibold"
+                  title="Record member dues payments for multiple members at once"
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Bulk Entry</span>
+                </Button>
+              )}
+
               {/* Fullscreen Toggle Button */}
               <Button
                 type="button"
@@ -746,6 +765,7 @@ export function DuesSpreadsheetPane({
                                       userId: member.userId,
                                       duesEventId: event._id,
                                       periodCount: 1,
+                                      fundId: fundId ?? undefined,
                                     });
                                   }
                                 }}
