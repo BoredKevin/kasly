@@ -13,10 +13,11 @@ import {
   PenLine,
   CalendarDays,
   Receipt,
+  Users,
 } from "lucide-react";
 import { Button, Badge } from "@boredkevin/ui";
 
-export type TreasuryTab = "overview" | "ledger" | "dues" | "invoices" | "keys" | "admin";
+export type TreasuryTab = "overview" | "ledger" | "dues" | "invoices" | "keys" | "admin" | "bulk-dues";
 
 interface TreasurySidebarProps {
   activeTab?: TreasuryTab;
@@ -52,6 +53,7 @@ export function TreasurySidebar({
     if (loc === "/treasury/invoices") return "invoices";
     if (loc === "/treasury/keys") return "keys";
     if (loc === "/treasury/admin") return "admin";
+    if (loc === "/treasury/bulk-dues" || loc === "/treasury/dues/bulk") return "bulk-dues";
     return "overview";
   };
 
@@ -251,6 +253,36 @@ export function TreasurySidebar({
                 <span className="text-xs font-medium">{t("nav.recordPayment")}</span>
               </div>
             </button>
+
+            {/* Bulk Dues Entry Link */}
+            <Link
+              href="/treasury/bulk-dues"
+              onClick={() => handleTabClick("bulk-dues")}
+              style={{
+                backgroundColor:
+                  currentActiveTab === "bulk-dues"
+                    ? "rgba(255, 255, 255, 0.08)"
+                    : "rgba(255, 255, 255, 0.03)",
+              }}
+              className={`w-full p-3 flex items-center justify-between border transition-all text-left cursor-pointer ${
+                currentActiveTab === "bulk-dues"
+                  ? "border-primary/60 text-foreground font-semibold shadow-md"
+                  : "border-border/70 text-muted-foreground hover:text-foreground hover:border-border hover:bg-white/5"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className={`p-2 border ${
+                    currentActiveTab === "bulk-dues"
+                      ? "bg-primary/20 border-primary/40 text-primary"
+                      : "bg-muted/40 border-border/60 text-muted-foreground"
+                  }`}
+                >
+                  <Users className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-medium">Bulk Dues Entry</span>
+              </div>
+            </Link>
 
             {/* My Keys Link */}
             <Link

@@ -12,6 +12,7 @@ import { DuesSpreadsheetPane } from "./DuesSpreadsheetPane";
 import { MyKeysPane } from "./MyKeysPane";
 import { AdminPane } from "./AdminPane";
 import { InvoicesPane } from "./InvoicesPane";
+import { BulkDuesEntryPane } from "./BulkDuesEntryPane";
 import { RecordPaymentModal } from "./RecordPaymentModal";
 import { CreateDueEventModal } from "./CreateDueEventModal";
 import { CreateManualDuesModal } from "./CreateManualDuesModal";
@@ -28,6 +29,7 @@ import {
   Receipt,
   KeyRound,
   ShieldCheck,
+  Users,
 } from "lucide-react";
 import { Button, Badge } from "@boredkevin/ui";
 
@@ -84,6 +86,7 @@ export function TreasuryView({
     if (loc.startsWith("/tx/") || entryIdentifier) return "entry";
     if (loc === "/treasury/ledger") return "ledger";
     if (loc === "/treasury/dues") return "dues";
+    if (loc === "/treasury/bulk-dues" || loc === "/treasury/dues/bulk") return "bulk-dues";
     if (loc === "/treasury/invoices") return "invoices";
     if (loc === "/treasury/keys") return "keys";
     if (loc === "/treasury/admin") return "admin";
@@ -116,6 +119,7 @@ export function TreasuryView({
     userId?: Id<"users"> | null;
     duesEventId?: Id<"duesEvents"> | null;
     periodCount?: number;
+    fundId?: Id<"funds"> | null;
   } | null>(null);
 
   const [isDueEventOpen, setIsDueEventOpen] = useState(false);
@@ -127,6 +131,7 @@ export function TreasuryView({
     userId?: Id<"users">;
     duesEventId?: Id<"duesEvents">;
     periodCount?: number;
+    fundId?: Id<"funds">;
   }) => {
     if (prefill) {
       setRecordPaymentPrefill({
@@ -134,10 +139,12 @@ export function TreasuryView({
         userId: prefill.userId,
         duesEventId: prefill.duesEventId,
         periodCount: prefill.periodCount ?? 1,
+        fundId: prefill.fundId ?? activeFundId ?? undefined,
       });
     } else {
       setRecordPaymentPrefill({
         initialMode: "manual",
+        fundId: activeFundId ?? undefined,
       });
     }
     setIsRecordPaymentOpen(true);
@@ -309,6 +316,20 @@ export function TreasuryView({
             <CalendarDays className="w-3 h-3" />
             <span>{t("nav.duesAndPayments")}</span>
           </Link>
+          {canSign && (
+            <Link
+              href="/treasury/bulk-dues"
+              onClick={() => handleSelectTab("bulk-dues")}
+              className={`px-2.5 py-1 whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
+                safeCurrentTab === "bulk-dues"
+                  ? "bg-primary/20 border border-primary/60 text-primary font-bold shadow-sm"
+                  : "text-muted-foreground hover:text-foreground hover:bg-white/5 border border-transparent"
+              }`}
+            >
+              <Users className="w-3 h-3" />
+              <span>Bulk Dues</span>
+            </Link>
+          )}
           <Link
             href="/treasury/invoices"
             onClick={() => handleSelectTab("invoices")}
@@ -364,6 +385,7 @@ export function TreasuryView({
               if (tab === "overview") setLocation("/treasury");
               if (tab === "ledger") setLocation("/treasury/ledger");
               if (tab === "dues") setLocation("/treasury/dues");
+              if (tab === "bulk-dues") setLocation("/treasury/bulk-dues");
               if (tab === "invoices") setLocation("/treasury/invoices");
               if (tab === "keys") setLocation("/treasury/keys");
               if (tab === "admin") setLocation("/treasury/admin");
@@ -426,6 +448,25 @@ export function TreasuryView({
                   onOpenEntryDetails={handleInspectEntryById}
                   onOpenAdminTab={() => setLocation("/treasury/admin")}
                   onOpenCreateDues={() => setIsCreateDuesModalOpen(true)}
+                  onOpenBulkDues={() => {
+                    handleSelectTab("bulk-dues");
+                    setLocation("/treasury/bulk-dues");
+                  }}
+                />
+              </div>
+            )}
+
+            {safeCurrentTab === "bulk-dues" && canSign && (
+              <div>
+                <BulkDuesEntryPane
+                  organizationId={effectiveOrgId}
+                  initialFundId={activeFundId}
+                  onNavigateBack={() => {
+                    handleSelectTab("dues");
+                    setLocation("/treasury/dues");
+                  }}
+                  onOpenKeyGen={() => setIsKeyGenOpen(true)}
+                  onInspectEntry={handleInspectEntryById}
                 />
               </div>
             )}
@@ -471,7 +512,7 @@ export function TreasuryView({
               setRecordPaymentPrefill(null);
             }}
             organizationId={effectiveOrgId}
-            defaultFundId={activeFundId}
+            defaultFundId={recordPaymentPrefill?.fundId ?? activeFundId}
             initialMode={recordPaymentPrefill?.initialMode ?? "manual"}
             prefillUserId={recordPaymentPrefill?.userId}
             prefillDuesEventId={recordPaymentPrefill?.duesEventId}
