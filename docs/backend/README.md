@@ -130,7 +130,14 @@ convex/
 ├── roles.ts             # Role creation, hierarchy position ordering, and permissions
 ├── schema.ts            # Database schema definitions and indexes
 ├── treasury/            # Cryptographic Treasury & Ledger Engine
-│   ├── borderpay.ts     # BorderPay payment gateway, invoicing & automated CLE signing
+│   ├── invoices.ts      # Pure invoicing domain (dues & custom charges lifecycle)
+│   ├── settlement.ts    # Universal automated CLE settlement & membership fulfillment
+│   ├── gateways/        # Modular Payment Gateway Abstraction Subsystem
+│   │   ├── types.ts     # PaymentGatewayAdapter contract & normalized data models
+│   │   ├── registry.ts  # Dynamic adapter registry & factory lookup
+│   │   ├── router.ts    # Gateway service router for checkout & payment initiation
+│   │   └── adapters/    # Concrete provider adapters (BorderPay, etc.)
+│   ├── borderpay.ts     # Backward-compatibility facade for treasury payment rails
 │   ├── checkpoints.ts   # Fast balance snapshots and replay verification
 │   ├── dues.ts          # Automated dues scheduling and spreadsheet generation
 │   ├── funds.ts         # Fund accounts CRUD and derived balances
@@ -146,6 +153,7 @@ convex/
 
 For in-depth guides and references, consult:
 
+* **[Modular Payment Gateway Architecture & Extensibility Guide](payment-gateways.md)** — Architectural decoupling of Invoicing, Settlement, and Gateway Adapters (`PaymentGatewayAdapter`), normalized channel structures, and guide to implementing new providers.
 * **[Brevo Email & Password Reset Setup Guide](email-brevo.md)** — Brevo API key configuration, verified senders, link-based reset workflow, anti-enumeration security, and local dev fallback.
 * **[BorderPay Payment Gateway & Invoicing Architecture](borderpay-integration.md)** — BorderPay payment integration, dynamic QRIS fee models, upstream Virtual Accounts/E-Wallets, automated gateway signing keys, and webhook idempotency.
 * **[Treasury & Cryptographic Ledger Engine](treasury.md)** — Append-only hash chain, Web Crypto ECDSA signing, zero-trust key ceremony, and balance derivation.
