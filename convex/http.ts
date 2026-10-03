@@ -25,7 +25,7 @@ http.route({
 
     // Match verification token against organizationPaymentConfig
     const config = await ctx.runQuery(
-      internal.treasury.borderpay._getConfigByWebhookToken,
+      internal.treasury.gateways.router._getConfigByWebhookToken,
       { webhookToken: token }
     );
 
@@ -50,12 +50,13 @@ http.route({
     const data = payload?.data;
     const event = req.headers.get("x-borderpay-event") || payload?.event;
 
-    // Process payment.paid event
+    // Process payment.paid event via universal settlement engine
     if (data?.reference_id && (data.status === "paid" || event === "payment.paid")) {
-      await ctx.runAction(internal.treasury.borderpay.internalMarkInvoicePaid, {
+      await ctx.runAction(internal.treasury.settlement.settleInvoicePayment, {
         referenceId: data.reference_id,
         paidAt: Date.now(),
-        borderpayData: data,
+        provider: "borderpay",
+        metadata: data,
       });
     }
 

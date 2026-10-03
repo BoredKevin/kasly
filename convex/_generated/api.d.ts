@@ -24,9 +24,16 @@ import type * as treasury_borderpay from "../treasury/borderpay.js";
 import type * as treasury_checkpoints from "../treasury/checkpoints.js";
 import type * as treasury_dues from "../treasury/dues.js";
 import type * as treasury_funds from "../treasury/funds.js";
+import type * as treasury_gateways_adapters_borderpay from "../treasury/gateways/adapters/borderpay.js";
+import type * as treasury_gateways_adapters_index from "../treasury/gateways/adapters/index.js";
+import type * as treasury_gateways_registry from "../treasury/gateways/registry.js";
+import type * as treasury_gateways_router from "../treasury/gateways/router.js";
+import type * as treasury_gateways_types from "../treasury/gateways/types.js";
 import type * as treasury_helpers from "../treasury/helpers.js";
+import type * as treasury_invoices from "../treasury/invoices.js";
 import type * as treasury_keys from "../treasury/keys.js";
 import type * as treasury_ledger from "../treasury/ledger.js";
+import type * as treasury_settlement from "../treasury/settlement.js";
 import type * as users from "../users.js";
 
 import type {
@@ -52,9 +59,16 @@ declare const fullApi: ApiFromModules<{
   "treasury/checkpoints": typeof treasury_checkpoints;
   "treasury/dues": typeof treasury_dues;
   "treasury/funds": typeof treasury_funds;
+  "treasury/gateways/adapters/borderpay": typeof treasury_gateways_adapters_borderpay;
+  "treasury/gateways/adapters/index": typeof treasury_gateways_adapters_index;
+  "treasury/gateways/registry": typeof treasury_gateways_registry;
+  "treasury/gateways/router": typeof treasury_gateways_router;
+  "treasury/gateways/types": typeof treasury_gateways_types;
   "treasury/helpers": typeof treasury_helpers;
+  "treasury/invoices": typeof treasury_invoices;
   "treasury/keys": typeof treasury_keys;
   "treasury/ledger": typeof treasury_ledger;
+  "treasury/settlement": typeof treasury_settlement;
   users: typeof users;
 }>;
 
