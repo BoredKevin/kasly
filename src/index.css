@@ -1,6 +1,10 @@
 @import "@boredkevin/ui/theme.css";
 @import "tailwindcss";
 
+@theme {
+  --font-sans: 'Plus Jakarta Sans', Inter, Geist, system-ui, -apple-system, sans-serif;
+}
+
 @layer base {
   :root {
     --color-light: #ffffff;
