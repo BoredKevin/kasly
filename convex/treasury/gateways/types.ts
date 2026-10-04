@@ -40,7 +40,24 @@ export interface GatewayConfigRecord {
     qrisEnabled: boolean;
     enabledBanks: string[];
     enabledWallets: string[];
+    customQrisFee?: {
+      type: "flat" | "percent";
+      value: number;
+    };
   };
+  channelRouting?: {
+    qrisGateway?: string;
+    vaGateway?: string;
+    ewalletGateway?: string;
+  };
+  providerConfigs?: Record<
+    string,
+    {
+      apiKey: string;
+      webhookToken?: string;
+      isTestMode?: boolean;
+    }
+  >;
   lastFetchedAt?: number;
   updatedAt: number;
 }
@@ -61,6 +78,7 @@ export interface PaymentInitiationResult {
   provider: string;
   providerReferenceId: string;
   qrString?: string;
+  qrImage?: string;
   vaNumber?: string;
   vaBank?: string;
   payUrl?: string;
@@ -75,6 +93,7 @@ export interface WebhookVerificationRequest {
   headers: Record<string, string>;
   bodyText: string;
   parsedBody?: unknown;
+  secret?: string;
 }
 
 export interface WebhookVerificationResult {

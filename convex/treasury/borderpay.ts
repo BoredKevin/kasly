@@ -38,6 +38,8 @@ export {
   getPublicPaymentMethods,
   initiatePayment,
   simulatePayment,
+  confirmCustomerPayment,
+  verifyAndSettleTemanQrisOrder,
   _getAuthAndExistingConfigForSave,
   _saveConfigMutation,
   _getInternalConfig,

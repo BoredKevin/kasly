@@ -26,6 +26,7 @@ import type * as treasury_dues from "../treasury/dues.js";
 import type * as treasury_funds from "../treasury/funds.js";
 import type * as treasury_gateways_adapters_borderpay from "../treasury/gateways/adapters/borderpay.js";
 import type * as treasury_gateways_adapters_index from "../treasury/gateways/adapters/index.js";
+import type * as treasury_gateways_adapters_temanqris from "../treasury/gateways/adapters/temanqris.js";
 import type * as treasury_gateways_registry from "../treasury/gateways/registry.js";
 import type * as treasury_gateways_router from "../treasury/gateways/router.js";
 import type * as treasury_gateways_types from "../treasury/gateways/types.js";
@@ -61,6 +62,7 @@ declare const fullApi: ApiFromModules<{
   "treasury/funds": typeof treasury_funds;
   "treasury/gateways/adapters/borderpay": typeof treasury_gateways_adapters_borderpay;
   "treasury/gateways/adapters/index": typeof treasury_gateways_adapters_index;
+  "treasury/gateways/adapters/temanqris": typeof treasury_gateways_adapters_temanqris;
   "treasury/gateways/registry": typeof treasury_gateways_registry;
   "treasury/gateways/router": typeof treasury_gateways_router;
   "treasury/gateways/types": typeof treasury_gateways_types;

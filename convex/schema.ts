@@ -272,8 +272,16 @@ export default defineSchema({
     methodOverrides: v.optional(
       v.object({
         qrisEnabled: v.boolean(),
+        vaEnabled: v.optional(v.boolean()),
+        ewalletEnabled: v.optional(v.boolean()),
         enabledBanks: v.array(v.string()),
         enabledWallets: v.array(v.string()),
+        customQrisFee: v.optional(
+          v.object({
+            type: v.union(v.literal("flat"), v.literal("percent")),
+            value: v.number(),
+          })
+        ),
       })
     ),
     channelRouting: v.optional(
@@ -282,6 +290,16 @@ export default defineSchema({
         vaGateway: v.optional(v.string()),
         ewalletGateway: v.optional(v.string()),
       })
+    ),
+    providerConfigs: v.optional(
+      v.record(
+        v.string(),
+        v.object({
+          apiKey: v.string(),
+          webhookToken: v.optional(v.string()),
+          isTestMode: v.optional(v.boolean()),
+        })
+      )
     ),
     lastFetchedAt: v.optional(v.number()),
     updatedBy: v.id("users"),
@@ -337,6 +355,10 @@ export default defineSchema({
     checkoutUrl: v.optional(v.string()),
     expiresAt: v.optional(v.number()),
     paidAt: v.optional(v.number()),
+
+    // Customer confirmation tracking (e.g. TemanQRIS 'Sudah Bayar')
+    isAwaitingConfirmation: v.optional(v.boolean()),
+    awaitingConfirmationAt: v.optional(v.number()),
 
     // CLE Settlement link (populated upon webhook payment for dues invoices)
     ledgerEntryId: v.optional(v.id("ledgerEntries")),

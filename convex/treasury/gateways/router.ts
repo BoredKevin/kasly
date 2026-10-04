@@ -12,6 +12,7 @@ import { PERMISSIONS } from "../../permissions";
 import { computeKeyIdFromJwk } from "../helpers";
 import { getGatewayAdapter, listSupportedGateways } from "./registry";
 import "./adapters/index"; // Ensures default adapters are registered
+import { TemanQrisAdapter } from "./adapters/temanqris";
 
 /**
  * Returns available payment gateway providers registered in the system.
@@ -23,7 +24,10 @@ export const listAvailableGateways = query({
     return supported.map((g) => ({
       id: g.provider,
       name: g.displayName,
-      supportedChannels: ["qris", "va", "ewallet"] as const,
+      supportedChannels:
+        g.provider === "temanqris"
+          ? (["qris"] as const)
+          : (["qris", "va", "ewallet"] as const),
     }));
   },
 });
@@ -60,6 +64,24 @@ export const getPaymentConfig = query({
         ? `${key.slice(0, 8)}••••••••${key.slice(-4)}`
         : "••••••••";
 
+    const maskedProviderConfigs = config.providerConfigs
+      ? Object.fromEntries(
+          Object.entries(config.providerConfigs).map(([prov, pConfig]) => [
+            prov,
+            {
+              maskedApiKey: pConfig.apiKey
+                ? (pConfig.apiKey.length > 12
+                    ? `${pConfig.apiKey.slice(0, 8)}••••••••${pConfig.apiKey.slice(-4)}`
+                    : "••••••••")
+                : "",
+              hasApiKey: Boolean(pConfig.apiKey),
+              webhookToken: pConfig.webhookToken || "",
+              isTestMode: Boolean(pConfig.isTestMode),
+            },
+          ])
+        )
+      : undefined;
+
     return {
       _id: config._id,
       organizationId: config.organizationId,
@@ -81,6 +103,7 @@ export const getPaymentConfig = query({
         vaGateway: "borderpay",
         ewalletGateway: "borderpay",
       },
+      providerConfigs: maskedProviderConfigs,
       lastFetchedAt: config.lastFetchedAt,
       updatedAt: config.updatedAt,
     };
@@ -130,8 +153,16 @@ export const _saveConfigMutation = internalMutation({
     gatewayPrivateKeyJwk: v.string(),
     methodOverrides: v.object({
       qrisEnabled: v.boolean(),
+      vaEnabled: v.optional(v.boolean()),
+      ewalletEnabled: v.optional(v.boolean()),
       enabledBanks: v.array(v.string()),
       enabledWallets: v.array(v.string()),
+      customQrisFee: v.optional(
+        v.object({
+          type: v.union(v.literal("flat"), v.literal("percent")),
+          value: v.number(),
+        })
+      ),
     }),
     channelRouting: v.optional(
       v.object({
@@ -139,6 +170,16 @@ export const _saveConfigMutation = internalMutation({
         vaGateway: v.optional(v.string()),
         ewalletGateway: v.optional(v.string()),
       })
+    ),
+    providerConfigs: v.optional(
+      v.record(
+        v.string(),
+        v.object({
+          apiKey: v.string(),
+          webhookToken: v.optional(v.string()),
+          isTestMode: v.optional(v.boolean()),
+        })
+      )
     ),
     userId: v.id("users"),
     newGatewayKey: v.optional(
@@ -179,10 +220,11 @@ export const _saveConfigMutation = internalMutation({
       .first();
 
     const now = Date.now();
-    const providerToSave = "borderpay" as const;
+    const providerToSave = args.provider || existing?.provider || "borderpay";
 
     if (existing) {
       await ctx.db.patch("organizationPaymentConfig", existing._id, {
+        provider: providerToSave,
         apiKey: args.apiKey,
         webhookToken: args.webhookToken,
         isEnabled: args.isEnabled,
@@ -191,6 +233,7 @@ export const _saveConfigMutation = internalMutation({
         gatewayPrivateKeyJwk: args.gatewayPrivateKeyJwk,
         methodOverrides: args.methodOverrides,
         channelRouting: args.channelRouting ?? existing.channelRouting,
+        providerConfigs: args.providerConfigs ?? existing.providerConfigs,
         updatedBy: args.userId,
         updatedAt: now,
       });
@@ -207,6 +250,7 @@ export const _saveConfigMutation = internalMutation({
         isTestMode: args.isTestMode,
         methodOverrides: args.methodOverrides,
         channelRouting: args.channelRouting,
+        providerConfigs: args.providerConfigs,
         updatedBy: args.userId,
         updatedAt: now,
       });
@@ -224,11 +268,20 @@ export const savePaymentConfig = action({
     apiKey: v.optional(v.string()), // Optional if not changing existing key
     webhookToken: v.optional(v.string()),
     isEnabled: v.boolean(),
+    isTestMode: v.optional(v.boolean()),
     methodOverrides: v.optional(
       v.object({
         qrisEnabled: v.boolean(),
+        vaEnabled: v.optional(v.boolean()),
+        ewalletEnabled: v.optional(v.boolean()),
         enabledBanks: v.array(v.string()),
         enabledWallets: v.array(v.string()),
+        customQrisFee: v.optional(
+          v.object({
+            type: v.union(v.literal("flat"), v.literal("percent")),
+            value: v.number(),
+          })
+        ),
       })
     ),
     channelRouting: v.optional(
@@ -237,6 +290,16 @@ export const savePaymentConfig = action({
         vaGateway: v.optional(v.string()),
         ewalletGateway: v.optional(v.string()),
       })
+    ),
+    providerConfigs: v.optional(
+      v.record(
+        v.string(),
+        v.object({
+          apiKey: v.optional(v.string()),
+          webhookToken: v.optional(v.string()),
+          isTestMode: v.optional(v.boolean()),
+        })
+      )
     ),
   },
   returns: v.id("organizationPaymentConfig"),
@@ -255,11 +318,43 @@ export const savePaymentConfig = action({
         ? args.apiKey.trim()
         : (existing?.apiKey ?? "");
 
-    if (!apiKeyToUse && args.isEnabled) {
+    // Prepare and merge providerConfigs if provided
+    let mergedProviderConfigs:
+      | Record<string, { apiKey: string; webhookToken?: string; isTestMode?: boolean }>
+      | undefined = existing?.providerConfigs ? { ...existing.providerConfigs } : undefined;
+
+    if (args.providerConfigs) {
+      if (!mergedProviderConfigs) mergedProviderConfigs = {};
+      for (const [pKey, pVal] of Object.entries(args.providerConfigs)) {
+        const prev = mergedProviderConfigs[pKey];
+        const keyToUse =
+          pVal.apiKey && pVal.apiKey.trim().length > 0
+            ? pVal.apiKey.trim()
+            : (prev?.apiKey ?? "");
+        mergedProviderConfigs[pKey] = {
+          apiKey: keyToUse,
+          webhookToken:
+            pVal.webhookToken !== undefined ? pVal.webhookToken.trim() : prev?.webhookToken,
+          isTestMode:
+            pVal.isTestMode !== undefined ? pVal.isTestMode : prev?.isTestMode,
+        };
+      }
+    }
+
+    // Also verify if a secondary provider is configured
+    const hasSecondaryKey = Boolean(
+      mergedProviderConfigs?.temanqris?.apiKey?.trim() ||
+      mergedProviderConfigs?.borderpay?.apiKey?.trim()
+    );
+
+    if (!apiKeyToUse && !hasSecondaryKey && args.isEnabled) {
       throw new Error("Cannot enable payment gateway without a valid API key.");
     }
 
-    const isTestMode = apiKeyToUse.startsWith("bp_test_");
+    const isTestMode =
+      args.isTestMode !== undefined
+        ? args.isTestMode
+        : (apiKeyToUse.startsWith("bp_test_") || apiKeyToUse.startsWith("test_"));
 
     let gatewayKeyId = existing?.gatewayKeyId;
     let gatewayPrivateKeyJwk = existing?.gatewayPrivateKeyJwk;
@@ -287,6 +382,8 @@ export const savePaymentConfig = action({
 
     const overrides = args.methodOverrides ?? existing?.methodOverrides ?? {
       qrisEnabled: true,
+      vaEnabled: true,
+      ewalletEnabled: true,
       enabledBanks: ["BCA", "BNI", "MANDIRI", "BRI", "PERMATA", "CIMB"],
       enabledWallets: ["DANA", "SHOPEE", "OVO"],
     };
@@ -311,6 +408,7 @@ export const savePaymentConfig = action({
       gatewayPrivateKeyJwk,
       methodOverrides: overrides,
       channelRouting: routing,
+      providerConfigs: mergedProviderConfigs,
       userId,
       newGatewayKey,
     });
@@ -466,9 +564,20 @@ export const getPublicPaymentMethods = query({
     const raw = (config.rawFetchedMethods as any) || {};
     const overrides = config.methodOverrides || {
       qrisEnabled: true,
+      vaEnabled: true,
+      ewalletEnabled: true,
       enabledBanks: ["BCA", "BNI", "MANDIRI", "BRI", "PERMATA", "CIMB"],
       enabledWallets: ["DANA", "SHOPEE", "OVO"],
     };
+
+    const vaEnabled =
+      overrides.vaEnabled !== undefined
+        ? overrides.vaEnabled
+        : overrides.enabledBanks && overrides.enabledBanks.length > 0;
+    const ewalletEnabled =
+      overrides.ewalletEnabled !== undefined
+        ? overrides.ewalletEnabled
+        : overrides.enabledWallets && overrides.enabledWallets.length > 0;
 
     // 1. QRIS
     const qrisRawEnabled =
@@ -562,25 +671,80 @@ export const getPublicPaymentMethods = query({
         maxAmount: w.max_amount || w.maxAmount || 10000000,
       }));
 
+    const qrisGateway = config.channelRouting?.qrisGateway || "borderpay";
+    const customQrisFee = overrides.customQrisFee;
+
+    let qrisFee: {
+      flat: number;
+      percent: number;
+      lowAmountFixed?: number;
+      lowAmountPercent?: number;
+      highAmountPercent?: number;
+      threshold?: number;
+      isCustom?: boolean;
+    };
+
+    if (qrisGateway === "temanqris") {
+      if (customQrisFee && customQrisFee.value > 0) {
+        if (customQrisFee.type === "flat") {
+          qrisFee = {
+            flat: customQrisFee.value,
+            percent: 0,
+            lowAmountFixed: customQrisFee.value,
+            lowAmountPercent: 0,
+            highAmountPercent: 0,
+            threshold: 0,
+            isCustom: true,
+          };
+        } else {
+          qrisFee = {
+            flat: 0,
+            percent: customQrisFee.value,
+            lowAmountFixed: 0,
+            lowAmountPercent: customQrisFee.value,
+            highAmountPercent: customQrisFee.value,
+            threshold: 0,
+            isCustom: true,
+          };
+        }
+      } else {
+        qrisFee = {
+          flat: 0,
+          percent: 0,
+          lowAmountFixed: 0,
+          lowAmountPercent: 0,
+          highAmountPercent: 0,
+          threshold: 0,
+          isCustom: true,
+        };
+      }
+    } else {
+      qrisFee = {
+        flat: 290,
+        percent: 0.7,
+        lowAmountFixed: 290,
+        lowAmountPercent: 0.7,
+        highAmountPercent: 1.0,
+        threshold: 100000,
+        isCustom: false,
+      };
+    }
+
     return {
       isEnabled: true,
       isTestMode: config.isTestMode,
       qris: {
         enabled: qrisEnabled,
-        fee: {
-          lowAmountFixed: 290,
-          lowAmountPercent: 0.7,
-          highAmountPercent: 1.0,
-          threshold: 100000,
-        },
+        gateway: qrisGateway,
+        fee: qrisFee,
       },
       va: {
-        enabled: filteredBanks.length > 0,
-        banks: filteredBanks,
+        enabled: vaEnabled && filteredBanks.length > 0,
+        banks: vaEnabled ? filteredBanks : [],
       },
       ewallet: {
-        enabled: filteredWallets.length > 0,
-        wallets: filteredWallets,
+        enabled: ewalletEnabled && filteredWallets.length > 0,
+        wallets: ewalletEnabled ? filteredWallets : [],
       },
     };
   },
@@ -658,6 +822,8 @@ export const initiatePayment = action({
       selectedBankCode: args.bankCode?.toUpperCase() || undefined,
       gatewayFee: result.fee,
       totalAmount: result.totalAmount,
+      gatewayProvider: targetGateway,
+      gatewayReferenceId: result.providerReferenceId || invoice.invoiceNumber,
       borderpayReferenceId: result.providerReferenceId || invoice.invoiceNumber,
       payUrl: result.payUrl,
       qrString: result.qrString,
@@ -720,5 +886,121 @@ export const simulatePayment = action({
       invoiceNumber: invoice.invoiceNumber,
       providerReferenceId: invoice.borderpayReferenceId || invoice.invoiceNumber,
     });
+  },
+});
+
+/**
+ * Internal mutation to flag an invoice as awaiting confirmation (e.g. when customer clicks 'Sudah Bayar').
+ */
+export const _flagInvoiceAwaitingConfirmation = internalMutation({
+  args: {
+    invoiceId: v.id("invoices"),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch("invoices", args.invoiceId, {
+      isAwaitingConfirmation: true,
+      awaitingConfirmationAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Public action for customer to claim payment completion ("Saya Sudah Bayar") on checkout.
+ */
+export const confirmCustomerPayment = action({
+  args: {
+    invoiceNumber: v.string(),
+  },
+  handler: async (ctx, args): Promise<{ success: boolean; message: string }> => {
+    const invoice: Doc<"invoices"> | null = await ctx.runQuery(
+      internal.treasury.invoices._getInvoiceByNumber,
+      { invoiceNumber: args.invoiceNumber }
+    );
+
+    if (!invoice) {
+      throw new Error("Invoice not found.");
+    }
+
+    if (invoice.status === "paid") {
+      return { success: true, message: "Invoice is already paid." };
+    }
+
+    const linkCode = invoice.gatewayReferenceId || invoice.borderpayReferenceId;
+    if (!linkCode) {
+      throw new Error("Payment reference is missing.");
+    }
+
+    const adapter = getGatewayAdapter(invoice.gatewayProvider || "temanqris");
+    if (adapter instanceof TemanQrisAdapter) {
+      await adapter.confirmCustomerClaim(linkCode);
+    }
+
+    await ctx.runMutation(
+      internal.treasury.gateways.router._flagInvoiceAwaitingConfirmation,
+      { invoiceId: invoice._id }
+    );
+
+    return {
+      success: true,
+      message: "Konfirmasi pembayaran telah dikirim. Menunggu verifikasi admin/merchant.",
+    };
+  },
+});
+
+/**
+ * Admin action to verify a TemanQRIS payment upstream and execute automated CLE ledger settlement.
+ */
+export const verifyAndSettleTemanQrisOrder = action({
+  args: {
+    invoiceNumber: v.string(),
+  },
+  handler: async (ctx, args): Promise<{ success: boolean; message: string }> => {
+    const invoice: Doc<"invoices"> | null = await ctx.runQuery(
+      internal.treasury.invoices._getInvoiceByNumber,
+      { invoiceNumber: args.invoiceNumber }
+    );
+
+    if (!invoice) {
+      throw new Error("Invoice not found.");
+    }
+
+    if (invoice.status === "paid") {
+      return { success: true, message: "Invoice is already paid." };
+    }
+
+    // Require treasury management permission
+    const authData: {
+      userId: Id<"users">;
+      existing: Doc<"organizationPaymentConfig"> | null;
+    } = await ctx.runQuery(
+      internal.treasury.gateways.router._getAuthAndExistingConfigForSave,
+      { organizationId: invoice.organizationId }
+    );
+
+    const config = authData.existing;
+    if (!config) {
+      throw new Error("Payment gateway is not configured for this organization.");
+    }
+
+    const adapter = getGatewayAdapter("temanqris");
+    if (adapter.simulatePayment) {
+      await adapter.simulatePayment(ctx, config, {
+        invoiceNumber: invoice.invoiceNumber,
+        providerReferenceId: invoice.gatewayReferenceId || invoice.borderpayReferenceId,
+      });
+    }
+
+    // Trigger universal CLE ledger settlement
+    await ctx.runAction(internal.treasury.settlement.settleInvoicePayment, {
+      referenceId: invoice.invoiceNumber,
+      paidAt: Date.now(),
+      provider: "temanqris",
+      metadata: { confirmedBy: "admin", verifiedByUserId: authData.userId },
+    });
+
+    return {
+      success: true,
+      message: "Pembayaran berhasil diverifikasi dan dicatat ke dalam Ledger.",
+    };
   },
 });
