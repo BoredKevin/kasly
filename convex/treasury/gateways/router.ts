@@ -10,8 +10,23 @@ import { Doc, Id } from "../../_generated/dataModel";
 import { requirePermission } from "../../authz";
 import { PERMISSIONS } from "../../permissions";
 import { computeKeyIdFromJwk } from "../helpers";
-import { getGatewayAdapter } from "./registry";
+import { getGatewayAdapter, listSupportedGateways } from "./registry";
 import "./adapters/index"; // Ensures default adapters are registered
+
+/**
+ * Returns available payment gateway providers registered in the system.
+ */
+export const listAvailableGateways = query({
+  args: {},
+  handler: async () => {
+    const supported = listSupportedGateways();
+    return supported.map((g) => ({
+      id: g.provider,
+      name: g.displayName,
+      supportedChannels: ["qris", "va", "ewallet"] as const,
+    }));
+  },
+});
 
 /**
  * Returns the organization's payment configuration with masked API key for admins.
@@ -60,6 +75,11 @@ export const getPaymentConfig = query({
         qrisEnabled: true,
         enabledBanks: ["BCA", "BNI", "MANDIRI", "BRI", "PERMATA", "CIMB"],
         enabledWallets: ["DANA", "SHOPEE", "OVO"],
+      },
+      channelRouting: config.channelRouting || {
+        qrisGateway: "borderpay",
+        vaGateway: "borderpay",
+        ewalletGateway: "borderpay",
       },
       lastFetchedAt: config.lastFetchedAt,
       updatedAt: config.updatedAt,
@@ -113,6 +133,13 @@ export const _saveConfigMutation = internalMutation({
       enabledBanks: v.array(v.string()),
       enabledWallets: v.array(v.string()),
     }),
+    channelRouting: v.optional(
+      v.object({
+        qrisGateway: v.optional(v.string()),
+        vaGateway: v.optional(v.string()),
+        ewalletGateway: v.optional(v.string()),
+      })
+    ),
     userId: v.id("users"),
     newGatewayKey: v.optional(
       v.object({
@@ -163,6 +190,7 @@ export const _saveConfigMutation = internalMutation({
         gatewayKeyId: args.gatewayKeyId,
         gatewayPrivateKeyJwk: args.gatewayPrivateKeyJwk,
         methodOverrides: args.methodOverrides,
+        channelRouting: args.channelRouting ?? existing.channelRouting,
         updatedBy: args.userId,
         updatedAt: now,
       });
@@ -178,6 +206,7 @@ export const _saveConfigMutation = internalMutation({
         isEnabled: args.isEnabled,
         isTestMode: args.isTestMode,
         methodOverrides: args.methodOverrides,
+        channelRouting: args.channelRouting,
         updatedBy: args.userId,
         updatedAt: now,
       });
@@ -200,6 +229,13 @@ export const savePaymentConfig = action({
         qrisEnabled: v.boolean(),
         enabledBanks: v.array(v.string()),
         enabledWallets: v.array(v.string()),
+      })
+    ),
+    channelRouting: v.optional(
+      v.object({
+        qrisGateway: v.optional(v.string()),
+        vaGateway: v.optional(v.string()),
+        ewalletGateway: v.optional(v.string()),
       })
     ),
   },
@@ -255,6 +291,12 @@ export const savePaymentConfig = action({
       enabledWallets: ["DANA", "SHOPEE", "OVO"],
     };
 
+    const routing = args.channelRouting ?? existing?.channelRouting ?? {
+      qrisGateway: "borderpay",
+      vaGateway: "borderpay",
+      ewalletGateway: "borderpay",
+    };
+
     const webhookTokenToSave =
       args.webhookToken !== undefined ? args.webhookToken.trim() : existing?.webhookToken;
 
@@ -268,6 +310,7 @@ export const savePaymentConfig = action({
       gatewayKeyId,
       gatewayPrivateKeyJwk,
       methodOverrides: overrides,
+      channelRouting: routing,
       userId,
       newGatewayKey,
     });
@@ -336,14 +379,61 @@ export const fetchAvailablePaymentMethods = action({
 
     const adapter = getGatewayAdapter(config.provider || "borderpay");
     const methods = await adapter.fetchPaymentMethods(ctx, config);
-
-    // Cache results in database
-    await ctx.runMutation(internal.treasury.gateways.router._saveFetchedMethods, {
-      configId: config._id,
-      methods: config.rawFetchedMethods || methods,
-    });
-
     return methods;
+  },
+});
+
+/**
+ * Public action invoked when a customer arrives at checkout (/invoice/:invoiceNumber).
+ * Checks cache freshness (< 5 minutes) and refreshes live payment methods and fee schedule from the active gateway.
+ */
+export const syncCheckoutPaymentMethods = action({
+  args: {
+    invoiceNumber: v.string(),
+    forceRefresh: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args): Promise<any> => {
+    const invoice: Doc<"invoices"> | null = await ctx.runQuery(
+      internal.treasury.invoices._getInvoiceByNumber,
+      { invoiceNumber: args.invoiceNumber }
+    );
+
+    if (!invoice) {
+      return { success: false, reason: "Invoice not found" };
+    }
+
+    if (invoice.status === "paid" || invoice.status === "cancelled") {
+      return { success: true, status: invoice.status };
+    }
+
+    const config: Doc<"organizationPaymentConfig"> | null = await ctx.runQuery(
+      internal.treasury.gateways.router._getInternalConfig,
+      { organizationId: invoice.organizationId }
+    );
+
+    if (!config || !config.isEnabled || !config.apiKey) {
+      return { success: false, reason: "Payment gateway is not configured or disabled" };
+    }
+
+    // Cache freshness: 5 minutes
+    const fiveMinutesMs = 5 * 60 * 1000;
+    const isFresh =
+      config.lastFetchedAt &&
+      Date.now() - config.lastFetchedAt < fiveMinutesMs &&
+      Boolean(config.rawFetchedMethods);
+
+    if (isFresh && !args.forceRefresh) {
+      return { success: true, cached: true };
+    }
+
+    try {
+      const adapter = getGatewayAdapter(config.provider || "borderpay");
+      const methods = await adapter.fetchPaymentMethods(ctx, config);
+      return { success: true, count: methods.length };
+    } catch (err) {
+      console.warn("syncCheckoutPaymentMethods failed to refresh gateway methods:", err);
+      return { success: false, error: err instanceof Error ? err.message : String(err) };
+    }
   },
 });
 
@@ -381,7 +471,12 @@ export const getPublicPaymentMethods = query({
     };
 
     // 1. QRIS
-    const qrisRawEnabled = raw.qris?.enabled ?? true;
+    const qrisRawEnabled =
+      raw.qris?.enabled !== undefined
+        ? Boolean(raw.qris.enabled)
+        : raw.qris?.status !== undefined
+          ? raw.qris.status === "active"
+          : true;
     const qrisEnabled = overrides.qrisEnabled && qrisRawEnabled;
 
     // 2. VA Banks
@@ -393,7 +488,23 @@ export const getPublicPaymentMethods = query({
       { code: "PERMATA", name: "Permata Bank" },
       { code: "CIMB", name: "CIMB Niaga" },
     ];
-    const sourceBanks = raw.va?.banks || defaultBanks;
+    const sourceBanks =
+      raw.va?.banks ||
+      raw.raw?.va?.banks ||
+      (Array.isArray(raw.normalized)
+        ? raw.normalized
+            .filter((m: any) => m.channelType === "va")
+            .map((m: any) => ({
+              code: m.code,
+              name: m.name,
+              fee: m.fee,
+              min_amount: m.minAmount,
+              max_amount: m.maxAmount,
+              enabled: m.isEnabled,
+            }))
+        : null) ||
+      defaultBanks;
+
     const filteredBanks = sourceBanks
       .filter((b: any) =>
         overrides.enabledBanks.some(
@@ -403,9 +514,12 @@ export const getPublicPaymentMethods = query({
       .map((b: any) => ({
         code: b.code.toUpperCase(),
         name: b.name || b.code,
-        fee: b.fee || { flat: 4200, percent: 0 },
-        minAmount: b.min_amount || 10000,
-        maxAmount: b.max_amount || 50000000,
+        fee: {
+          flat: Number(b.fee?.flat ?? b.fee_flat ?? b.flat_fee ?? 4200),
+          percent: Number(b.fee?.percent ?? b.fee_percentage ?? b.percent_fee ?? 0),
+        },
+        minAmount: b.min_amount || b.minAmount || 10000,
+        maxAmount: b.max_amount || b.maxAmount || 50000000,
       }));
 
     // 3. E-Wallets
@@ -414,7 +528,23 @@ export const getPublicPaymentMethods = query({
       { code: "SHOPEE", name: "ShopeePay" },
       { code: "OVO", name: "OVO" },
     ];
-    const sourceWallets = raw.ewallet?.wallets || defaultWallets;
+    const sourceWallets =
+      raw.ewallet?.wallets ||
+      raw.raw?.ewallet?.wallets ||
+      (Array.isArray(raw.normalized)
+        ? raw.normalized
+            .filter((m: any) => m.channelType === "ewallet")
+            .map((m: any) => ({
+              code: m.code,
+              name: m.name,
+              fee: m.fee,
+              min_amount: m.minAmount,
+              max_amount: m.maxAmount,
+              enabled: m.isEnabled,
+            }))
+        : null) ||
+      defaultWallets;
+
     const filteredWallets = sourceWallets
       .filter((w: any) =>
         overrides.enabledWallets.some(
@@ -424,9 +554,12 @@ export const getPublicPaymentMethods = query({
       .map((w: any) => ({
         code: w.code.toUpperCase(),
         name: w.name || w.code,
-        fee: w.fee || { flat: 0, percent: 2 },
-        minAmount: w.min_amount || 1000,
-        maxAmount: w.max_amount || 10000000,
+        fee: {
+          flat: Number(w.fee?.flat ?? w.fee_flat ?? w.flat_fee ?? 0),
+          percent: Number(w.fee?.percent ?? w.fee_percentage ?? w.percent_fee ?? 2),
+        },
+        minAmount: w.min_amount || w.minAmount || 1000,
+        maxAmount: w.max_amount || w.maxAmount || 10000000,
       }));
 
     return {
@@ -496,8 +629,19 @@ export const initiatePayment = action({
       throw new Error("Payment gateway is not enabled for this organization.");
     }
 
-    // 3. Resolve adapter
-    const adapter = getGatewayAdapter(config.provider || "borderpay");
+    // 3. Resolve assigned gateway based on channel routing
+    let targetGateway = config.provider || "borderpay";
+    if (config.channelRouting) {
+      if (args.method === "qris" && config.channelRouting.qrisGateway) {
+        targetGateway = config.channelRouting.qrisGateway;
+      } else if (args.method === "va" && config.channelRouting.vaGateway) {
+        targetGateway = config.channelRouting.vaGateway;
+      } else if (args.method === "ewallet" && config.channelRouting.ewalletGateway) {
+        targetGateway = config.channelRouting.ewalletGateway;
+      }
+    }
+
+    const adapter = getGatewayAdapter(targetGateway);
 
     // 4. Initiate payment with adapter
     const result = await adapter.initiatePayment(ctx, config, {

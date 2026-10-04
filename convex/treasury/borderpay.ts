@@ -30,9 +30,11 @@ export {
 
 // 2. Gateway router re-exports
 export {
+  listAvailableGateways,
   getPaymentConfig,
   savePaymentConfig,
   fetchAvailablePaymentMethods,
+  syncCheckoutPaymentMethods,
   getPublicPaymentMethods,
   initiatePayment,
   simulatePayment,

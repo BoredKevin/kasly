@@ -276,6 +276,13 @@ export default defineSchema({
         enabledWallets: v.array(v.string()),
       })
     ),
+    channelRouting: v.optional(
+      v.object({
+        qrisGateway: v.optional(v.string()),
+        vaGateway: v.optional(v.string()),
+        ewalletGateway: v.optional(v.string()),
+      })
+    ),
     lastFetchedAt: v.optional(v.number()),
     updatedBy: v.id("users"),
     updatedAt: v.number(),
