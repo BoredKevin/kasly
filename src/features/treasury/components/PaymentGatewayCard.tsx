@@ -41,6 +41,12 @@ interface PaymentGatewayCardProps {
   organizationId: Id<"organizations">;
 }
 
+interface GatewayOption {
+  id: string;
+  name: string;
+  supportedChannels?: readonly string[] | string[];
+}
+
 export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) {
   const { t } = useTranslation();
 
@@ -279,19 +285,22 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
     );
   };
 
-  const gatewaysList = availableGateways || [
+  const fallbackGateways: GatewayOption[] = [
     { id: "borderpay", name: "BorderPay (Default)", supportedChannels: ["qris", "va", "ewallet"] },
     { id: "temanqris", name: "TemanQRIS", supportedChannels: ["qris"] },
   ];
 
+  const gatewaysList: GatewayOption[] =
+    (availableGateways as GatewayOption[] | undefined) || fallbackGateways;
+
   const qrisGateways = gatewaysList.filter(
-    (g: any) => !g.supportedChannels || g.supportedChannels.includes("qris")
+    (g: GatewayOption) => !g.supportedChannels || g.supportedChannels.includes("qris")
   );
   const vaGateways = gatewaysList.filter(
-    (g: any) => !g.supportedChannels || g.supportedChannels.includes("va")
+    (g: GatewayOption) => !g.supportedChannels || g.supportedChannels.includes("va")
   );
   const ewalletGateways = gatewaysList.filter(
-    (g: any) => !g.supportedChannels || g.supportedChannels.includes("ewallet")
+    (g: GatewayOption) => !g.supportedChannels || g.supportedChannels.includes("ewallet")
   );
 
   return (
@@ -342,7 +351,7 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
         </div>
       </CardHeader>
 
-      <form onSubmit={handleSave}>
+      <form onSubmit={(e) => { void handleSave(e); }}>
         <CardContent className="space-y-6 pt-5">
           {/* Feedback Banner */}
           {feedback && (
@@ -757,7 +766,7 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
                       onChange={(e) => setQrisGateway(e.target.value)}
                       className="bg-black/40 border border-border/80 text-foreground font-mono text-xs px-2.5 py-1 focus:border-primary focus:outline-none transition-colors"
                     >
-                      {qrisGateways.map((g) => (
+                      {qrisGateways.map((g: GatewayOption) => (
                         <option key={g.id} value={g.id} className="bg-neutral-900 text-foreground">
                           {g.name}
                         </option>
@@ -879,7 +888,7 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
                         onChange={(e) => setVaGateway(e.target.value)}
                         className="bg-black/40 border border-border/80 text-foreground font-mono text-xs px-2.5 py-1 focus:border-primary focus:outline-none transition-colors"
                       >
-                        {vaGateways.map((g) => (
+                        {vaGateways.map((g: GatewayOption) => (
                           <option key={g.id} value={g.id} className="bg-neutral-900 text-foreground">
                             {g.name}
                           </option>
@@ -993,7 +1002,7 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
                         onChange={(e) => setEwalletGateway(e.target.value)}
                         className="bg-black/40 border border-border/80 text-foreground font-mono text-xs px-2.5 py-1 focus:border-primary focus:outline-none transition-colors"
                       >
-                        {ewalletGateways.map((g) => (
+                        {ewalletGateways.map((g: GatewayOption) => (
                           <option key={g.id} value={g.id} className="bg-neutral-900 text-foreground">
                             {g.name}
                           </option>
