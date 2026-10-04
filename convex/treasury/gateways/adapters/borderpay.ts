@@ -1,4 +1,6 @@
 import { ActionCtx } from "../../../_generated/server";
+import { internal } from "../../../_generated/api";
+import { Doc } from "../../../_generated/dataModel";
 import {
   PaymentGatewayAdapter,
   PaymentChannelType,
@@ -50,8 +52,8 @@ export class BorderPayAdapter implements PaymentGatewayAdapter {
 
   /**
    * Calculates fee upfront based on BorderPay pricing schedule:
-   * - QRIS: < 100k IDR -> 0.7% + Rp 290; >= 100k IDR -> 1.0%
-   * - Virtual Accounts: Flat fee (default 4200) + percent from metadata
+   * - QRIS: < 100k IDR -> 0.7% + Rp 290; >= 100k IDR -> 1.0% (or live dynamic schedule if provided)
+   * - Virtual Accounts: Flat fee (default Rp 4,200) + percent from metadata
    * - E-wallets: Percent fee (default 2%) + flat from metadata
    */
   calculateFee(
@@ -61,6 +63,19 @@ export class BorderPayAdapter implements PaymentGatewayAdapter {
     rawMetadata?: any
   ): number {
     if (channelType === "qris") {
+      const qrisMeta = rawMetadata?.qris || rawMetadata?.raw?.qris;
+      if (qrisMeta?.fee) {
+        const lowThreshold = Number(qrisMeta.fee.threshold ?? 100000);
+        const lowPercent = Number(qrisMeta.fee.lowAmountPercent ?? 0.7) / 100;
+        const lowFixed = Number(qrisMeta.fee.lowAmountFixed ?? 290);
+        const highPercent = Number(qrisMeta.fee.highAmountPercent ?? 1.0) / 100;
+        if (subtotal < lowThreshold) {
+          return Math.ceil(subtotal * lowPercent) + lowFixed;
+        } else {
+          return Math.ceil(subtotal * highPercent);
+        }
+      }
+
       if (subtotal < 100000) {
         return Math.ceil(subtotal * 0.007) + 290;
       } else {
@@ -71,18 +86,41 @@ export class BorderPayAdapter implements PaymentGatewayAdapter {
     if (channelType === "va") {
       let flat = 4200;
       let percent = 0;
-      if (
-        rawMetadata?.va?.banks &&
-        Array.isArray(rawMetadata.va.banks) &&
-        channelCode
-      ) {
-        const b = rawMetadata.va.banks.find(
-          (item: any) =>
-            item.code.toUpperCase() === channelCode.toUpperCase()
+
+      // 1. Check normalized array if available
+      const normList = Array.isArray(rawMetadata)
+        ? rawMetadata
+        : Array.isArray(rawMetadata?.normalized)
+          ? rawMetadata.normalized
+          : null;
+
+      if (normList && channelCode) {
+        const found = normList.find(
+          (m: any) =>
+            m.channelType === "va" &&
+            m.code?.toUpperCase() === channelCode.toUpperCase()
         );
-        if (b?.fee) {
-          flat = Number(b.fee.flat ?? 4200);
-          percent = Number(b.fee.percent ?? 0);
+        if (found?.fee) {
+          flat = Number(found.fee.flat ?? 4200);
+          percent = Number(found.fee.percent ?? 0);
+          return Math.ceil(subtotal * (percent / 100)) + flat;
+        }
+      }
+
+      // 2. Check raw metadata banks list
+      const banks =
+        rawMetadata?.va?.banks ||
+        rawMetadata?.raw?.va?.banks ||
+        (Array.isArray(rawMetadata?.banks) ? rawMetadata.banks : null);
+
+      if (banks && Array.isArray(banks) && channelCode) {
+        const b = banks.find(
+          (item: any) =>
+            item.code?.toUpperCase() === channelCode.toUpperCase()
+        );
+        if (b) {
+          flat = Number(b.fee?.flat ?? b.fee_flat ?? b.flat_fee ?? 4200);
+          percent = Number(b.fee?.percent ?? b.fee_percentage ?? b.percent_fee ?? 0);
         }
       }
       return Math.ceil(subtotal * (percent / 100)) + flat;
@@ -91,18 +129,41 @@ export class BorderPayAdapter implements PaymentGatewayAdapter {
     if (channelType === "ewallet") {
       let flat = 0;
       let percent = 2;
-      if (
-        rawMetadata?.ewallet?.wallets &&
-        Array.isArray(rawMetadata.ewallet.wallets) &&
-        channelCode
-      ) {
-        const w = rawMetadata.ewallet.wallets.find(
-          (item: any) =>
-            item.code.toUpperCase() === channelCode.toUpperCase()
+
+      // 1. Check normalized array if available
+      const normList = Array.isArray(rawMetadata)
+        ? rawMetadata
+        : Array.isArray(rawMetadata?.normalized)
+          ? rawMetadata.normalized
+          : null;
+
+      if (normList && channelCode) {
+        const found = normList.find(
+          (m: any) =>
+            m.channelType === "ewallet" &&
+            m.code?.toUpperCase() === channelCode.toUpperCase()
         );
-        if (w?.fee) {
-          flat = Number(w.fee.flat ?? 0);
-          percent = Number(w.fee.percent ?? 2);
+        if (found?.fee) {
+          flat = Number(found.fee.flat ?? 0);
+          percent = Number(found.fee.percent ?? 2);
+          return Math.ceil(subtotal * (percent / 100)) + flat;
+        }
+      }
+
+      // 2. Check raw metadata wallets list
+      const wallets =
+        rawMetadata?.ewallet?.wallets ||
+        rawMetadata?.raw?.ewallet?.wallets ||
+        (Array.isArray(rawMetadata?.wallets) ? rawMetadata.wallets : null);
+
+      if (wallets && Array.isArray(wallets) && channelCode) {
+        const w = wallets.find(
+          (item: any) =>
+            item.code?.toUpperCase() === channelCode.toUpperCase()
+        );
+        if (w) {
+          flat = Number(w.fee?.flat ?? w.fee_flat ?? w.flat_fee ?? 0);
+          percent = Number(w.fee?.percent ?? w.fee_percentage ?? w.percent_fee ?? 2);
         }
       } else if (rawMetadata?.ewallet?.fee) {
         flat = Number(rawMetadata.ewallet.fee.flat ?? 0);
@@ -115,10 +176,11 @@ export class BorderPayAdapter implements PaymentGatewayAdapter {
   }
 
   /**
-   * Fetches payment methods from BorderPay /payment-methods API.
+   * Fetches payment methods from BorderPay /payment-methods API,
+   * normalizes them, and persists the payload into the database cache.
    */
   async fetchPaymentMethods(
-    _ctx: ActionCtx,
+    ctx: ActionCtx,
     config: GatewayConfigRecord
   ): Promise<NormalizedPaymentMethod[]> {
     if (!config.apiKey) {
@@ -173,8 +235,8 @@ export class BorderPayAdapter implements PaymentGatewayAdapter {
           minAmount: b.min_amount || 10000,
           maxAmount: b.max_amount || 50000000,
           fee: {
-            flat: Number(b.fee?.flat ?? 4200),
-            percent: Number(b.fee?.percent ?? 0),
+            flat: Number(b.fee?.flat ?? b.fee_flat ?? b.flat_fee ?? 4200),
+            percent: Number(b.fee?.percent ?? b.fee_percentage ?? b.percent_fee ?? 0),
           },
           provider: this.provider,
           isEnabled: b.status === "active",
@@ -193,8 +255,8 @@ export class BorderPayAdapter implements PaymentGatewayAdapter {
           minAmount: w.min_amount || 1000,
           maxAmount: w.max_amount || 10000000,
           fee: {
-            flat: Number(w.fee?.flat ?? 0),
-            percent: Number(w.fee?.percent ?? 2),
+            flat: Number(w.fee?.flat ?? w.fee_flat ?? w.flat_fee ?? 0),
+            percent: Number(w.fee?.percent ?? w.fee_percentage ?? w.percent_fee ?? 2),
           },
           provider: this.provider,
           isEnabled: w.status === "active",
@@ -202,14 +264,29 @@ export class BorderPayAdapter implements PaymentGatewayAdapter {
       }
     }
 
+    // Persist to database cache
+    try {
+      await ctx.runMutation(internal.treasury.gateways.router._saveFetchedMethods, {
+        configId: config._id,
+        methods: {
+          ...rawData,
+          raw: rawData,
+          normalized: methods,
+        },
+      });
+    } catch (saveErr) {
+      console.warn("Could not save fetched methods to organizationPaymentConfig:", saveErr);
+    }
+
     return methods;
   }
 
   /**
    * Initiates payment via BorderPay /payments API.
+   * Calculates upfront customer fees so the payer bears the fee and the organization receives 100% dues.
    */
   async initiatePayment(
-    _ctx: ActionCtx,
+    ctx: ActionCtx,
     config: GatewayConfigRecord,
     request: PaymentInitiationRequest
   ): Promise<PaymentInitiationResult> {
@@ -226,11 +303,28 @@ export class BorderPayAdapter implements PaymentGatewayAdapter {
       throw new Error("Please select an e-wallet option.");
     }
 
+    // Ensure rawFetchedMethods is available for accurate fee calculation
+    let currentConfig = config;
+    if (!currentConfig.rawFetchedMethods) {
+      try {
+        await this.fetchPaymentMethods(ctx, currentConfig);
+        const refreshed: Doc<"organizationPaymentConfig"> | null = await ctx.runQuery(
+          internal.treasury.gateways.router._getInternalConfig,
+          { organizationId: config.organizationId }
+        );
+        if (refreshed) {
+          currentConfig = refreshed;
+        }
+      } catch (err) {
+        console.warn("Could not lazily fetch payment methods in initiatePayment:", err);
+      }
+    }
+
     const fee = this.calculateFee(
       invoice.subtotal,
       channelType,
       channelCode,
-      config.rawFetchedMethods
+      currentConfig.rawFetchedMethods
     );
 
     const totalAmount = invoice.subtotal + fee;

@@ -354,9 +354,24 @@ Expose the provider configuration in `PaymentGatewayCard.tsx`.
 
 ---
 
-## 8. Migration & Backward Compatibility Verification
+## 8. Upfront Customer-Borne Fee Architecture
+
+To protect organizations from margin erosion and maintain 100% dues collection integrity:
+1. **Payer-Borne Fee Principle**: Payment gateway processing fees are borne entirely by the customer at checkout:
+   $$\text{TotalCharged} = \text{Invoice Subtotal} + \text{Gateway Fee}$$
+2. **Checkout Fee Synchronization Lifecycle**:
+   - When a payer navigates to `/invoice/:invoiceNumber`, the checkout view dispatches `syncCheckoutPaymentMethods({ invoiceNumber })`.
+   - The router queries upstream gateway rails (`adapter.fetchPaymentMethods`), refreshing the fee schedule and active channels into the database cache.
+   - The checkout breakdown renders reactive fee line items (`+Rp 290` / `+Rp 4.200` / `+2%`) directly on the payment rail buttons and summary breakdown before payment initiation.
+3. **Automated CLE Settlement**:
+   - When payment is confirmed via webhook or sandbox simulation, `settlement.ts` commits exactly `invoice.subtotal` into the organization's cryptographically signed ledger.
+   - The organization receives 100% of the face value of the invoice.
+
+---
+
+## 9. Migration & Backward Compatibility Verification
 
 To avoid breaking active deployments, invoices in transit, or existing database records:
 - **`borderpayReferenceId` Field Alias**: The `invoices` schema maintains `borderpayReferenceId` alongside `gatewayReferenceId`.
-- **Public API Facade**: `convex/treasury/borderpay.ts` continues to export existing query and mutation symbols (`getInvoice`, `listInvoices`, `createDuesInvoice`, `initiatePayment`), delegating under the hood to `invoices.ts` and `gateways/router.ts`.
+- **Public API Facade**: `convex/treasury/borderpay.ts` continues to export existing query and mutation symbols (`getInvoice`, `listInvoices`, `createDuesInvoice`, `initiatePayment`, `syncCheckoutPaymentMethods`), delegating under the hood to `invoices.ts` and `gateways/router.ts`.
 - **No Database Lockups**: Existing `organizationPaymentConfig` rows remain valid without requiring an emergency database migration.

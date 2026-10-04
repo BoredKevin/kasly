@@ -58,6 +58,14 @@ export function InvoicePaymentPage({
   const initiatePayment = useAction(api.treasury.borderpay.initiatePayment);
   const simulatePayment = useAction(api.treasury.borderpay.simulatePayment);
   const cancelInvoice = useMutation(api.treasury.borderpay.cancelInvoice);
+  const syncCheckoutMethods = useAction(api.treasury.borderpay.syncCheckoutPaymentMethods);
+
+  // When a customer visits checkout for an unpaid invoice, ensure live fees & methods are fetched
+  useEffect(() => {
+    if (invoice && invoice.status === "draft") {
+      void syncCheckoutMethods({ invoiceNumber });
+    }
+  }, [invoice?.invoiceNumber, invoice?.status, syncCheckoutMethods]);
 
   // View state: "checkout" (Stripe-like order breakdown + method selection) vs "payment" (pure payment details & QR/VA)
   const [activeView, setActiveView] = useState<"checkout" | "payment">(() => {
@@ -178,27 +186,46 @@ export function InvoicePaymentPage({
 
   // Calculate upfront fee preview based on current selection
   const calculateFeePreview = () => {
+    if (!invoice) return 0;
+
     if (selectedMethod === "qris") {
-      if (invoice.subtotal < 100000) {
-        return Math.ceil(invoice.subtotal * 0.007) + 290;
+      const feeCfg = publicMethods?.qris?.fee;
+      const threshold = Number(feeCfg?.threshold ?? 100000);
+      const lowPct = Number(feeCfg?.lowAmountPercent ?? 0.7) / 100;
+      const lowFixed = Number(feeCfg?.lowAmountFixed ?? 290);
+      const highPct = Number(feeCfg?.highAmountPercent ?? 1.0) / 100;
+
+      if (invoice.subtotal < threshold) {
+        return Math.ceil(invoice.subtotal * lowPct) + lowFixed;
       } else {
-        return Math.ceil(invoice.subtotal * 0.01);
+        return Math.ceil(invoice.subtotal * highPct);
       }
     }
     if (selectedMethod === "va") {
-      const bank = publicMethods?.va?.banks?.find((b: any) => b.code === selectedBank);
+      const bank = publicMethods?.va?.banks?.find(
+        (b: any) => b.code.toUpperCase() === selectedBank.toUpperCase()
+      );
       const percent = Number(bank?.fee?.percent ?? 0);
       const flat = Number(bank?.fee?.flat ?? 4200);
       return Math.ceil(invoice.subtotal * (percent / 100)) + flat;
     }
     if (selectedMethod === "ewallet") {
-      const wallet = publicMethods?.ewallet?.wallets?.find((w: any) => w.code === selectedWallet);
+      const wallet = publicMethods?.ewallet?.wallets?.find(
+        (w: any) => w.code.toUpperCase() === selectedWallet.toUpperCase()
+      );
       const percent = Number(wallet?.fee?.percent ?? 2);
       const flat = Number(wallet?.fee?.flat ?? 0);
       return Math.ceil(invoice.subtotal * (percent / 100)) + flat;
     }
     return 0;
   };
+
+  const qrisFeeEstimate = invoice
+    ? (invoice.subtotal < Number(publicMethods?.qris?.fee?.threshold ?? 100000)
+        ? Math.ceil(invoice.subtotal * (Number(publicMethods?.qris?.fee?.lowAmountPercent ?? 0.7) / 100)) +
+          Number(publicMethods?.qris?.fee?.lowAmountFixed ?? 290)
+        : Math.ceil(invoice.subtotal * (Number(publicMethods?.qris?.fee?.highAmountPercent ?? 1.0) / 100)))
+    : 0;
 
   const previewFee = invoice.status === "pending" || invoice.status === "paid"
     ? invoice.gatewayFee
@@ -887,6 +914,9 @@ export function InvoicePaymentPage({
                     >
                       <QrCode className={`w-5 h-5 ${selectedMethod === "qris" ? "text-primary" : "text-muted-foreground"}`} />
                       <span className="text-xs font-mono font-bold">QRIS</span>
+                      <span className="text-[10px] text-muted-foreground font-mono">
+                        +Rp {qrisFeeEstimate.toLocaleString()}
+                      </span>
                     </button>
 
                     <button
@@ -899,6 +929,9 @@ export function InvoicePaymentPage({
                     >
                       <Building className={`w-5 h-5 ${selectedMethod === "va" ? "text-primary" : "text-muted-foreground"}`} />
                       <span className="text-xs font-mono font-bold">Virtual Account</span>
+                      <span className="text-[10px] text-muted-foreground font-mono">
+                        +Rp {Number(publicMethods?.va?.banks?.[0]?.fee?.flat ?? 4200).toLocaleString()}
+                      </span>
                     </button>
 
                     <button
@@ -911,6 +944,9 @@ export function InvoicePaymentPage({
                     >
                       <Wallet className={`w-5 h-5 ${selectedMethod === "ewallet" ? "text-primary" : "text-muted-foreground"}`} />
                       <span className="text-xs font-mono font-bold">E-Wallet</span>
+                      <span className="text-[10px] text-muted-foreground font-mono">
+                        +{Number(publicMethods?.ewallet?.wallets?.[0]?.fee?.percent ?? 2)}%
+                      </span>
                     </button>
                   </div>
 
@@ -921,27 +957,37 @@ export function InvoicePaymentPage({
                         {t("treasury.invoices.checkout.selectBank")}
                       </label>
                       <div className="grid grid-cols-2 gap-2">
-                        {(publicMethods?.va?.banks || [
-                          { code: "BNI", name: "BNI", fee: { flat: 4200 } },
-                          { code: "BCA", name: "BCA", fee: { flat: 4200 } },
-                          { code: "MANDIRI", name: "Mandiri", fee: { flat: 4200 } },
-                          { code: "BRI", name: "BRI", fee: { flat: 4200 } },
-                        ]).map((b: any) => (
-                          <button
-                            type="button"
-                            key={b.code}
-                            onClick={() => setSelectedBank(b.code)}
-                            className={`p-2 border text-left flex items-center justify-between text-xs font-mono transition-all cursor-pointer ${selectedBank === b.code
-                              ? "bg-primary/20 border-primary text-foreground font-bold"
-                              : "bg-background/80 border-border/60 text-muted-foreground hover:border-border"
+                        {(publicMethods?.va?.banks && publicMethods.va.banks.length > 0
+                          ? publicMethods.va.banks
+                          : [
+                              { code: "BNI", name: "BNI", fee: { flat: 4200, percent: 0 } },
+                              { code: "BCA", name: "BCA", fee: { flat: 4200, percent: 0 } },
+                              { code: "MANDIRI", name: "Mandiri", fee: { flat: 4200, percent: 0 } },
+                              { code: "BRI", name: "BRI", fee: { flat: 4200, percent: 0 } },
+                            ]
+                        ).map((b: any) => {
+                          const bankFee = invoice
+                            ? Math.ceil(invoice.subtotal * (Number(b.fee?.percent ?? 0) / 100)) +
+                              Number(b.fee?.flat ?? 4200)
+                            : 4200;
+                          return (
+                            <button
+                              type="button"
+                              key={b.code}
+                              onClick={() => setSelectedBank(b.code)}
+                              className={`p-2 border text-left flex items-center justify-between text-xs font-mono transition-all cursor-pointer ${
+                                selectedBank.toUpperCase() === b.code.toUpperCase()
+                                  ? "bg-primary/20 border-primary text-foreground font-bold"
+                                  : "bg-background/80 border-border/60 text-muted-foreground hover:border-border"
                               }`}
-                          >
-                            <span>{b.name}</span>
-                            <span className="text-[10px] text-muted-foreground">
-                              +Rp {Number(b.fee?.flat ?? 4200).toLocaleString()}
-                            </span>
-                          </button>
-                        ))}
+                            >
+                              <span>{b.name}</span>
+                              <span className="text-[10px] text-muted-foreground">
+                                +Rp {bankFee.toLocaleString()}
+                              </span>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -953,24 +999,36 @@ export function InvoicePaymentPage({
                         {t("treasury.invoices.checkout.selectWallet")}
                       </label>
                       <div className="grid grid-cols-3 gap-2">
-                        {(publicMethods?.ewallet?.wallets || [
-                          { code: "DANA", name: "DANA", fee: { percent: 2 } },
-                          { code: "SHOPEE", name: "ShopeePay", fee: { percent: 2 } },
-                          { code: "OVO", name: "OVO", fee: { percent: 2 } },
-                        ]).map((w: any) => (
-                          <button
-                            type="button"
-                            key={w.code}
-                            onClick={() => setSelectedWallet(w.code)}
-                            className={`p-2 border text-center text-xs font-mono transition-all cursor-pointer ${selectedWallet === w.code
-                              ? "bg-primary/20 border-primary text-foreground font-bold"
-                              : "bg-background/80 border-border/60 text-muted-foreground hover:border-border"
+                        {(publicMethods?.ewallet?.wallets && publicMethods.ewallet.wallets.length > 0
+                          ? publicMethods.ewallet.wallets
+                          : [
+                              { code: "DANA", name: "DANA", fee: { percent: 2, flat: 0 } },
+                              { code: "SHOPEE", name: "ShopeePay", fee: { percent: 2, flat: 0 } },
+                              { code: "OVO", name: "OVO", fee: { percent: 2, flat: 0 } },
+                            ]
+                        ).map((w: any) => {
+                          const walletFee = invoice
+                            ? Math.ceil(invoice.subtotal * (Number(w.fee?.percent ?? 2) / 100)) +
+                              Number(w.fee?.flat ?? 0)
+                            : 0;
+                          return (
+                            <button
+                              type="button"
+                              key={w.code}
+                              onClick={() => setSelectedWallet(w.code)}
+                              className={`p-2 border text-center text-xs font-mono transition-all cursor-pointer ${
+                                selectedWallet.toUpperCase() === w.code.toUpperCase()
+                                  ? "bg-primary/20 border-primary text-foreground font-bold"
+                                  : "bg-background/80 border-border/60 text-muted-foreground hover:border-border"
                               }`}
-                          >
-                            <div>{w.name}</div>
-                            <div className="text-[10px] text-muted-foreground">+{w.fee?.percent ?? 2}%</div>
-                          </button>
-                        ))}
+                            >
+                              <div>{w.name}</div>
+                              <div className="text-[10px] text-muted-foreground">
+                                +Rp {walletFee.toLocaleString()}
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
