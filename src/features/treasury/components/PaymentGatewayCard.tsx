@@ -33,6 +33,8 @@ import {
   Settings2,
   CheckCircle2,
   Layers,
+  ExternalLink,
+  Coins,
 } from "lucide-react";
 
 interface PaymentGatewayCardProps {
@@ -47,8 +49,18 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
   const saveConfig = useAction(api.treasury.gateways.router.savePaymentConfig);
   const fetchMethods = useAction(api.treasury.gateways.router.fetchAvailablePaymentMethods);
 
+  // Active Provider Tab in Credentials Section
+  const [credentialTab, setCredentialTab] = useState<"borderpay" | "temanqris">("borderpay");
+
+  // BorderPay Credentials
   const [apiKey, setApiKey] = useState("");
   const [webhookToken, setWebhookToken] = useState("");
+
+  // TemanQRIS Credentials
+  const [temanQrisApiKey, setTemanQrisApiKey] = useState("");
+  const [temanQrisWebhookSecret, setTemanQrisWebhookSecret] = useState("");
+
+  // Global Gateway Master Enable
   const [isEnabled, setIsEnabled] = useState(false);
 
   // Method Rail Toggles
@@ -60,6 +72,10 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
   const [qrisGateway, setQrisGateway] = useState("borderpay");
   const [vaGateway, setVaGateway] = useState("borderpay");
   const [ewalletGateway, setEwalletGateway] = useState("borderpay");
+
+  // Custom QRIS Surcharge Settings (especially for TemanQRIS)
+  const [customQrisFeeType, setCustomQrisFeeType] = useState<"flat" | "percent">("flat");
+  const [customQrisFeeValue, setCustomQrisFeeValue] = useState<number>(0);
 
   // Specific Bank & Wallet Selections
   const standardBanks = [
@@ -113,17 +129,32 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
       if (config.methodOverrides) {
         setQrisEnabled(config.methodOverrides.qrisEnabled);
         setEnabledBanks(config.methodOverrides.enabledBanks);
-        setVaEnabled(config.methodOverrides.enabledBanks.length > 0);
+        setVaEnabled(
+          config.methodOverrides.vaEnabled !== undefined
+            ? config.methodOverrides.vaEnabled
+            : config.methodOverrides.enabledBanks.length > 0
+        );
         setEnabledWallets(config.methodOverrides.enabledWallets);
-        setEwalletEnabled(config.methodOverrides.enabledWallets.length > 0);
+        setEwalletEnabled(
+          config.methodOverrides.ewalletEnabled !== undefined
+            ? config.methodOverrides.ewalletEnabled
+            : config.methodOverrides.enabledWallets.length > 0
+        );
+        if (config.methodOverrides.customQrisFee) {
+          setCustomQrisFeeType(config.methodOverrides.customQrisFee.type);
+          setCustomQrisFeeValue(config.methodOverrides.customQrisFee.value);
+        }
       }
       if (config.channelRouting) {
         setQrisGateway(config.channelRouting.qrisGateway || "borderpay");
         setVaGateway(config.channelRouting.vaGateway || "borderpay");
         setEwalletGateway(config.channelRouting.ewalletGateway || "borderpay");
       }
-      // Auto-expand credentials if not yet set up
-      if (!config.hasApiKey) {
+      if (config.providerConfigs?.temanqris) {
+        setTemanQrisWebhookSecret(config.providerConfigs.temanqris.webhookToken || "");
+      }
+      // Auto-expand credentials if neither provider is set up yet
+      if (!config.hasApiKey && !config.providerConfigs?.temanqris?.hasApiKey) {
         setIsEditingCredentials(true);
       }
       setHasInitialized(true);
@@ -137,12 +168,18 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
       ? (import.meta.env.VITE_CONVEX_URL as string).replace(/\.convex\.cloud\/?$/, ".convex.site")
       : "");
   const cleanSiteUrl = rawSiteUrl ? rawSiteUrl.replace(/\/+$/, "") : "";
-  const webhookUrl = cleanSiteUrl
+  const borderpayWebhookUrl = cleanSiteUrl
     ? `${cleanSiteUrl}/api/borderpay-webhook`
     : "https://your-convex-site.convex.site/api/borderpay-webhook";
+  const temanqrisWebhookUrl = cleanSiteUrl
+    ? `${cleanSiteUrl}/api/temanqris-webhook`
+    : "https://your-convex-site.convex.site/api/temanqris-webhook";
+
+  const activeWebhookUrl =
+    credentialTab === "temanqris" ? temanqrisWebhookUrl : borderpayWebhookUrl;
 
   const handleCopyWebhookUrl = () => {
-    void navigator.clipboard.writeText(webhookUrl);
+    void navigator.clipboard.writeText(activeWebhookUrl);
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
   };
@@ -178,6 +215,8 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
         isEnabled,
         methodOverrides: {
           qrisEnabled,
+          vaEnabled,
+          ewalletEnabled,
           enabledBanks: vaEnabled
             ? enabledBanks.length > 0
               ? enabledBanks
@@ -188,19 +227,34 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
               ? enabledWallets
               : ["DANA", "SHOPEE", "OVO"]
             : [],
+          customQrisFee:
+            qrisGateway === "temanqris"
+              ? {
+                  type: customQrisFeeType,
+                  value: Number(customQrisFeeValue) || 0,
+                }
+              : undefined,
         },
         channelRouting: {
           qrisGateway,
           vaGateway,
           ewalletGateway,
         },
+        providerConfigs: {
+          temanqris: {
+            apiKey: temanQrisApiKey.trim() || undefined,
+            webhookToken: temanQrisWebhookSecret.trim() || undefined,
+            isTestMode: false,
+          },
+        },
       });
       setApiKey("");
+      setTemanQrisApiKey("");
       setFeedback({
         type: "success",
         message: t("treasury.gateway.savedSuccess"),
       });
-      if (config?.hasApiKey) {
+      if (config?.hasApiKey || config?.providerConfigs?.temanqris?.hasApiKey) {
         setIsEditingCredentials(false);
       }
     } catch (err: unknown) {
@@ -226,8 +280,19 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
   };
 
   const gatewaysList = availableGateways || [
-    { id: "borderpay", name: "BorderPay (Default)" },
+    { id: "borderpay", name: "BorderPay (Default)", supportedChannels: ["qris", "va", "ewallet"] },
+    { id: "temanqris", name: "TemanQRIS", supportedChannels: ["qris"] },
   ];
+
+  const qrisGateways = gatewaysList.filter(
+    (g: any) => !g.supportedChannels || g.supportedChannels.includes("qris")
+  );
+  const vaGateways = gatewaysList.filter(
+    (g: any) => !g.supportedChannels || g.supportedChannels.includes("va")
+  );
+  const ewalletGateways = gatewaysList.filter(
+    (g: any) => !g.supportedChannels || g.supportedChannels.includes("ewallet")
+  );
 
   return (
     <Card telemetry="TREASURY.PAYMENTS" cornerLines className="bg-card border-border shadow-xl">
@@ -294,39 +359,51 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
           )}
 
           {/* ══════════════════════════════════════════════════════════════════
-              SECTION 1: COMPACT GATEWAY PROVIDER & CREDENTIALS
+              SECTION 1: GATEWAY PROVIDERS & CREDENTIALS
           ══════════════════════════════════════════════════════════════════ */}
           <div className="border border-border/80 bg-muted/10 p-4 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="p-1.5 bg-primary/10 border border-primary/20 text-primary">
-                  <Settings2 className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-foreground">
-                      BorderPay Gateway
-                    </span>
-                    {config?.hasApiKey ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 border border-emerald-500/20">
-                        <CheckCircle2 className="w-3 h-3" />
-                        {t("treasury.gateway.connectedStatus")}
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 border border-amber-500/20">
-                        <AlertCircle className="w-3 h-3" />
-                        {t("treasury.gateway.notConnectedStatus")}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">
-                    {t("treasury.gateway.gatewaySettingsSubtitle")}
-                  </p>
-                </div>
+            {/* Provider Tabs Header */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-3">
+              <div className="flex items-center gap-1 bg-muted/30 p-1 border border-border/60">
+                <button
+                  type="button"
+                  onClick={() => setCredentialTab("borderpay")}
+                  className={`px-3 py-1.5 text-xs font-mono font-medium flex items-center gap-2 transition-colors cursor-pointer ${
+                    credentialTab === "borderpay"
+                      ? "bg-card text-foreground shadow-sm border border-border"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <CreditCard className="w-3.5 h-3.5 text-primary" />
+                  <span>BorderPay</span>
+                  {config?.hasApiKey ? (
+                    <span className="w-2 h-2 rounded-full bg-emerald-400" title="Connected" />
+                  ) : (
+                    <span className="w-2 h-2 rounded-full bg-amber-400/60" title="Not Configured" />
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setCredentialTab("temanqris")}
+                  className={`px-3 py-1.5 text-xs font-mono font-medium flex items-center gap-2 transition-colors cursor-pointer ${
+                    credentialTab === "temanqris"
+                      ? "bg-card text-foreground shadow-sm border border-border"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <QrCode className="w-3.5 h-3.5 text-primary" />
+                  <span>TemanQRIS</span>
+                  {config?.providerConfigs?.temanqris?.hasApiKey ? (
+                    <span className="w-2 h-2 rounded-full bg-emerald-400" title="Connected" />
+                  ) : (
+                    <span className="w-2 h-2 rounded-full bg-amber-400/60" title="Not Configured" />
+                  )}
+                </button>
               </div>
 
               <div className="flex items-center gap-2">
-                {config?.hasApiKey && (
+                {credentialTab === "borderpay" && config?.hasApiKey && (
                   <Button
                     type="button"
                     variant="outline"
@@ -339,6 +416,18 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
                     <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`} />
                     <span>{isFetching ? t("treasury.gateway.fetching") : t("treasury.gateway.fetchLiveMethods")}</span>
                   </Button>
+                )}
+
+                {credentialTab === "temanqris" && (
+                  <a
+                    href="https://temanqris.com"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="h-8 px-2.5 text-xs font-mono text-muted-foreground hover:text-primary flex items-center gap-1.5 border border-border/60 bg-muted/20 hover:bg-muted/40 transition-colors"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>temanqris.com</span>
+                  </a>
                 )}
 
                 <Button
@@ -363,74 +452,188 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
               </div>
             </div>
 
+            {/* Provider Summary Row */}
+            <div className="flex items-center gap-3">
+              <div className="p-1.5 bg-primary/10 border border-primary/20 text-primary">
+                {credentialTab === "borderpay" ? <Settings2 className="w-4 h-4" /> : <QrCode className="w-4 h-4" />}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-foreground">
+                    {credentialTab === "borderpay"
+                      ? "BorderPay Gateway (Aggregator)"
+                      : "TemanQRIS (Direct Static-to-Dynamic Rail)"}
+                  </span>
+                  {(credentialTab === "borderpay"
+                    ? config?.hasApiKey
+                    : config?.providerConfigs?.temanqris?.hasApiKey) ? (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 border border-emerald-500/20">
+                      <CheckCircle2 className="w-3 h-3" />
+                      {t("treasury.gateway.connectedStatus")}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-mono text-amber-400 bg-amber-500/10 px-2 py-0.5 border border-amber-500/20">
+                      <AlertCircle className="w-3 h-3" />
+                      {t("treasury.gateway.notConnectedStatus")}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  {credentialTab === "borderpay"
+                    ? t("treasury.gateway.gatewaySettingsSubtitle")
+                    : t("treasury.gateway.temanqrisSubtitle", "Direct static-to-dynamic QRIS converter with 0% transaction fee.")}
+                </p>
+              </div>
+            </div>
+
             {/* Collapsible Credentials & Webhook Form */}
             {isEditingCredentials && (
               <div className="pt-4 border-t border-border/60 space-y-4 animate-in fade-in-50 duration-150">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* API Key */}
-                  <div className="space-y-1.5">
-                    <label
-                      htmlFor="gateway-api-key"
-                      className="text-xs font-medium text-foreground flex items-center justify-between"
-                    >
-                      <span className="flex items-center gap-1.5">
-                        <KeyRound className="w-3.5 h-3.5 text-primary" />
-                        {t("treasury.gateway.apiKey")}
-                      </span>
-                      {config?.maskedApiKey && (
-                        <span className="font-mono text-[10px] text-muted-foreground">
-                          Current: {config.maskedApiKey}
-                        </span>
-                      )}
-                    </label>
-                    <Input
-                      id="gateway-api-key"
-                      type="password"
-                      chamfer="dual"
-                      value={apiKey}
-                      onChange={(e) => setApiKey(e.target.value)}
-                      placeholder={
-                        config?.hasApiKey
-                          ? "Leave blank to keep current key"
-                          : t("treasury.gateway.apiKeyPlaceholder")
-                      }
-                      className="font-mono text-xs"
-                    />
-                    <p className="text-[10px] text-muted-foreground">
-                      {t("treasury.gateway.apiKeyHelp")}
-                    </p>
-                  </div>
+                {credentialTab === "borderpay" ? (
+                  /* BorderPay Credentials */
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* API Key */}
+                      <div className="space-y-1.5">
+                        <label
+                          htmlFor="gateway-api-key"
+                          className="text-xs font-medium text-foreground flex items-center justify-between"
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <KeyRound className="w-3.5 h-3.5 text-primary" />
+                            {t("treasury.gateway.apiKey")}
+                          </span>
+                          {config?.maskedApiKey && (
+                            <span className="font-mono text-[10px] text-muted-foreground">
+                              Current: {config.maskedApiKey}
+                            </span>
+                          )}
+                        </label>
+                        <Input
+                          id="gateway-api-key"
+                          type="password"
+                          chamfer="dual"
+                          value={apiKey}
+                          onChange={(e) => setApiKey(e.target.value)}
+                          placeholder={
+                            config?.hasApiKey
+                              ? "Leave blank to keep current key"
+                              : t("treasury.gateway.apiKeyPlaceholder")
+                          }
+                          className="font-mono text-xs"
+                        />
+                        <p className="text-[10px] text-muted-foreground">
+                          {t("treasury.gateway.apiKeyHelp")}
+                        </p>
+                      </div>
 
-                  {/* Webhook Token */}
-                  <div className="space-y-1.5">
-                    <label
-                      htmlFor="gateway-webhook-token"
-                      className="text-xs font-medium text-foreground flex items-center gap-1.5"
-                    >
-                      <Webhook className="w-3.5 h-3.5 text-primary" />
-                      {t("treasury.gateway.webhookToken")}
-                    </label>
-                    <Input
-                      id="gateway-webhook-token"
-                      type="text"
-                      chamfer="dual"
-                      value={webhookToken}
-                      onChange={(e) => setWebhookToken(e.target.value)}
-                      placeholder={t("treasury.gateway.webhookTokenPlaceholder")}
-                      className="font-mono text-xs"
-                    />
-                    <p className="text-[10px] text-muted-foreground">
-                      {t("treasury.gateway.webhookTokenHelp")}
-                    </p>
+                      {/* Webhook Token */}
+                      <div className="space-y-1.5">
+                        <label
+                          htmlFor="gateway-webhook-token"
+                          className="text-xs font-medium text-foreground flex items-center gap-1.5"
+                        >
+                          <Webhook className="w-3.5 h-3.5 text-primary" />
+                          {t("treasury.gateway.webhookToken")}
+                        </label>
+                        <Input
+                          id="gateway-webhook-token"
+                          type="text"
+                          chamfer="dual"
+                          value={webhookToken}
+                          onChange={(e) => setWebhookToken(e.target.value)}
+                          placeholder={t("treasury.gateway.webhookTokenPlaceholder")}
+                          className="font-mono text-xs"
+                        />
+                        <p className="text-[10px] text-muted-foreground">
+                          {t("treasury.gateway.webhookTokenHelp")}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  /* TemanQRIS Credentials */
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* API Key */}
+                      <div className="space-y-1.5">
+                        <label
+                          htmlFor="temanqris-api-key"
+                          className="text-xs font-medium text-foreground flex items-center justify-between"
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <KeyRound className="w-3.5 h-3.5 text-primary" />
+                            TemanQRIS API Key (X-API-Key)
+                          </span>
+                          {config?.providerConfigs?.temanqris?.maskedApiKey && (
+                            <span className="font-mono text-[10px] text-muted-foreground">
+                              Current: {config.providerConfigs.temanqris.maskedApiKey}
+                            </span>
+                          )}
+                        </label>
+                        <Input
+                          id="temanqris-api-key"
+                          type="password"
+                          chamfer="dual"
+                          value={temanQrisApiKey}
+                          onChange={(e) => setTemanQrisApiKey(e.target.value)}
+                          placeholder={
+                            config?.providerConfigs?.temanqris?.hasApiKey
+                              ? "Leave blank to keep current key"
+                              : "tq_live_..."
+                          }
+                          className="font-mono text-xs"
+                        />
+                        <p className="text-[10px] text-muted-foreground">
+                          {t(
+                            "treasury.gateway.temanqrisApiKeyHelp",
+                            "Get your API key from the TemanQRIS Dashboard under Settings > API."
+                          )}
+                        </p>
+                      </div>
+
+                      {/* Webhook Secret */}
+                      <div className="space-y-1.5">
+                        <label
+                          htmlFor="temanqris-webhook-secret"
+                          className="text-xs font-medium text-foreground flex items-center gap-1.5"
+                        >
+                          <Webhook className="w-3.5 h-3.5 text-primary" />
+                          Webhook Secret (HMAC-SHA256)
+                        </label>
+                        <Input
+                          id="temanqris-webhook-secret"
+                          type="text"
+                          chamfer="dual"
+                          value={temanQrisWebhookSecret}
+                          onChange={(e) => setTemanQrisWebhookSecret(e.target.value)}
+                          placeholder="whsec_... or secret string"
+                          className="font-mono text-xs"
+                        />
+                        <p className="text-[10px] text-muted-foreground">
+                          {t(
+                            "treasury.gateway.temanqrisSecretHelp",
+                            "Shared secret used to verify the X-TemanQRIS-Signature header."
+                          )}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 bg-primary/5 border border-primary/20 text-xs font-mono text-muted-foreground">
+                      💡 {t(
+                        "treasury.gateway.temanqrisStaticNotice",
+                        "Make sure your Static QRIS image is uploaded and active on temanqris.com so dynamic orders can be generated seamlessly."
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Target Webhook URL Banner */}
                 <div className="p-3 bg-black/40 border border-border/60 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                       <Webhook className="w-3.5 h-3.5 text-primary" />
-                      {t("treasury.gateway.webhookUrl")}
+                      {t("treasury.gateway.webhookUrl")} ({credentialTab === "temanqris" ? "TemanQRIS" : "BorderPay"})
                     </span>
                     <Button
                       type="button"
@@ -449,10 +652,15 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
                     </Button>
                   </div>
                   <p className="font-mono text-[11px] text-muted-foreground bg-black/60 p-2 border border-border/40 select-all break-all">
-                    {webhookUrl}
+                    {activeWebhookUrl}
                   </p>
                   <p className="text-[10px] text-muted-foreground">
-                    {t("treasury.gateway.webhookUrlHelp")}
+                    {credentialTab === "temanqris"
+                      ? t(
+                          "treasury.gateway.temanqrisWebhookHelp",
+                          "Paste this webhook endpoint into your TemanQRIS dashboard webhook settings."
+                        )
+                      : t("treasury.gateway.webhookUrlHelp")}
                   </p>
                 </div>
 
@@ -519,7 +727,12 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
                       {t("treasury.gateway.qrisDesc")}
                     </p>
                     <p className="text-[10px] font-mono text-muted-foreground/80">
-                      {t("treasury.gateway.qrisFeeNote")}
+                      {qrisGateway === "temanqris"
+                        ? t(
+                            "treasury.gateway.temanqrisFeeNote",
+                            "TemanQRIS: 0% gateway commission. Upfront surcharge configurable below."
+                          )
+                        : t("treasury.gateway.qrisFeeNote")}
                     </p>
                   </div>
                 </div>
@@ -531,24 +744,78 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
                 />
               </div>
 
-              {/* Gateway Assignment Selector */}
+              {/* Gateway Assignment Selector & Surcharge Config */}
               {qrisEnabled && (
-                <div className="mt-3 pt-3 border-t border-border/50 flex flex-wrap items-center justify-between gap-2 text-xs">
-                  <span className="text-muted-foreground font-mono text-[11px] flex items-center gap-1.5">
-                    <span>{t("treasury.gateway.routeVia")}:</span>
-                  </span>
+                <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <span className="text-muted-foreground font-mono text-[11px] flex items-center gap-1.5">
+                      <span>{t("treasury.gateway.routeVia")}:</span>
+                    </span>
 
-                  <select
-                    value={qrisGateway}
-                    onChange={(e) => setQrisGateway(e.target.value)}
-                    className="bg-black/40 border border-border/80 text-foreground font-mono text-xs px-2.5 py-1 focus:border-primary focus:outline-none transition-colors"
-                  >
-                    {gatewaysList.map((g) => (
-                      <option key={g.id} value={g.id} className="bg-neutral-900 text-foreground">
-                        {g.name}
-                      </option>
-                    ))}
-                  </select>
+                    <select
+                      value={qrisGateway}
+                      onChange={(e) => setQrisGateway(e.target.value)}
+                      className="bg-black/40 border border-border/80 text-foreground font-mono text-xs px-2.5 py-1 focus:border-primary focus:outline-none transition-colors"
+                    >
+                      {qrisGateways.map((g) => (
+                        <option key={g.id} value={g.id} className="bg-neutral-900 text-foreground">
+                          {g.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* TemanQRIS Custom Surcharge Configuration */}
+                  {qrisGateway === "temanqris" && (
+                    <div className="p-3 bg-muted/20 border border-border/60 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                          <Coins className="w-3.5 h-3.5 text-primary" />
+                          {t("treasury.gateway.qrisSurchargeTitle", "TemanQRIS Surcharge / Fee Settings")}
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] font-mono border-primary/30 text-primary"
+                        >
+                          {customQrisFeeValue > 0
+                            ? `${customQrisFeeType === "flat" ? "Rp " : ""}${customQrisFeeValue}${customQrisFeeType === "percent" ? "%" : ""} surcharge`
+                            : "Rp 0 (Free)"}
+                        </Badge>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        {t(
+                          "treasury.gateway.qrisSurchargeDesc",
+                          "TemanQRIS transaction fee is Rp 0. You can optionally configure an upfront fee surcharge added to the invoice total."
+                        )}
+                      </p>
+                      <div className="flex items-center gap-2 pt-1">
+                        <select
+                          value={customQrisFeeType}
+                          onChange={(e) =>
+                            setCustomQrisFeeType(e.target.value as "flat" | "percent")
+                          }
+                          className="bg-black/40 border border-border/80 text-foreground font-mono text-xs px-2.5 py-1.5 focus:border-primary focus:outline-none"
+                        >
+                          <option value="flat">Fixed Surcharge (Rp)</option>
+                          <option value="percent">Percentage Surcharge (%)</option>
+                        </select>
+                        <Input
+                          type="number"
+                          min="0"
+                          step={customQrisFeeType === "flat" ? "100" : "0.1"}
+                          value={customQrisFeeValue}
+                          onChange={(e) =>
+                            setCustomQrisFeeValue(parseFloat(e.target.value) || 0)
+                          }
+                          className="font-mono text-xs max-w-[140px]"
+                          placeholder="0"
+                        />
+                        <span className="text-xs font-mono text-muted-foreground">
+                          {customQrisFeeType === "flat" ? "IDR" : "%"}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -612,7 +879,7 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
                         onChange={(e) => setVaGateway(e.target.value)}
                         className="bg-black/40 border border-border/80 text-foreground font-mono text-xs px-2.5 py-1 focus:border-primary focus:outline-none transition-colors"
                       >
-                        {gatewaysList.map((g) => (
+                        {vaGateways.map((g) => (
                           <option key={g.id} value={g.id} className="bg-neutral-900 text-foreground">
                             {g.name}
                           </option>
@@ -726,7 +993,7 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
                         onChange={(e) => setEwalletGateway(e.target.value)}
                         className="bg-black/40 border border-border/80 text-foreground font-mono text-xs px-2.5 py-1 focus:border-primary focus:outline-none transition-colors"
                       >
-                        {gatewaysList.map((g) => (
+                        {ewalletGateways.map((g) => (
                           <option key={g.id} value={g.id} className="bg-neutral-900 text-foreground">
                             {g.name}
                           </option>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "convex/react";
+import { useQuery, useAction } from "convex/react";
 import { Link, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
@@ -27,6 +27,8 @@ import {
   MoreHorizontal,
   ChevronLeft,
   ChevronRight,
+  ShieldCheck,
+  Loader2,
 } from "lucide-react";
 import { CreateCustomInvoiceModal } from "./CreateCustomInvoiceModal";
 import { CreateInvoiceModal } from "./CreateInvoiceModal";
@@ -97,6 +99,11 @@ export function InvoicesPane({
   const [isDuesModalOpen, setIsDuesModalOpen] = useState(false);
   const [copiedInvoiceNumber, setCopiedInvoiceNumber] = useState<string | null>(null);
   const [activeMobileMenuId, setActiveMobileMenuId] = useState<string | null>(null);
+  const [verifyingInvoiceNumber, setVerifyingInvoiceNumber] = useState<string | null>(null);
+
+  const verifyAndSettleTemanQrisOrder = useAction(
+    api.treasury.borderpay.verifyAndSettleTemanQrisOrder
+  );
 
   const myMembership = useQuery(api.members.getMyMembership, { organizationId });
   const invoices = useQuery(api.treasury.borderpay.listInvoices, {
@@ -110,6 +117,23 @@ export function InvoicesPane({
     myMembership?.permissions.includes("ADMINISTRATOR") ||
     myMembership?.permissions.includes("MANAGE_TREASURY")
   );
+
+  const handleVerifyPayment = async (invoiceNumber: string) => {
+    if (verifyingInvoiceNumber) return;
+    setVerifyingInvoiceNumber(invoiceNumber);
+    try {
+      await verifyAndSettleTemanQrisOrder({ invoiceNumber });
+    } catch (err: unknown) {
+      console.error("Verification failed:", err);
+      alert(
+        err instanceof Error
+          ? err.message
+          : t("treasury.invoices.verifyFailed", "Failed to verify payment.")
+      );
+    } finally {
+      setVerifyingInvoiceNumber(null);
+    }
+  };
 
   useEffect(() => {
     if (!activeMobileMenuId) return;
@@ -169,8 +193,21 @@ export function InvoicesPane({
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
+  const getStatusBadge = (inv: Doc<"invoices">) => {
+    if (inv.status === "pending" && inv.isAwaitingConfirmation) {
+      return (
+        <Badge
+          variant="outline"
+          className="text-[10px] font-mono font-bold px-1.5 py-0.5 border flex items-center gap-1 shrink-0 bg-amber-500/20 text-amber-300 border-amber-500/40 animate-pulse"
+        >
+          <Clock className="w-3 h-3 text-amber-400" />
+          <span>
+            {t("treasury.invoices.statusAwaitingVerification", "Awaiting Verification")}
+          </span>
+        </Badge>
+      );
+    }
+    switch (inv.status) {
       case "paid":
         return (
           <Badge
@@ -347,7 +384,7 @@ export function InvoicesPane({
                           <div className="min-w-0 flex-1 space-y-1.5">
                             {/* Top Line: Status Badge + Amount + Title */}
                             <div className="flex flex-wrap items-center gap-2">
-                              {getStatusBadge(inv.status)}
+                              {getStatusBadge(inv)}
 
                               <span className="font-mono text-xs font-bold text-foreground shrink-0">
                                 {inv.currency} {inv.totalAmount.toLocaleString()}
@@ -417,6 +454,32 @@ export function InvoicesPane({
                               <Receipt className="w-3.5 h-3.5 text-primary" />
                               <span className="hidden md:inline">{t("treasury.invoices.viewBtn")}</span>
                             </Button>
+
+                            {/* Verify Button if Pending and (Awaiting Confirmation or TemanQRIS) */}
+                            {canManage &&
+                              inv.status === "pending" &&
+                              (inv.isAwaitingConfirmation || inv.gatewayProvider === "temanqris") && (
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  chamfer="dual"
+                                  disabled={verifyingInvoiceNumber === inv.invoiceNumber}
+                                  onClick={() => void handleVerifyPayment(inv.invoiceNumber)}
+                                  title={t(
+                                    "treasury.invoices.verifyPaymentAction",
+                                    "Verify upstream & settle to ledger"
+                                  )}
+                                  className="h-7 px-2.5 flex items-center gap-1.5 cursor-pointer text-xs text-amber-400 hover:text-amber-300 border-amber-500/40 hover:bg-amber-500/10"
+                                >
+                                  {verifyingInvoiceNumber === inv.invoiceNumber ? (
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  ) : (
+                                    <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                                  )}
+                                  <span>{t("treasury.invoices.verifyPaymentBtn", "Verify")}</span>
+                                </Button>
+                              )}
 
                             {/* Pay Button if Pending */}
                             {inv.status === "pending" && (
@@ -497,6 +560,29 @@ export function InvoicesPane({
                                   <Copy className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                                   <span>{t("treasury.invoices.copyLink")}</span>
                                 </button>
+
+                                {canManage &&
+                                  inv.status === "pending" &&
+                                  (inv.isAwaitingConfirmation || inv.gatewayProvider === "temanqris") && (
+                                    <button
+                                      type="button"
+                                      disabled={verifyingInvoiceNumber === inv.invoiceNumber}
+                                      onClick={() => {
+                                        void handleVerifyPayment(inv.invoiceNumber);
+                                        setActiveMobileMenuId(null);
+                                      }}
+                                      className="w-full px-2.5 py-1.5 flex items-center gap-2 hover:bg-amber-500/20 text-amber-400 text-left cursor-pointer transition-colors border-t border-border/40 font-bold"
+                                    >
+                                      {verifyingInvoiceNumber === inv.invoiceNumber ? (
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                                      ) : (
+                                        <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                                      )}
+                                      <span>
+                                        {t("treasury.invoices.verifyPaymentBtn", "Verify Payment")}
+                                      </span>
+                                    </button>
+                                  )}
 
                                 {inv.status === "pending" && (
                                   <button
