@@ -57,7 +57,18 @@ export function InvoicePaymentPage({
 
   const initiatePayment = useAction(api.treasury.borderpay.initiatePayment);
   const simulatePayment = useAction(api.treasury.borderpay.simulatePayment);
+  const confirmCustomerPayment = useAction(api.treasury.borderpay.confirmCustomerPayment);
   const cancelInvoice = useMutation(api.treasury.borderpay.cancelInvoice);
+  const syncCheckoutMethods = useAction(api.treasury.borderpay.syncCheckoutPaymentMethods);
+
+  const [isConfirmingClaim, setIsConfirmingClaim] = useState(false);
+
+  // When a customer visits checkout for an unpaid invoice, ensure live fees & methods are fetched
+  useEffect(() => {
+    if (invoice && invoice.status === "draft") {
+      void syncCheckoutMethods({ invoiceNumber });
+    }
+  }, [invoice?.invoiceNumber, invoice?.status, syncCheckoutMethods]);
 
   // View state: "checkout" (Stripe-like order breakdown + method selection) vs "payment" (pure payment details & QR/VA)
   const [activeView, setActiveView] = useState<"checkout" | "payment">(() => {
@@ -70,11 +81,16 @@ export function InvoicePaymentPage({
   useEffect(() => {
     if (isPayRoute) {
       setActiveView("payment");
-    } else if (!initialView && invoice?.status === "pending" && !hasAutoSwitchedToPay) {
+    } else if (
+      !initialView &&
+      invoice?.status === "pending" &&
+      !invoice?.isAwaitingConfirmation &&
+      !hasAutoSwitchedToPay
+    ) {
       setActiveView("payment");
       setHasAutoSwitchedToPay(true);
     }
-  }, [isPayRoute, invoice?.status, hasAutoSwitchedToPay, initialView]);
+  }, [isPayRoute, invoice?.status, invoice?.isAwaitingConfirmation, hasAutoSwitchedToPay, initialView]);
 
   // Summary breakdown is shown immediately by default
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(true);
@@ -89,6 +105,7 @@ export function InvoicePaymentPage({
   const [isCopiedVa, setIsCopiedVa] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [remainingTime, setRemainingTime] = useState<string>("");
+  const [showDetailsInAwaiting, setShowDetailsInAwaiting] = useState(false);
 
   const [hasSyncedMethod, setHasSyncedMethod] = useState(false);
 
@@ -106,6 +123,30 @@ export function InvoicePaymentPage({
     }
     setHasSyncedMethod(true);
   }
+
+  const isQrisAvailable = Boolean(publicMethods?.qris?.enabled !== false);
+  const isVaAvailable = Boolean(publicMethods?.va?.enabled && publicMethods.va.banks && publicMethods.va.banks.length > 0);
+  const isEwalletAvailable = Boolean(publicMethods?.ewallet?.enabled && publicMethods.ewallet.wallets && publicMethods.ewallet.wallets.length > 0);
+
+  const availableMethodsCount =
+    (isQrisAvailable ? 1 : 0) +
+    (isVaAvailable ? 1 : 0) +
+    (isEwalletAvailable ? 1 : 0);
+
+  // Automatically adjust selectedMethod if current selection is disabled by organization admin
+  useEffect(() => {
+    if (!publicMethods) return;
+    if (selectedMethod === "va" && !isVaAvailable) {
+      if (isQrisAvailable) setSelectedMethod("qris");
+      else if (isEwalletAvailable) setSelectedMethod("ewallet");
+    } else if (selectedMethod === "ewallet" && !isEwalletAvailable) {
+      if (isQrisAvailable) setSelectedMethod("qris");
+      else if (isVaAvailable) setSelectedMethod("va");
+    } else if (selectedMethod === "qris" && !isQrisAvailable) {
+      if (isVaAvailable) setSelectedMethod("va");
+      else if (isEwalletAvailable) setSelectedMethod("ewallet");
+    }
+  }, [publicMethods, selectedMethod, isQrisAvailable, isVaAvailable, isEwalletAvailable]);
 
   // Expiry countdown timer (properly formatted for days, hours, minutes, and seconds)
   useEffect(() => {
@@ -178,21 +219,49 @@ export function InvoicePaymentPage({
 
   // Calculate upfront fee preview based on current selection
   const calculateFeePreview = () => {
+    if (!invoice) return 0;
+
     if (selectedMethod === "qris") {
-      if (invoice.subtotal < 100000) {
-        return Math.ceil(invoice.subtotal * 0.007) + 290;
+      const qris = publicMethods?.qris;
+      const feeCfg = qris?.fee;
+
+      // TemanQRIS or custom QRIS fee configuration (e.g. 0% / Rp 0 free fee)
+      if (qris?.gateway === "temanqris" || feeCfg?.isCustom) {
+        const flat = Number(feeCfg?.flat ?? 0);
+        const percent = Number(feeCfg?.percent ?? 0);
+        return Math.ceil(invoice.subtotal * (percent / 100)) + flat;
+      }
+
+      // If public methods have not loaded yet, do not assume arbitrary surcharge
+      if (!feeCfg) {
+        return 0;
+      }
+
+      const threshold = Number(feeCfg.threshold ?? 100000);
+      const lowPct = Number(feeCfg.lowAmountPercent ?? 0.7) / 100;
+      const lowFixed = Number(feeCfg.lowAmountFixed ?? 290);
+      const highPct = Number(feeCfg.highAmountPercent ?? 1.0) / 100;
+
+      if (invoice.subtotal < threshold) {
+        return Math.ceil(invoice.subtotal * lowPct) + lowFixed;
       } else {
-        return Math.ceil(invoice.subtotal * 0.01);
+        return Math.ceil(invoice.subtotal * highPct);
       }
     }
     if (selectedMethod === "va") {
-      const bank = publicMethods?.va?.banks?.find((b: any) => b.code === selectedBank);
+      const bank = publicMethods?.va?.banks?.find(
+        (b: any) => b.code.toUpperCase() === selectedBank.toUpperCase()
+      );
+      if (!bank && !publicMethods) return 0;
       const percent = Number(bank?.fee?.percent ?? 0);
       const flat = Number(bank?.fee?.flat ?? 4200);
       return Math.ceil(invoice.subtotal * (percent / 100)) + flat;
     }
     if (selectedMethod === "ewallet") {
-      const wallet = publicMethods?.ewallet?.wallets?.find((w: any) => w.code === selectedWallet);
+      const wallet = publicMethods?.ewallet?.wallets?.find(
+        (w: any) => w.code.toUpperCase() === selectedWallet.toUpperCase()
+      );
+      if (!wallet && !publicMethods) return 0;
       const percent = Number(wallet?.fee?.percent ?? 2);
       const flat = Number(wallet?.fee?.flat ?? 0);
       return Math.ceil(invoice.subtotal * (percent / 100)) + flat;
@@ -200,11 +269,45 @@ export function InvoicePaymentPage({
     return 0;
   };
 
+  const qrisFeeEstimate = (() => {
+    if (!invoice) return 0;
+    const qris = publicMethods?.qris;
+    const feeCfg = qris?.fee;
+
+    // TemanQRIS or custom QRIS fee configuration
+    if (qris?.gateway === "temanqris" || feeCfg?.isCustom) {
+      const flat = Number(feeCfg?.flat ?? 0);
+      const percent = Number(feeCfg?.percent ?? 0);
+      return Math.ceil(invoice.subtotal * (percent / 100)) + flat;
+    }
+
+    if (!feeCfg) return 0;
+
+    const threshold = Number(feeCfg.threshold ?? 100000);
+    const lowPct = Number(feeCfg.lowAmountPercent ?? 0.7) / 100;
+    const lowFixed = Number(feeCfg.lowAmountFixed ?? 290);
+    const highPct = Number(feeCfg.highAmountPercent ?? 1.0) / 100;
+
+    if (invoice.subtotal < threshold) {
+      return Math.ceil(invoice.subtotal * lowPct) + lowFixed;
+    } else {
+      return Math.ceil(invoice.subtotal * highPct);
+    }
+  })();
+
   const previewFee = invoice.status === "pending" || invoice.status === "paid"
     ? invoice.gatewayFee
     : calculateFeePreview();
 
   const previewTotal = invoice.subtotal + previewFee;
+
+  const isAwaitingConfirmation = Boolean(
+    invoice?.isAwaitingConfirmation && invoice?.status === "pending"
+  );
+
+  const isTemanQris = Boolean(
+    invoice?.gatewayProvider === "temanqris" || invoice?.payUrl?.includes("temanqris")
+  );
 
   const handleCopyVa = () => {
     if (invoice.vaNumber) {
@@ -255,6 +358,22 @@ export function InvoicePaymentPage({
       setErrorMessage(err instanceof Error ? err.message : "Simulation failed.");
     } finally {
       setIsSimulating(false);
+    }
+  };
+
+  const handleConfirmClaim = async () => {
+    setIsConfirmingClaim(true);
+    setErrorMessage(null);
+    try {
+      await confirmCustomerPayment({ invoiceNumber });
+      setActiveView("checkout");
+      setLocation(`/invoice/${invoiceNumber}`);
+    } catch (err: unknown) {
+      setErrorMessage(
+        err instanceof Error ? err.message : "Gagal mengonfirmasi pembayaran."
+      );
+    } finally {
+      setIsConfirmingClaim(false);
     }
   };
 
@@ -426,6 +545,122 @@ export function InvoicePaymentPage({
                   <span>{t("treasury.invoices.checkout.downloadReceipt")}</span>
                 </Button>
               </Card>
+            ) : isAwaitingConfirmation ? (
+              <Card cornerLines={false} className="bg-card/90 backdrop-blur-md border border-amber-500/30 shadow-lg text-center p-6 sm:p-8 space-y-4">
+                <div className="inline-flex p-3 bg-amber-500/20 text-amber-400 rounded-full border border-amber-500/40">
+                  <Clock className="w-8 h-8" />
+                </div>
+                <div className="space-y-1.5">
+                  <h3 className="text-lg font-bold text-amber-400 font-mono tracking-wider uppercase">
+                    {t("treasury.invoices.checkout.awaitingConfirmationTitle")}
+                  </h3>
+                  <p className="text-xs text-muted-foreground max-w-sm sm:max-w-md mx-auto font-mono leading-relaxed">
+                    {t("treasury.invoices.checkout.awaitingConfirmationDesc")}
+                  </p>
+                </div>
+
+                <div className="p-3.5 bg-background/60 border border-border/60 text-xs font-mono space-y-1.5 max-w-sm mx-auto text-left">
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>{t("treasury.invoices.checkout.totalPay")}</span>
+                    <span className="font-bold text-foreground">
+                      {invoice.currency} {invoice.totalAmount.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>{t("treasury.invoices.checkout.awaitingConfirmationAt")}</span>
+                    <span>
+                      {new Date(invoice.awaitingConfirmationAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ({new Date(invoice.awaitingConfirmationAt || Date.now()).toLocaleDateString()})
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Status</span>
+                    <span className="text-amber-400 font-semibold">
+                      {t("treasury.invoices.checkout.awaitingConfirmationStatus")}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-1 max-w-sm mx-auto">
+                  {invoice.payUrl && !isTemanQris && (
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      chamfer="dual"
+                      className="w-full text-xs font-mono text-muted-foreground hover:text-foreground border-border/80"
+                    >
+                      <a href={invoice.payUrl} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                        <span>
+                          {i18n.language === "id"
+                            ? "Buka Halaman Gateway"
+                            : "Open Gateway Page"}
+                        </span>
+                      </a>
+                    </Button>
+                  )}
+
+                  {invoice.isTestMode && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      chamfer="dual"
+                      disabled={isSimulating}
+                      onClick={() => void handleSimulatePayment()}
+                      className="w-full text-xs font-mono text-amber-400 border-amber-500/40 hover:bg-amber-500/10"
+                    >
+                      <span>{isSimulating ? t("treasury.invoices.checkout.simulating") : t("treasury.invoices.checkout.simulateBtn")}</span>
+                    </Button>
+                  )}
+
+                  {invoice.selectedMethod === "qris" && qrImageUrl && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      chamfer="dual"
+                      onClick={() => setShowDetailsInAwaiting(!showDetailsInAwaiting)}
+                      className="w-full text-xs font-mono text-muted-foreground hover:text-foreground"
+                    >
+                      <span>
+                        {showDetailsInAwaiting
+                          ? t("treasury.invoices.checkout.hideQrAgain")
+                          : t("treasury.invoices.checkout.showQrAgain")}
+                      </span>
+                    </Button>
+                  )}
+                </div>
+
+                {showDetailsInAwaiting && invoice.selectedMethod === "qris" && qrImageUrl && (
+                  <div className="pt-3 border-t border-border/40 text-center animate-in fade-in duration-200">
+                    <div className="inline-block p-3 bg-white rounded-xl border border-border/80 shadow-md">
+                      <img
+                        src={qrImageUrl}
+                        alt="QRIS Code"
+                        className="w-44 h-44 mx-auto object-contain"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="pt-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    chamfer="dual"
+                    onClick={() => {
+                      setActiveView("checkout");
+                      setIsSummaryExpanded(true);
+                      setLocation(`/invoice/${invoiceNumber}`);
+                    }}
+                    className="text-xs text-primary hover:underline cursor-pointer"
+                  >
+                    {i18n.language === "id" ? "← Lihat Rincian Tagihan" : "← View Invoice Details"}
+                  </Button>
+                </div>
+              </Card>
             ) : (
               <>
                 {/* 1. Dedicated Total Card & Expiry Bar */}
@@ -493,19 +728,63 @@ export function InvoicePaymentPage({
                         )}
 
                         {qrImageUrl && (
-                          <div>
-                            <Button
-                              asChild
-                              variant="outline"
-                              size="sm"
-                              chamfer="dual"
-                              className="text-xs font-mono"
-                            >
-                              <a href={qrImageUrl} download={`${invoice.invoiceNumber}-QRIS.png`}>
-                                <Download className="w-3.5 h-3.5 mr-1.5" />
-                                {t("treasury.invoices.checkout.downloadQr")}
-                              </a>
-                            </Button>
+                          <div className="space-y-3 pt-1">
+                            <div>
+                              <Button
+                                asChild
+                                variant="outline"
+                                size="sm"
+                                chamfer="dual"
+                                className="text-xs font-mono"
+                              >
+                                <a href={qrImageUrl} download={`${invoice.invoiceNumber}-QRIS.png`}>
+                                  <Download className="w-3.5 h-3.5 mr-1.5" />
+                                  {t("treasury.invoices.checkout.downloadQr")}
+                                </a>
+                              </Button>
+                            </div>
+
+                            {/* Customer Payment Claim / Awaiting Verification */}
+                            {/* Customer Payment Claim */}
+                            {isPending && !isAwaitingConfirmation && (
+                              <div className="space-y-2 pt-2 border-t border-border/50 max-w-xs mx-auto">
+                                <Button
+                                  type="button"
+                                  variant="cyber"
+                                  size="sm"
+                                  chamfer="dual"
+                                  disabled={isConfirmingClaim}
+                                  onClick={handleConfirmClaim}
+                                  className="w-full text-xs font-mono flex items-center justify-center gap-1.5 h-9 cursor-pointer"
+                                >
+                                  <CheckCircle2 className="w-4 h-4" />
+                                  <span>
+                                    {isConfirmingClaim
+                                      ? (i18n.language === "id" ? "Memproses..." : "Submitting...")
+                                      : (i18n.language === "id" ? "Saya Sudah Bayar" : "I Have Paid")}
+                                  </span>
+                                </Button>
+
+                                {invoice.payUrl && !isTemanQris && (
+                                  <Button
+                                    asChild
+                                    variant="ghost"
+                                    size="sm"
+                                    chamfer="dual"
+                                    className="w-full text-xs font-mono text-muted-foreground hover:text-foreground"
+                                  >
+                                    <a href={invoice.payUrl} target="_blank" rel="noopener noreferrer">
+                                      <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                                      <span>
+                                        {i18n.language === "id"
+                                          ? "Buka Halaman Pembayaran"
+                                          : "Open Gateway Page"}
+                                      </span>
+                                    </a>
+                                  </Button>
+                                )}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -785,7 +1064,9 @@ export function InvoicePaymentPage({
                       <div className="flex justify-between">
                         <span>{t("treasury.invoices.checkout.adminFee")}</span>
                         <span className="text-foreground">
-                          {invoice.currency} {previewFee.toLocaleString()}
+                          {previewFee === 0
+                            ? `${invoice.currency} 0 (${t("treasury.invoices.checkout.freeFee")})`
+                            : `${invoice.currency} ${previewFee.toLocaleString()}`}
                         </span>
                       </div>
                       <div className="flex justify-between pt-1 border-t border-border/40 font-bold text-foreground">
@@ -805,8 +1086,138 @@ export function InvoicePaymentPage({
               </CardContent>
             </Card>
 
-            {/* If Invoice Already Has Pending Payment */}
-            {isPending && (
+            {/* If Invoice is Paid */}
+            {isPaid && (
+              <Card cornerLines={false} className="bg-card/90 backdrop-blur-md border border-emerald-500/30 p-5 text-center space-y-3">
+                <div className="inline-flex p-2.5 bg-emerald-500/20 text-emerald-400 rounded-full border border-emerald-500/40">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="font-mono font-bold text-emerald-400 text-sm">
+                    {t("treasury.invoices.checkout.paidSuccessTitle")}
+                  </h4>
+                  <p className="text-xs text-muted-foreground font-mono mt-0.5">
+                    {t("treasury.invoices.checkout.paidSuccessDesc")}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="cyber"
+                  size="sm"
+                  chamfer="dual"
+                  onClick={handleDownloadPdf}
+                  className="text-xs font-mono"
+                >
+                  <Download className="w-3.5 h-3.5 mr-1.5" />
+                  <span>{t("treasury.invoices.checkout.downloadReceipt")}</span>
+                </Button>
+              </Card>
+            )}
+
+            {/* If Invoice is Pending and Awaiting Confirmation */}
+            {isPending && isAwaitingConfirmation && (
+              <Card cornerLines={false} className="bg-card/90 backdrop-blur-md border border-amber-500/30 p-6 sm:p-8 text-center space-y-4">
+                <div className="inline-flex p-3 bg-amber-500/20 text-amber-400 rounded-full border border-amber-500/40">
+                  <Clock className="w-8 h-8" />
+                </div>
+                <div className="space-y-1.5">
+                  <h4 className="font-mono font-bold text-amber-400 text-base sm:text-lg tracking-wider uppercase">
+                    {t("treasury.invoices.checkout.awaitingConfirmationTitle")}
+                  </h4>
+                  <p className="text-xs text-muted-foreground font-mono max-w-sm sm:max-w-md mx-auto leading-relaxed">
+                    {t("treasury.invoices.checkout.awaitingConfirmationDesc")}
+                  </p>
+                </div>
+
+                <div className="p-3.5 bg-background/60 border border-border/60 text-xs font-mono space-y-1.5 max-w-xs mx-auto text-left">
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>{t("treasury.invoices.checkout.totalPay")}</span>
+                    <span className="font-bold text-foreground">
+                      {invoice.currency} {invoice.totalAmount.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>{t("treasury.invoices.checkout.awaitingConfirmationAt")}</span>
+                    <span>
+                      {new Date(invoice.awaitingConfirmationAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ({new Date(invoice.awaitingConfirmationAt || Date.now()).toLocaleDateString()})
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Status</span>
+                    <span className="text-amber-400 font-semibold">
+                      {t("treasury.invoices.checkout.awaitingConfirmationStatus")}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-1 max-w-xs mx-auto">
+                  {invoice.payUrl && !isTemanQris && (
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      chamfer="dual"
+                      className="w-full text-xs font-mono text-muted-foreground hover:text-foreground border-border/80"
+                    >
+                      <a href={invoice.payUrl} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                        <span>
+                          {i18n.language === "id"
+                            ? "Buka Halaman Gateway"
+                            : "Open Gateway Page"}
+                        </span>
+                      </a>
+                    </Button>
+                  )}
+
+                  {invoice.isTestMode && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      chamfer="dual"
+                      disabled={isSimulating}
+                      onClick={() => void handleSimulatePayment()}
+                      className="w-full text-xs font-mono text-amber-400 border-amber-500/40 hover:bg-amber-500/10"
+                    >
+                      <span>{isSimulating ? t("treasury.invoices.checkout.simulating") : t("treasury.invoices.checkout.simulateBtn")}</span>
+                    </Button>
+                  )}
+
+                  {invoice.selectedMethod === "qris" && qrImageUrl && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      chamfer="dual"
+                      onClick={() => setShowDetailsInAwaiting(!showDetailsInAwaiting)}
+                      className="w-full text-xs font-mono text-muted-foreground hover:text-foreground"
+                    >
+                      <span>
+                        {showDetailsInAwaiting
+                          ? t("treasury.invoices.checkout.hideQrAgain")
+                          : t("treasury.invoices.checkout.showQrAgain")}
+                      </span>
+                    </Button>
+                  )}
+                </div>
+
+                {showDetailsInAwaiting && invoice.selectedMethod === "qris" && qrImageUrl && (
+                  <div className="pt-3 border-t border-border/40 text-center animate-in fade-in duration-200">
+                    <div className="inline-block p-3 bg-white rounded-xl border border-border/80 shadow-md">
+                      <img
+                        src={qrImageUrl}
+                        alt="QRIS Code"
+                        className="w-44 h-44 mx-auto object-contain"
+                      />
+                    </div>
+                  </div>
+                )}
+              </Card>
+            )}
+
+            {/* If Invoice Already Has Pending Payment (not yet clicked Saya Sudah Bayar) */}
+            {isPending && !isAwaitingConfirmation && (
               <Card cornerLines={false} className="bg-card/90 backdrop-blur-md border border-amber-500/30 p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-amber-300 font-mono text-xs">
@@ -839,34 +1250,6 @@ export function InvoicePaymentPage({
               </Card>
             )}
 
-            {/* If Invoice is Paid */}
-            {isPaid && (
-              <Card cornerLines={false} className="bg-card/90 backdrop-blur-md border border-emerald-500/30 p-5 text-center space-y-3">
-                <div className="inline-flex p-2.5 bg-emerald-500/20 text-emerald-400 rounded-full border border-emerald-500/40">
-                  <CheckCircle2 className="w-6 h-6" />
-                </div>
-                <div>
-                  <h4 className="font-mono font-bold text-emerald-400 text-sm">
-                    {t("treasury.invoices.checkout.paidSuccessTitle")}
-                  </h4>
-                  <p className="text-xs text-muted-foreground font-mono mt-0.5">
-                    {t("treasury.invoices.checkout.paidSuccessDesc")}
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="cyber"
-                  size="sm"
-                  chamfer="dual"
-                  onClick={handleDownloadPdf}
-                  className="text-xs font-mono"
-                >
-                  <Download className="w-3.5 h-3.5 mr-1.5" />
-                  <span>{t("treasury.invoices.checkout.downloadReceipt")}</span>
-                </Button>
-              </Card>
-            )}
-
             {/* Payment Method Selector (For Draft Invoices) */}
             {isDraft && (
               <Card cornerLines={false} className="bg-card/90 backdrop-blur-md border border-border/80 shadow-md">
@@ -875,102 +1258,153 @@ export function InvoicePaymentPage({
                     {t("treasury.invoices.checkout.selectMethod")}
                   </span>
 
-                  {/* Method Tabs: QRIS, VA, E-Wallet */}
-                  <div className="grid grid-cols-3 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedMethod("qris")}
-                      className={`p-3 border text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${selectedMethod === "qris"
-                        ? "bg-primary/20 border-primary text-foreground shadow-sm ring-1 ring-primary/40"
-                        : "bg-muted/15 border-border/60 text-muted-foreground hover:border-border hover:bg-muted/30"
-                        }`}
+                  {/* Method Tabs: Only render active/enabled methods */}
+                  {availableMethodsCount > 0 ? (
+                    <div
+                      className={`grid gap-2 ${
+                        availableMethodsCount === 1
+                          ? "grid-cols-1"
+                          : availableMethodsCount === 2
+                            ? "grid-cols-2"
+                            : "grid-cols-3"
+                      }`}
                     >
-                      <QrCode className={`w-5 h-5 ${selectedMethod === "qris" ? "text-primary" : "text-muted-foreground"}`} />
-                      <span className="text-xs font-mono font-bold">QRIS</span>
-                    </button>
+                      {isQrisAvailable && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedMethod("qris")}
+                          className={`p-3 border text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
+                            selectedMethod === "qris"
+                              ? "bg-primary/20 border-primary text-foreground shadow-sm ring-1 ring-primary/40"
+                              : "bg-muted/15 border-border/60 text-muted-foreground hover:border-border hover:bg-muted/30"
+                          }`}
+                        >
+                          <QrCode className={`w-5 h-5 ${selectedMethod === "qris" ? "text-primary" : "text-muted-foreground"}`} />
+                          <span className="text-xs font-mono font-bold">QRIS</span>
+                          <span className="text-[10px] text-muted-foreground font-mono">
+                            {qrisFeeEstimate === 0
+                              ? t("treasury.invoices.checkout.freeFee")
+                              : `+Rp ${qrisFeeEstimate.toLocaleString()}`}
+                          </span>
+                        </button>
+                      )}
 
-                    <button
-                      type="button"
-                      onClick={() => setSelectedMethod("va")}
-                      className={`p-3 border text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${selectedMethod === "va"
-                        ? "bg-primary/20 border-primary text-foreground shadow-sm ring-1 ring-primary/40"
-                        : "bg-muted/15 border-border/60 text-muted-foreground hover:border-border hover:bg-muted/30"
-                        }`}
-                    >
-                      <Building className={`w-5 h-5 ${selectedMethod === "va" ? "text-primary" : "text-muted-foreground"}`} />
-                      <span className="text-xs font-mono font-bold">Virtual Account</span>
-                    </button>
+                      {isVaAvailable && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedMethod("va")}
+                          className={`p-3 border text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
+                            selectedMethod === "va"
+                              ? "bg-primary/20 border-primary text-foreground shadow-sm ring-1 ring-primary/40"
+                              : "bg-muted/15 border-border/60 text-muted-foreground hover:border-border hover:bg-muted/30"
+                          }`}
+                        >
+                          <Building className={`w-5 h-5 ${selectedMethod === "va" ? "text-primary" : "text-muted-foreground"}`} />
+                          <span className="text-xs font-mono font-bold">Virtual Account</span>
+                          <span className="text-[10px] text-muted-foreground font-mono">
+                            +Rp {Number(publicMethods?.va?.banks?.[0]?.fee?.flat ?? 4200).toLocaleString()}
+                          </span>
+                        </button>
+                      )}
 
-                    <button
-                      type="button"
-                      onClick={() => setSelectedMethod("ewallet")}
-                      className={`p-3 border text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${selectedMethod === "ewallet"
-                        ? "bg-primary/20 border-primary text-foreground shadow-sm ring-1 ring-primary/40"
-                        : "bg-muted/15 border-border/60 text-muted-foreground hover:border-border hover:bg-muted/30"
-                        }`}
-                    >
-                      <Wallet className={`w-5 h-5 ${selectedMethod === "ewallet" ? "text-primary" : "text-muted-foreground"}`} />
-                      <span className="text-xs font-mono font-bold">E-Wallet</span>
-                    </button>
-                  </div>
+                      {isEwalletAvailable && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedMethod("ewallet")}
+                          className={`p-3 border text-center transition-all cursor-pointer flex flex-col items-center gap-1.5 ${
+                            selectedMethod === "ewallet"
+                              ? "bg-primary/20 border-primary text-foreground shadow-sm ring-1 ring-primary/40"
+                              : "bg-muted/15 border-border/60 text-muted-foreground hover:border-border hover:bg-muted/30"
+                          }`}
+                        >
+                          <Wallet className={`w-5 h-5 ${selectedMethod === "ewallet" ? "text-primary" : "text-muted-foreground"}`} />
+                          <span className="text-xs font-mono font-bold">E-Wallet</span>
+                          <span className="text-[10px] text-muted-foreground font-mono">
+                            +{Number(publicMethods?.ewallet?.wallets?.[0]?.fee?.percent ?? 2)}%
+                          </span>
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="p-4 bg-muted/20 border border-border/60 text-center space-y-1 font-mono text-xs text-muted-foreground">
+                      <AlertTriangle className="w-5 h-5 text-amber-400 mx-auto mb-1" />
+                      <p className="font-semibold text-foreground">
+                        {i18n.language === "id"
+                          ? "Metode Pembayaran Tidak Tersedia"
+                          : "No Payment Methods Available"}
+                      </p>
+                      <p className="text-[11px]">
+                        {i18n.language === "id"
+                          ? "Organisasi belum mengaktifkan metode pembayaran gateway untuk tagihan ini."
+                          : "The organization has not enabled payment gateway methods for this invoice."}
+                      </p>
+                    </div>
+                  )}
 
                   {/* Sub-selector for Virtual Account */}
-                  {selectedMethod === "va" && (
+                  {selectedMethod === "va" && isVaAvailable && publicMethods?.va?.banks && publicMethods.va.banks.length > 0 && (
                     <div className="p-3 bg-muted/15 border border-border/60 space-y-2">
                       <label className="text-xs font-medium text-foreground block font-mono">
                         {t("treasury.invoices.checkout.selectBank")}
                       </label>
                       <div className="grid grid-cols-2 gap-2">
-                        {(publicMethods?.va?.banks || [
-                          { code: "BNI", name: "BNI", fee: { flat: 4200 } },
-                          { code: "BCA", name: "BCA", fee: { flat: 4200 } },
-                          { code: "MANDIRI", name: "Mandiri", fee: { flat: 4200 } },
-                          { code: "BRI", name: "BRI", fee: { flat: 4200 } },
-                        ]).map((b: any) => (
-                          <button
-                            type="button"
-                            key={b.code}
-                            onClick={() => setSelectedBank(b.code)}
-                            className={`p-2 border text-left flex items-center justify-between text-xs font-mono transition-all cursor-pointer ${selectedBank === b.code
-                              ? "bg-primary/20 border-primary text-foreground font-bold"
-                              : "bg-background/80 border-border/60 text-muted-foreground hover:border-border"
+                        {publicMethods.va.banks.map((b: any) => {
+                          const bankFee = invoice
+                            ? Math.ceil(invoice.subtotal * (Number(b.fee?.percent ?? 0) / 100)) +
+                              Number(b.fee?.flat ?? 4200)
+                            : 4200;
+                          return (
+                            <button
+                              type="button"
+                              key={b.code}
+                              onClick={() => setSelectedBank(b.code)}
+                              className={`p-2 border text-left flex items-center justify-between text-xs font-mono transition-all cursor-pointer ${
+                                selectedBank.toUpperCase() === b.code.toUpperCase()
+                                  ? "bg-primary/20 border-primary text-foreground font-bold"
+                                  : "bg-background/80 border-border/60 text-muted-foreground hover:border-border"
                               }`}
-                          >
-                            <span>{b.name}</span>
-                            <span className="text-[10px] text-muted-foreground">
-                              +Rp {Number(b.fee?.flat ?? 4200).toLocaleString()}
-                            </span>
-                          </button>
-                        ))}
+                            >
+                              <span>{b.name}</span>
+                              <span className="text-[10px] text-muted-foreground">
+                                +Rp {bankFee.toLocaleString()}
+                              </span>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
 
                   {/* Sub-selector for E-Wallet */}
-                  {selectedMethod === "ewallet" && (
+                  {selectedMethod === "ewallet" && isEwalletAvailable && publicMethods?.ewallet?.wallets && publicMethods.ewallet.wallets.length > 0 && (
                     <div className="p-3 bg-muted/15 border border-border/60 space-y-2">
                       <label className="text-xs font-medium text-foreground block font-mono">
                         {t("treasury.invoices.checkout.selectWallet")}
                       </label>
                       <div className="grid grid-cols-3 gap-2">
-                        {(publicMethods?.ewallet?.wallets || [
-                          { code: "DANA", name: "DANA", fee: { percent: 2 } },
-                          { code: "SHOPEE", name: "ShopeePay", fee: { percent: 2 } },
-                          { code: "OVO", name: "OVO", fee: { percent: 2 } },
-                        ]).map((w: any) => (
-                          <button
-                            type="button"
-                            key={w.code}
-                            onClick={() => setSelectedWallet(w.code)}
-                            className={`p-2 border text-center text-xs font-mono transition-all cursor-pointer ${selectedWallet === w.code
-                              ? "bg-primary/20 border-primary text-foreground font-bold"
-                              : "bg-background/80 border-border/60 text-muted-foreground hover:border-border"
+                        {publicMethods.ewallet.wallets.map((w: any) => {
+                          const walletFee = invoice
+                            ? Math.ceil(invoice.subtotal * (Number(w.fee?.percent ?? 2) / 100)) +
+                              Number(w.fee?.flat ?? 0)
+                            : 0;
+                          return (
+                            <button
+                              type="button"
+                              key={w.code}
+                              onClick={() => setSelectedWallet(w.code)}
+                              className={`p-2 border text-center text-xs font-mono transition-all cursor-pointer ${
+                                selectedWallet.toUpperCase() === w.code.toUpperCase()
+                                  ? "bg-primary/20 border-primary text-foreground font-bold"
+                                  : "bg-background/80 border-border/60 text-muted-foreground hover:border-border"
                               }`}
-                          >
-                            <div>{w.name}</div>
-                            <div className="text-[10px] text-muted-foreground">+{w.fee?.percent ?? 2}%</div>
-                          </button>
-                        ))}
+                            >
+                              <div>{w.name}</div>
+                              <div className="text-[10px] text-muted-foreground">
+                                +Rp {walletFee.toLocaleString()}
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -981,7 +1415,7 @@ export function InvoicePaymentPage({
                     variant="cyber"
                     chamfer="dual"
                     size="default"
-                    disabled={isInitiating}
+                    disabled={isInitiating || availableMethodsCount === 0}
                     onClick={() => {
                       void handleInitiatePayment();
                     }}
@@ -990,9 +1424,11 @@ export function InvoicePaymentPage({
                     <span>
                       {isInitiating
                         ? t("treasury.invoices.checkout.generating")
-                        : `${t("treasury.invoices.checkout.generatePayment", {
-                          method: selectedMethod.toUpperCase(),
-                        })} • ${invoice.currency} ${previewTotal.toLocaleString()}`}
+                        : availableMethodsCount === 0
+                          ? (i18n.language === "id" ? "Metode Tidak Tersedia" : "Payment Unavailable")
+                          : `${t("treasury.invoices.checkout.generatePayment", {
+                            method: selectedMethod.toUpperCase(),
+                          })} • ${invoice.currency} ${previewTotal.toLocaleString()}`}
                     </span>
                   </Button>
                 </CardContent>

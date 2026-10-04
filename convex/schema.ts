@@ -258,23 +258,48 @@ export default defineSchema({
     .index("by_ledgerEntryId", ["ledgerEntryId"])
     .index("by_invoiceId", ["invoiceId"]),
 
-  // BorderPay organization payment gateway configuration
+  // Modular organization payment gateway configuration
   organizationPaymentConfig: defineTable({
     organizationId: v.id("organizations"),
-    provider: v.literal("borderpay"),
+    provider: v.string(), // e.g. "borderpay", "midtrans", "xendit"
     apiKey: v.string(), // Server-side secret (bp_test_... or bp_live_...)
-    webhookToken: v.optional(v.string()), // bpt_... project verification token
+    webhookToken: v.optional(v.string()), // Verification token
     gatewayKeyId: v.optional(v.string()), // SHA-256 fingerprint of registered CLE gateway signing key
     gatewayPrivateKeyJwk: v.optional(v.string()), // Encrypted/server-held private key for automated CLE commits
     isEnabled: v.boolean(),
     isTestMode: v.boolean(),
-    rawFetchedMethods: v.optional(v.any()), // Cached GET /api/v1/payment-methods response
+    rawFetchedMethods: v.optional(v.any()), // Cached payment methods response
     methodOverrides: v.optional(
       v.object({
         qrisEnabled: v.boolean(),
+        vaEnabled: v.optional(v.boolean()),
+        ewalletEnabled: v.optional(v.boolean()),
         enabledBanks: v.array(v.string()),
         enabledWallets: v.array(v.string()),
+        customQrisFee: v.optional(
+          v.object({
+            type: v.union(v.literal("flat"), v.literal("percent")),
+            value: v.number(),
+          })
+        ),
       })
+    ),
+    channelRouting: v.optional(
+      v.object({
+        qrisGateway: v.optional(v.string()),
+        vaGateway: v.optional(v.string()),
+        ewalletGateway: v.optional(v.string()),
+      })
+    ),
+    providerConfigs: v.optional(
+      v.record(
+        v.string(),
+        v.object({
+          apiKey: v.string(),
+          webhookToken: v.optional(v.string()),
+          isTestMode: v.optional(v.boolean()),
+        })
+      )
     ),
     lastFetchedAt: v.optional(v.number()),
     updatedBy: v.id("users"),
@@ -320,7 +345,9 @@ export default defineSchema({
       v.union(v.literal("qris"), v.literal("va"), v.literal("ewallet"))
     ),
     selectedBankCode: v.optional(v.string()),
-    borderpayReferenceId: v.optional(v.string()),
+    gatewayProvider: v.optional(v.string()), // e.g. "borderpay"
+    gatewayReferenceId: v.optional(v.string()), // Provider transaction/order reference
+    borderpayReferenceId: v.optional(v.string()), // Backward-compatibility alias
     payUrl: v.optional(v.string()),
     qrString: v.optional(v.string()),
     vaNumber: v.optional(v.string()),
@@ -328,6 +355,10 @@ export default defineSchema({
     checkoutUrl: v.optional(v.string()),
     expiresAt: v.optional(v.number()),
     paidAt: v.optional(v.number()),
+
+    // Customer confirmation tracking (e.g. TemanQRIS 'Sudah Bayar')
+    isAwaitingConfirmation: v.optional(v.boolean()),
+    awaitingConfirmationAt: v.optional(v.number()),
 
     // CLE Settlement link (populated upon webhook payment for dues invoices)
     ledgerEntryId: v.optional(v.id("ledgerEntries")),
