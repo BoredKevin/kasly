@@ -80,7 +80,6 @@ export function DuesSpreadsheetPane({
       ? {
         organizationId,
         fundId,
-        limitEvents: 60,
       }
       : "skip"
   );

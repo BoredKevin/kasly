@@ -635,13 +635,17 @@ export const listDuesEvents = query({
       throw new Error("Fund not found or does not belong to this organization.");
     }
 
-    const events = await ctx.db
+    const eventsQuery = ctx.db
       .query("duesEvents")
       .withIndex("by_fundId_and_dueDate", (q) =>
         q.eq("fundId", args.fundId)
       )
-      .order("desc")
-      .take(args.limit ?? 50);
+      .order("desc");
+
+    const events =
+      args.limit !== undefined
+        ? await eventsQuery.take(args.limit)
+        : await eventsQuery.collect();
 
     return events;
   },
@@ -803,13 +807,17 @@ export const getDuesSpreadsheet = query({
     }
 
     // 1. Fetch events (ordered oldest to newest for spreadsheet left-to-right)
-    const rawEvents = await ctx.db
+    const rawEventsQuery = ctx.db
       .query("duesEvents")
       .withIndex("by_fundId_and_dueDate", (q) =>
         q.eq("fundId", args.fundId)
       )
-      .order("desc")
-      .take(args.limitEvents ?? 20);
+      .order("desc");
+
+    const rawEvents =
+      args.limitEvents !== undefined
+        ? await rawEventsQuery.take(args.limitEvents)
+        : await rawEventsQuery.collect();
 
     const events = [...rawEvents].reverse();
 
