@@ -8,7 +8,7 @@ export function Footer() {
 
   return (
     <>
-      <footer className="w-full border-t border-border/40 bg-background/50 backdrop-blur-sm py-4 px-4 sm:px-8 mt-auto relative z-10">
+      <footer className="w-full border-t border-border/40 bg-background/50 backdrop-blur-sm py-4 px-4 sm:px-8 mt-auto relative z-0">
         <div className="max-w-6xl mx-auto flex items-center justify-center text-center text-xs text-muted-foreground font-mono">
           <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
             <span>&copy; {currentYear}</span>

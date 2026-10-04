@@ -86,7 +86,7 @@ export const createDuesInvoice = mutation({
     const subtotal = selectedToPay.reduce((sum, item) => sum + item.event.amount, 0);
 
     const targetUser = await ctx.db.get("users", userId);
-    const payerName = targetUser?.name || "Member";
+    const payerName = member.nickname || targetUser?.name || "Member";
     const payerEmail = targetUser?.email || undefined;
     const periodLabels = selectedToPay.map((item) => item.event.periodLabel);
 
@@ -320,6 +320,7 @@ export const getInvoice = query({
       organizationName: org?.name || "Organization",
       fundName: fund?.name || "General Fund",
       isTestMode: config?.isTestMode ?? false,
+      qrisName: config?.qrisName || org?.name || "Kasly Payment",
     };
   },
 });

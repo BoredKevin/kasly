@@ -268,6 +268,7 @@ export default defineSchema({
     gatewayPrivateKeyJwk: v.optional(v.string()), // Encrypted/server-held private key for automated CLE commits
     isEnabled: v.boolean(),
     isTestMode: v.boolean(),
+    qrisName: v.optional(v.string()), // Custom merchant/business name printed on the QRIS header
     rawFetchedMethods: v.optional(v.any()), // Cached payment methods response
     methodOverrides: v.optional(
       v.object({

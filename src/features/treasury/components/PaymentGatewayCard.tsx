@@ -41,6 +41,12 @@ interface PaymentGatewayCardProps {
   organizationId: Id<"organizations">;
 }
 
+interface GatewayOption {
+  id: string;
+  name: string;
+  supportedChannels?: readonly string[] | string[];
+}
+
 export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) {
   const { t } = useTranslation();
 
@@ -76,6 +82,9 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
   // Custom QRIS Surcharge Settings (especially for TemanQRIS)
   const [customQrisFeeType, setCustomQrisFeeType] = useState<"flat" | "percent">("flat");
   const [customQrisFeeValue, setCustomQrisFeeValue] = useState<number>(0);
+
+  // Custom QRIS Display Name (Printed on QRIS Header)
+  const [qrisName, setQrisName] = useState("");
 
   // Specific Bank & Wallet Selections
   const standardBanks = [
@@ -123,6 +132,7 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
 
   // Synchronize state when config query resolves
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect */
     if (config && !hasInitialized) {
       setIsEnabled(config.isEnabled);
       setWebhookToken(config.webhookToken || "");
@@ -156,6 +166,9 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
       // Auto-expand credentials if neither provider is set up yet
       if (!config.hasApiKey && !config.providerConfigs?.temanqris?.hasApiKey) {
         setIsEditingCredentials(true);
+      }
+      if (config.qrisName !== undefined) {
+        setQrisName(config.qrisName);
       }
       setHasInitialized(true);
     }
@@ -213,6 +226,7 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
         apiKey: apiKey.trim() || undefined,
         webhookToken: webhookToken.trim(),
         isEnabled,
+        qrisName: qrisName.trim() || undefined,
         methodOverrides: {
           qrisEnabled,
           vaEnabled,
@@ -279,19 +293,22 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
     );
   };
 
-  const gatewaysList = availableGateways || [
+  const fallbackGateways: GatewayOption[] = [
     { id: "borderpay", name: "BorderPay (Default)", supportedChannels: ["qris", "va", "ewallet"] },
     { id: "temanqris", name: "TemanQRIS", supportedChannels: ["qris"] },
   ];
 
+  const gatewaysList: GatewayOption[] =
+    (availableGateways as GatewayOption[] | undefined) || fallbackGateways;
+
   const qrisGateways = gatewaysList.filter(
-    (g: any) => !g.supportedChannels || g.supportedChannels.includes("qris")
+    (g: GatewayOption) => !g.supportedChannels || g.supportedChannels.includes("qris")
   );
   const vaGateways = gatewaysList.filter(
-    (g: any) => !g.supportedChannels || g.supportedChannels.includes("va")
+    (g: GatewayOption) => !g.supportedChannels || g.supportedChannels.includes("va")
   );
   const ewalletGateways = gatewaysList.filter(
-    (g: any) => !g.supportedChannels || g.supportedChannels.includes("ewallet")
+    (g: GatewayOption) => !g.supportedChannels || g.supportedChannels.includes("ewallet")
   );
 
   return (
@@ -342,7 +359,7 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
         </div>
       </CardHeader>
 
-      <form onSubmit={handleSave}>
+      <form onSubmit={(e) => { void handleSave(e); }}>
         <CardContent className="space-y-6 pt-5">
           {/* Feedback Banner */}
           {feedback && (
@@ -757,12 +774,41 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
                       onChange={(e) => setQrisGateway(e.target.value)}
                       className="bg-black/40 border border-border/80 text-foreground font-mono text-xs px-2.5 py-1 focus:border-primary focus:outline-none transition-colors"
                     >
-                      {qrisGateways.map((g) => (
+                      {qrisGateways.map((g: GatewayOption) => (
                         <option key={g.id} value={g.id} className="bg-neutral-900 text-foreground">
                           {g.name}
                         </option>
                       ))}
                     </select>
+                  </div>
+
+                  {/* QRIS Merchant Display Name (Bold Title in QRIS Header) */}
+                  <div className="p-3 bg-muted/15 border border-border/60 space-y-1.5">
+                    <label
+                      htmlFor="qris-display-name"
+                      className="text-xs font-semibold text-foreground flex items-center justify-between"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <QrCode className="w-3.5 h-3.5 text-primary" />
+                        <span>{t("treasury.gateway.qrisDisplayName", "QRIS Display Name")}</span>
+                      </span>
+                      <span className="text-[10px] font-mono text-muted-foreground">ASPI / BI Standard</span>
+                    </label>
+                    <Input
+                      id="qris-display-name"
+                      type="text"
+                      chamfer="dual"
+                      value={qrisName}
+                      onChange={(e) => setQrisName(e.target.value)}
+                      placeholder="e.g. BoredKevin Design"
+                      className="font-sans text-xs"
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      {t(
+                        "treasury.gateway.qrisDisplayNameHelp",
+                        "Nama usaha atau organisasi yang dicetak tebal di bagian atas template QRIS."
+                      )}
+                    </p>
                   </div>
 
                   {/* TemanQRIS Custom Surcharge Configuration */}
@@ -879,7 +925,7 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
                         onChange={(e) => setVaGateway(e.target.value)}
                         className="bg-black/40 border border-border/80 text-foreground font-mono text-xs px-2.5 py-1 focus:border-primary focus:outline-none transition-colors"
                       >
-                        {vaGateways.map((g) => (
+                        {vaGateways.map((g: GatewayOption) => (
                           <option key={g.id} value={g.id} className="bg-neutral-900 text-foreground">
                             {g.name}
                           </option>
@@ -993,7 +1039,7 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
                         onChange={(e) => setEwalletGateway(e.target.value)}
                         className="bg-black/40 border border-border/80 text-foreground font-mono text-xs px-2.5 py-1 focus:border-primary focus:outline-none transition-colors"
                       >
-                        {ewalletGateways.map((g) => (
+                        {ewalletGateways.map((g: GatewayOption) => (
                           <option key={g.id} value={g.id} className="bg-neutral-900 text-foreground">
                             {g.name}
                           </option>

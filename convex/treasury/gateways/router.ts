@@ -92,6 +92,7 @@ export const getPaymentConfig = query({
       gatewayKeyId: config.gatewayKeyId || null,
       isEnabled: config.isEnabled,
       isTestMode: config.isTestMode,
+      qrisName: config.qrisName || "",
       rawFetchedMethods: config.rawFetchedMethods || null,
       methodOverrides: config.methodOverrides || {
         qrisEnabled: true,
@@ -149,6 +150,7 @@ export const _saveConfigMutation = internalMutation({
     webhookToken: v.optional(v.string()),
     isEnabled: v.boolean(),
     isTestMode: v.boolean(),
+    qrisName: v.optional(v.string()),
     gatewayKeyId: v.string(),
     gatewayPrivateKeyJwk: v.string(),
     methodOverrides: v.object({
@@ -229,6 +231,7 @@ export const _saveConfigMutation = internalMutation({
         webhookToken: args.webhookToken,
         isEnabled: args.isEnabled,
         isTestMode: args.isTestMode,
+        qrisName: args.qrisName,
         gatewayKeyId: args.gatewayKeyId,
         gatewayPrivateKeyJwk: args.gatewayPrivateKeyJwk,
         methodOverrides: args.methodOverrides,
@@ -248,6 +251,7 @@ export const _saveConfigMutation = internalMutation({
         gatewayPrivateKeyJwk: args.gatewayPrivateKeyJwk,
         isEnabled: args.isEnabled,
         isTestMode: args.isTestMode,
+        qrisName: args.qrisName,
         methodOverrides: args.methodOverrides,
         channelRouting: args.channelRouting,
         providerConfigs: args.providerConfigs,
@@ -269,6 +273,7 @@ export const savePaymentConfig = action({
     webhookToken: v.optional(v.string()),
     isEnabled: v.boolean(),
     isTestMode: v.optional(v.boolean()),
+    qrisName: v.optional(v.string()),
     methodOverrides: v.optional(
       v.object({
         qrisEnabled: v.boolean(),
@@ -404,6 +409,7 @@ export const savePaymentConfig = action({
       webhookToken: webhookTokenToSave,
       isEnabled: args.isEnabled,
       isTestMode,
+      qrisName: args.qrisName !== undefined ? args.qrisName.trim() : existing?.qrisName,
       gatewayKeyId,
       gatewayPrivateKeyJwk,
       methodOverrides: overrides,
@@ -561,7 +567,7 @@ export const getPublicPaymentMethods = query({
       };
     }
 
-    const raw = (config.rawFetchedMethods as any) || {};
+    const raw = config.rawFetchedMethods || {};
     const overrides = config.methodOverrides || {
       qrisEnabled: true,
       vaEnabled: true,
