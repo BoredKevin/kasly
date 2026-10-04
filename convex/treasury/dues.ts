@@ -705,7 +705,7 @@ export const getDuesSummary = query({
         q.eq("fundId", args.fundId)
       )
       .order("desc")
-      .take(20);
+      .collect();
 
     let totalUnpaid = 0;
     for (const event of events) {
