@@ -56,8 +56,8 @@ The payment processing subsystem is structured into five distinct, decoupled lay
 │                           CONCRETE PROVIDER ADAPTERS                                   │
 │                                                                                        │
 │  ┌───────────────────────┐  ┌───────────────────────┐  ┌────────────────────────────┐  │
-│  │   BorderPay Adapter   │  │   Midtrans Adapter    │  │   Stripe / Xendit Adapter  │  │
-│  │  (Currently Active)   │  │      (Future)         │  │          (Future)          │  │
+│  │   BorderPay Adapter   │  │   TemanQRIS Adapter   │  │   Midtrans / Stripe / etc. │  │
+│  │     (Active: All)     │  │     (Active: QRIS)    │  │          (Future)          │  │
 │  └───────────────────────┘  └───────────────────────┘  └────────────────────────────┘  │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -284,22 +284,42 @@ sequenceDiagram
 
 To ensure zero downtime during rollout and backwards compatibility with existing BorderPay configurations:
 
-1. **Legacy Webhook Route**: `/api/borderpay-webhook` remains active and delegates directly to the BorderPay adapter.
-2. **Universal Webhook Route**: `/api/webhooks/payment/:provider` is introduced for future gateways.
+1. **BorderPay Webhook Route**: `/api/borderpay-webhook` delegates directly to the BorderPay adapter.
+2. **TemanQRIS Webhook Route**: `/api/temanqris-webhook` performs Web Crypto HMAC-SHA256 signature verification and processes `payment.paid` (CLE settlement) and `payment.awaiting_confirmation` (claim flagging).
+3. **Universal Webhook Route**: `/api/webhooks/payment/:provider` is reserved for dynamic multi-tenant gateway dispatches.
 
 ```typescript
 http.route({
   path: "/api/borderpay-webhook",
   method: "POST",
-  handler: httpAction(async (ctx, req) => {
-    return handleGatewayWebhook(ctx, req, "borderpay");
-  }),
+  handler: httpAction(async (ctx, req) => handleGatewayWebhook(ctx, req, "borderpay")),
+});
+
+http.route({
+  path: "/api/temanqris-webhook",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => handleTemanQrisWebhook(ctx, req)),
 });
 ```
 
 ---
 
-## 7. How to Implement a New Gateway in 4 Steps
+## 7. Active Adapters & Capability Matrix
+
+| Gateway Provider | Supported Rails | Fee Structure | Webhook Verification | Dedicated Documentation |
+| :--- | :--- | :--- | :--- | :--- |
+| **BorderPay** | QRIS, Virtual Accounts (6 banks), E-Wallets (3 wallets) | Surcharge: 0.7%+Rp290 (QRIS), flat per bank (VA), % per wallet | Shared Bearer/Query Webhook Token | [BorderPay Integration Guide](file:///docs/backend/borderpay-integration.md) |
+| **TemanQRIS** | QRIS (Dynamic EMVCo from registered static QRIS) | Rp 0 gateway fee (Optional custom flat/percent surcharge) | `X-TemanQRIS-Signature` (HMAC-SHA256) | [TemanQRIS Integration Guide](file:///docs/backend/gateways/temanqris.md) |
+
+### Hybrid Multi-Provider Routing
+Organizations can utilize a hybrid configuration where:
+- `channelRouting.qrisGateway = "temanqris"` (benefiting from 0% QRIS transaction fees)
+- `channelRouting.vaGateway = "borderpay"` (providing full Virtual Account bank coverage)
+- `channelRouting.ewalletGateway = "borderpay"` (providing full E-Wallet coverage)
+
+---
+
+## 8. How to Implement a New Gateway in 4 Steps
 
 To illustrate the modularity of the system, adding a new gateway (e.g., Midtrans or Xendit) requires **zero modifications** to the Invoicing or Settlement modules:
 
@@ -354,7 +374,7 @@ Expose the provider configuration in `PaymentGatewayCard.tsx`.
 
 ---
 
-## 8. Upfront Customer-Borne Fee Architecture
+## 9. Upfront Customer-Borne Fee Architecture
 
 To protect organizations from margin erosion and maintain 100% dues collection integrity:
 1. **Payer-Borne Fee Principle**: Payment gateway processing fees are borne entirely by the customer at checkout:
@@ -369,7 +389,7 @@ To protect organizations from margin erosion and maintain 100% dues collection i
 
 ---
 
-## 9. Migration & Backward Compatibility Verification
+## 10. Migration & Backward Compatibility Verification
 
 To avoid breaking active deployments, invoices in transit, or existing database records:
 - **`borderpayReferenceId` Field Alias**: The `invoices` schema maintains `borderpayReferenceId` alongside `gatewayReferenceId`.
