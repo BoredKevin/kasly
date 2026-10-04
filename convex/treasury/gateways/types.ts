@@ -67,11 +67,6 @@ export interface PaymentInitiationRequest {
   channelType: PaymentChannelType;
   channelCode?: string;
   returnUrl?: string;
-  customer?: {
-    name: string;
-    email?: string;
-    phone?: string;
-  };
 }
 
 export interface PaymentInitiationResult {
