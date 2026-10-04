@@ -142,8 +142,12 @@ http.route({
 
     // Verify webhook signature with TemanQrisAdapter
     const adapter = getGatewayAdapter("temanqris");
+    const webhookHeaders: Record<string, string> = {};
+    req.headers.forEach((value, key) => {
+      webhookHeaders[key] = value;
+    });
     const verification = await adapter.verifyAndParseWebhook(ctx, {
-      headers: Object.fromEntries(req.headers.entries()),
+      headers: webhookHeaders,
       bodyText,
       parsedBody: payload,
       secret,
