@@ -25,6 +25,14 @@ export const createDuesInvoice = mutation({
     const caller = await requireUser(ctx);
     const userId = args.targetUserId ?? caller._id;
 
+    if (userId !== caller._id) {
+      await requirePermission(
+        ctx,
+        args.organizationId,
+        PERMISSIONS.MANAGE_TREASURY
+      );
+    }
+
     const fund = await ctx.db.get("funds", args.fundId);
     if (!fund || fund.organizationId !== args.organizationId) {
       throw new Error("Selected fund does not belong to this organization.");
@@ -181,6 +189,19 @@ export const createCustomInvoice = mutation({
       throw new Error("Invoice title cannot be empty.");
     }
 
+    let memberId = undefined;
+    if (args.targetUserId) {
+      const member = await ctx.db
+        .query("members")
+        .withIndex("by_organizationId_and_userId", (q) =>
+          q.eq("organizationId", args.organizationId).eq("userId", args.targetUserId!)
+        )
+        .first();
+      if (member) {
+        memberId = member._id;
+      }
+    }
+
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, "");
     const randSuffix = Math.random().toString(36).substring(2, 7).toUpperCase();
     const invoiceNumber = `INV-${dateStr}-${randSuffix}`;
@@ -193,6 +214,7 @@ export const createCustomInvoice = mutation({
       title: trimmedTitle,
       description: args.description?.trim() || undefined,
       userId: args.targetUserId,
+      memberId,
       payerName: args.payerName.trim() || "Customer",
       payerEmail: args.payerEmail?.trim() || undefined,
       subtotal: args.amount,
@@ -205,6 +227,126 @@ export const createCustomInvoice = mutation({
     });
 
     return invoiceNumber;
+  },
+});
+
+/**
+ * Updates a draft or pending invoice's metadata or amount.
+ */
+export const updateInvoice = mutation({
+  args: {
+    invoiceId: v.id("invoices"),
+    title: v.optional(v.string()),
+    description: v.optional(v.string()),
+    payerName: v.optional(v.string()),
+    payerEmail: v.optional(v.string()),
+    amount: v.optional(v.number()), // Only editable for custom invoices in draft
+  },
+  handler: async (ctx, args) => {
+    await requireUser(ctx);
+    const invoice = await ctx.db.get("invoices", args.invoiceId);
+    if (!invoice) {
+      throw new Error("Invoice not found.");
+    }
+
+    if (invoice.status === "paid") {
+      throw new Error("Cannot edit an invoice that has already been paid.");
+    }
+
+    if (invoice.status === "cancelled" || invoice.status === "expired") {
+      throw new Error("Cannot edit a cancelled or expired invoice.");
+    }
+
+    // Must be organization admin with MANAGE_TREASURY
+    await requirePermission(
+      ctx,
+      invoice.organizationId,
+      PERMISSIONS.MANAGE_TREASURY
+    );
+
+    const patch: Record<string, any> = {};
+
+    if (args.title !== undefined) {
+      const trimmedTitle = args.title.trim();
+      if (!trimmedTitle) {
+        throw new Error("Invoice title cannot be empty.");
+      }
+      patch.title = trimmedTitle;
+    }
+
+    if (args.description !== undefined) {
+      patch.description = args.description.trim() || undefined;
+    }
+
+    if (args.payerName !== undefined) {
+      const trimmedName = args.payerName.trim();
+      if (!trimmedName) {
+        throw new Error("Payer name cannot be empty.");
+      }
+      patch.payerName = trimmedName;
+    }
+
+    if (args.payerEmail !== undefined) {
+      patch.payerEmail = args.payerEmail.trim() || undefined;
+    }
+
+    if (args.amount !== undefined) {
+      if (invoice.type !== "custom") {
+        throw new Error("Cannot modify amount for dues invoices. Dues amounts are defined by cycle schedules.");
+      }
+      if (invoice.status !== "draft") {
+        throw new Error("Cannot change amount once payment session has been initiated.");
+      }
+      if (args.amount <= 0 || !Number.isInteger(args.amount)) {
+        throw new Error("Amount must be a positive integer.");
+      }
+      patch.subtotal = args.amount;
+      patch.totalAmount = args.amount + (invoice.gatewayFee || 0);
+    }
+
+    await ctx.db.patch("invoices", invoice._id, patch);
+    return { success: true };
+  },
+});
+
+/**
+ * Permanently deletes an unpaid (draft, cancelled, or expired) invoice and releases any reserved dues cycles.
+ */
+export const deleteInvoice = mutation({
+  args: {
+    invoiceId: v.id("invoices"),
+  },
+  handler: async (ctx, args) => {
+    const invoice = await ctx.db.get("invoices", args.invoiceId);
+    if (!invoice) {
+      throw new Error("Invoice not found.");
+    }
+
+    await requirePermission(
+      ctx,
+      invoice.organizationId,
+      PERMISSIONS.MANAGE_TREASURY
+    );
+
+    if (invoice.status === "paid") {
+      throw new Error("Cannot delete a paid invoice. Paid invoices are permanent financial records.");
+    }
+
+    // Release linked dues memberships if any
+    if (invoice.duesMembershipIds) {
+      for (const mid of invoice.duesMembershipIds) {
+        const mem = await ctx.db.get("duesMemberships", mid);
+        if (mem && !mem.hasPaid && mem.invoiceId === invoice._id) {
+          await ctx.db.patch("duesMemberships", mid, {
+            invoiceId: undefined,
+            paymentMethod: undefined,
+          });
+        }
+      }
+    }
+
+    await ctx.db.delete("invoices", invoice._id);
+    return { success: true };
   },
 });
 
@@ -284,6 +426,18 @@ export const _getInvoiceByNumber = internalQuery({
         q.eq("invoiceNumber", args.invoiceNumber)
       )
       .first();
+  },
+});
+
+/**
+ * Query to lookup an invoice document by ID.
+ */
+export const getInvoiceById = query({
+  args: {
+    invoiceId: v.id("invoices"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.get("invoices", args.invoiceId);
   },
 });
 

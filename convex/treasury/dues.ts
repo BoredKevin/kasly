@@ -791,6 +791,7 @@ export const getDuesSpreadsheet = query({
         isWaived: v.optional(v.boolean()),
         paidAt: v.optional(v.number()),
         ledgerEntryId: v.optional(v.id("ledgerEntries")),
+        invoiceId: v.optional(v.id("invoices")),
       })
     ),
   }),
@@ -896,6 +897,7 @@ export const getDuesSpreadsheet = query({
         isWaived: c.isWaived,
         paidAt: c.paidAt,
         ledgerEntryId: c.ledgerEntryId,
+        invoiceId: c.invoiceId,
       })),
     };
   },
