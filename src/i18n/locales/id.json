@@ -55,7 +55,7 @@
     "myKeys": "Kunci Saya",
     "dueAdjustment": "Penyesuaian Tunggakan",
     "adminPanel": "Panel Admin",
-    "invoices": "Faktur & Tagihan",
+    "invoices": "Faktur",
     "payDues": "Bayar Tunggakan",
     "roles": "Roles",
     "invites": "Undangan",
@@ -548,7 +548,7 @@
       "noMethodsFetched": "Klik 'Sinkronisasi Kanal' di atas untuk memuat daftar bank dan e-wallet yang didukung."
     },
     "invoices": {
-      "title": "Faktur & Tagihan",
+      "title": "Faktur",
       "subtitle": "Pantau pembayaran tunggakan anggota, buat faktur kustom, dan cetak tanda terima.",
       "createCustomBtn": "Buat Faktur Kustom",
       "filterStatus": "Filter Status",
