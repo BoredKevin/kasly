@@ -1,25 +1,20 @@
 import { useState } from "react";
-import { createPortal } from "react-dom";
 import { useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
   Button,
   Input,
   Badge,
 } from "@boredkevin/ui";
+import { ResponsiveDialog } from "../../../ui";
 import {
   Shield,
-  X,
   Sparkles,
   Check,
   Palette,
   Layers,
   AlertCircle,
+  ChevronDown,
 } from "lucide-react";
 import { Id } from "../../../../convex/_generated/dataModel";
 import {
@@ -73,6 +68,7 @@ function RoleEditorForm({
       "CREATE_INVITES",
     ],
   );
+  const [showAdvanced, setShowAdvanced] = useState(Boolean(initialRole?.description));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -138,55 +134,12 @@ function RoleEditorForm({
   const categories = ["Admin", "Treasury", "Management", "Moderation", "General"] as const;
 
   return (
-    <Card telemetry="ORG.ROLE.EDIT" cornerLines className="bg-card border-border shadow-2xl">
-      <CardHeader className="pb-3 border-b border-border">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div
-              className="p-1.5 rounded-none border text-primary"
-              style={{
-                borderColor: `${color}40`,
-                backgroundColor: `${color}15`,
-                color: color,
-              }}
-            >
-              <Shield className="w-5 h-5" />
-            </div>
-            <div>
-              <CardTitle className="text-base font-semibold flex items-center gap-2">
-                <span>{isEditing ? `Edit Role: ${initialRole?.name}` : "Create New Role"}</span>
-                {isDefault && (
-                  <Badge variant="outline" className="text-[10px] font-mono">
-                    DEFAULT ROLE
-                  </Badge>
-                )}
-              </CardTitle>
-              <CardDescription className="text-xs">
-                {isEditing
-                  ? "Update role attributes, permissions, and hierarchy rank"
-                  : "Define role authority and assignable privileges"}
-              </CardDescription>
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            chamfer="dual"
-            onClick={onClose}
-            className="h-7 w-7 p-0 cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </Button>
-        </div>
-      </CardHeader>
-
-      <CardContent className="pt-4 max-h-[75vh] overflow-y-auto space-y-4">
-        <form
-          onSubmit={(e) => {
-            void handleSubmit(e);
-          }}
-          className="space-y-4"
-        >
+    <form
+      onSubmit={(e) => {
+        void handleSubmit(e);
+      }}
+      className="space-y-4 pt-1"
+    >
           {/* Role Name & Hierarchy Level */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="sm:col-span-2 space-y-1.5">
@@ -198,7 +151,7 @@ function RoleEditorForm({
                 placeholder="e.g. Moderator, Squad Lead"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                chamfer="dual"
+                chamfer="none"
                 disabled={isDefault}
                 required
               />
@@ -214,67 +167,89 @@ function RoleEditorForm({
                 max={9999}
                 value={position}
                 onChange={(e) => setPosition(Number(e.target.value))}
-                chamfer="dual"
+                chamfer="none"
                 disabled={isDefault}
                 required
               />
             </div>
           </div>
 
-          {/* Role Description */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-foreground">
-              Description
-            </label>
-            <Input
-              type="text"
-              placeholder="Role responsibilities and purpose"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              chamfer="dual"
-            />
-          </div>
+          {/* Collapsible Color & Description */}
+          <div className="pt-1">
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground font-medium transition-colors py-1 cursor-pointer"
+            >
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showAdvanced ? "rotate-180" : ""}`} />
+              <span>{showAdvanced ? "Hide styling" : "+ Role Color & Description (Optional)"}</span>
+              {!showAdvanced && (
+                <span
+                  className="w-3 h-3 rounded-full ml-1 border border-border inline-block"
+                  style={{ backgroundColor: color }}
+                />
+              )}
+            </button>
 
-          {/* Role Color Picker */}
-          <div className="space-y-2 p-3 bg-muted/20 border border-border/60">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-foreground flex items-center gap-1.5">
-                <Palette className="w-3.5 h-3.5" /> Role Color
-              </label>
-              <span
-                className="font-mono text-xs px-2 py-0.5 border"
-                style={{ color: color, borderColor: `${color}60` }}
-              >
-                {color}
-              </span>
-            </div>
+            {showAdvanced && (
+              <div className="space-y-3 pt-2 pl-3 border-l-2 border-border/60 animate-in fade-in-50 duration-150">
+                {/* Role Description */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground">
+                    Description
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="Role responsibilities and purpose"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    chamfer="none"
+                  />
+                </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
-              {PRESET_ROLE_COLORS.map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  onClick={() => setColor(preset)}
-                  className={`w-6 h-6 rounded-none transition-transform flex items-center justify-center border cursor-pointer ${
-                    color.toLowerCase() === preset.toLowerCase()
-                      ? "scale-110 border-white shadow-sm ring-1 ring-primary"
-                      : "border-transparent opacity-80 hover:opacity-100"
-                  }`}
-                  style={{ backgroundColor: preset }}
-                >
-                  {color.toLowerCase() === preset.toLowerCase() && (
-                    <Check className="w-3.5 h-3.5 text-black drop-shadow" />
-                  )}
-                </button>
-              ))}
-              <input
-                type="color"
-                value={color}
-                onChange={(e) => setColor(e.target.value)}
-                className="w-6 h-6 p-0 bg-transparent border-0 cursor-pointer"
-                title="Custom color picker"
-              />
-            </div>
+                {/* Role Color Picker */}
+                <div className="space-y-2 p-3 bg-muted/20 border border-border/60 rounded-[var(--fintech-radius-sm)]">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                      <Palette className="w-3.5 h-3.5" /> Role Color
+                    </label>
+                    <span
+                      className="font-mono text-xs px-2 py-0.5 border rounded-[var(--fintech-radius-sm)]"
+                      style={{ color: color, borderColor: `${color}60` }}
+                    >
+                      {color}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {PRESET_ROLE_COLORS.map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => setColor(preset)}
+                        className={`w-6 h-6 rounded-full transition-transform flex items-center justify-center border cursor-pointer ${
+                          color.toLowerCase() === preset.toLowerCase()
+                            ? "scale-110 border-white shadow-sm ring-2 ring-primary"
+                            : "border-transparent opacity-80 hover:opacity-100"
+                        }`}
+                        style={{ backgroundColor: preset }}
+                      >
+                        {color.toLowerCase() === preset.toLowerCase() && (
+                          <Check className="w-3.5 h-3.5 text-black drop-shadow" />
+                        )}
+                      </button>
+                    ))}
+                    <input
+                      type="color"
+                      value={color}
+                      onChange={(e) => setColor(e.target.value)}
+                      className="w-6 h-6 p-0 bg-transparent border-0 cursor-pointer"
+                      title="Custom color picker"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Permissions Checklist */}
@@ -377,11 +352,11 @@ function RoleEditorForm({
             </div>
           )}
 
-          <div className="pt-3 flex items-center justify-end gap-2 border-t border-border">
+          <div className="pt-3 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 border-t border-border">
             <Button
               type="button"
               variant="outline"
-              chamfer="dual"
+              chamfer="none"
               onClick={onClose}
               disabled={isSubmitting}
               size="sm"
@@ -392,10 +367,10 @@ function RoleEditorForm({
             <Button
               type="submit"
               variant="cyber"
-              chamfer="dual"
+              chamfer="none"
               size="sm"
               disabled={isSubmitting || !name.trim()}
-              className="text-xs flex items-center gap-1.5 cursor-pointer"
+              className="text-xs flex items-center justify-center gap-1.5 cursor-pointer font-semibold"
             >
               {isSubmitting ? (
                 <span>Saving...</span>
@@ -408,27 +383,33 @@ function RoleEditorForm({
             </Button>
           </div>
         </form>
-      </CardContent>
-    </Card>
   );
 }
 
 export function RoleEditorModal(props: RoleEditorModalProps) {
-  if (!props.isOpen || typeof document === "undefined") return null;
+  if (!props.isOpen) return null;
 
-  const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
-      <div className="w-full max-w-xl my-8">
-        <RoleEditorForm
-          key={props.initialRole?._id ?? "new-role"}
-          organizationId={props.organizationId}
-          initialRole={props.initialRole}
-          suggestedPosition={props.suggestedPosition}
-          onClose={props.onClose}
-        />
-      </div>
-    </div>
+  const isEditing = Boolean(props.initialRole?._id);
+
+  return (
+    <ResponsiveDialog
+      isOpen={props.isOpen}
+      onClose={props.onClose}
+      title={isEditing ? `Edit Role: ${props.initialRole?.name}` : "Create New Role"}
+      description={
+        isEditing
+          ? "Update role attributes, permissions, and hierarchy rank"
+          : "Define role authority and assignable privileges"
+      }
+      maxWidth="lg"
+    >
+      <RoleEditorForm
+        key={props.initialRole?._id ?? "new-role"}
+        organizationId={props.organizationId}
+        initialRole={props.initialRole}
+        suggestedPosition={props.suggestedPosition}
+        onClose={props.onClose}
+      />
+    </ResponsiveDialog>
   );
-
-  return createPortal(modalContent, document.body);
 }

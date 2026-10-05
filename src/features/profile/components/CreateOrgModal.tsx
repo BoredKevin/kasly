@@ -1,18 +1,13 @@
 import { useState } from "react";
-import { createPortal } from "react-dom";
 import { useMutation, useQuery } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
   Button,
   Input,
 } from "@boredkevin/ui";
-import { Building2, X, Sparkles, AlertTriangle } from "lucide-react";
+import { ResponsiveDialog } from "../../../ui";
+import { Sparkles, AlertTriangle, ChevronDown } from "lucide-react";
 import { Id } from "../../../../convex/_generated/dataModel";
 
 interface CreateOrgModalProps {
@@ -30,6 +25,7 @@ export function CreateOrgModal({
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,7 +34,7 @@ export function CreateOrgModal({
 
   const createOrg = useMutation(api.organizations.create);
 
-  if (!isOpen || typeof document === "undefined") return null;
+  if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,6 +53,7 @@ export function CreateOrgModal({
       setName("");
       setSlug("");
       setDescription("");
+      setShowAdvanced(false);
       onSuccess?.(orgId);
       onClose();
     } catch (err: unknown) {
@@ -68,156 +65,147 @@ export function CreateOrgModal({
     }
   };
 
-  const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-md">
-        <Card telemetry="ORG.CREATE" cornerLines className="bg-card border-border shadow-2xl">
-          <CardHeader className="pb-4 border-b border-border">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="p-1.5 bg-primary/10 border border-primary/20 text-primary">
-                  <Building2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <CardTitle className="text-base font-semibold">
-                    {t("organization.createOrg")}
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    Establish a new organization workspace
-                  </CardDescription>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                chamfer="dual"
-                onClick={onClose}
-                className="h-7 w-7 p-0 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </Button>
+  return (
+    <ResponsiveDialog
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t("organization.createOrg", "Create Organization")}
+      description="Establish a new organization workspace"
+      maxWidth="md"
+    >
+      <div className="pt-1">
+        {isCreationDisabled && (
+          <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-start gap-2.5 rounded-[var(--fintech-radius-sm)]">
+            <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-semibold text-foreground">
+                Organization Creation Disabled
+              </p>
+              <p className="text-muted-foreground text-[11px] leading-relaxed">
+                Organization creation is currently disabled by system policy. You can still join existing organizations via invite code.
+              </p>
             </div>
-          </CardHeader>
+          </div>
+        )}
 
-          <CardContent className="pt-5">
-            {isCreationDisabled && (
-              <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-start gap-2.5">
-                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <p className="font-semibold text-foreground">
-                    Organization Creation Disabled
+        <form
+          onSubmit={(e) => {
+            void handleSubmit(e);
+          }}
+          className="space-y-4"
+        >
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-foreground">
+              {t("organization.orgName")} *
+            </label>
+            <Input
+              type="text"
+              placeholder="e.g. Cravion Class, Robotics Club"
+              value={name}
+              disabled={isCreationDisabled || isSubmitting}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (!slug) {
+                  setSlug(
+                    e.target.value
+                      .toLowerCase()
+                      .replace(/[^a-z0-9]+/g, "-")
+                      .replace(/(^-|-$)/g, ""),
+                  );
+                }
+              }}
+              chamfer="none"
+              required
+              autoFocus
+            />
+          </div>
+
+          {/* Advanced: Slug & Description */}
+          <div className="pt-1">
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground font-medium transition-colors py-1 cursor-pointer"
+            >
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showAdvanced ? "rotate-180" : ""}`} />
+              <span>{showAdvanced ? "Hide settings" : "+ Slug & Description (Optional)"}</span>
+              {!showAdvanced && slug && <span className="text-[10px] font-mono text-primary ml-1">({slug})</span>}
+            </button>
+
+            {showAdvanced && (
+              <div className="space-y-3 pt-2 pl-3 border-l-2 border-border/60 animate-in fade-in-50 duration-150">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground">
+                    {t("organization.orgSlug")}
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="e.g. cravion-class"
+                    value={slug}
+                    disabled={isCreationDisabled || isSubmitting}
+                    onChange={(e) => setSlug(e.target.value)}
+                    chamfer="none"
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Unique identifier used in URLs and invitations
                   </p>
-                  <p className="text-muted-foreground text-[11px] leading-relaxed">
-                    Organization creation is currently disabled by system policy. You can still join existing organizations via invite code.
-                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground">
+                    {t("organization.orgDescription")}
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="Brief organization purpose"
+                    value={description}
+                    disabled={isCreationDisabled || isSubmitting}
+                    onChange={(e) => setDescription(e.target.value)}
+                    chamfer="none"
+                  />
                 </div>
               </div>
             )}
+          </div>
 
-            <form
-              onSubmit={(e) => {
-                void handleSubmit(e);
-              }}
-              className="space-y-4"
+          {error && (
+            <div className="p-2.5 bg-destructive/15 border border-destructive/40 text-destructive-foreground text-xs font-mono rounded-[var(--fintech-radius-sm)]">
+              {error}
+            </div>
+          )}
+
+          <div className="pt-3 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 border-t border-border">
+            <Button
+              type="button"
+              variant="outline"
+              chamfer="none"
+              onClick={onClose}
+              disabled={isSubmitting}
+              size="sm"
+              className="text-xs cursor-pointer"
             >
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">
-                  {t("organization.orgName")} *
-                </label>
-                <Input
-                  type="text"
-                  placeholder="e.g. Cyberdine Systems"
-                  value={name}
-                  disabled={isCreationDisabled || isSubmitting}
-                  onChange={(e) => {
-                    setName(e.target.value);
-                    if (!slug) {
-                      setSlug(
-                        e.target.value
-                          .toLowerCase()
-                          .replace(/[^a-z0-9]+/g, "-")
-                          .replace(/(^-|-$)/g, ""),
-                      );
-                    }
-                  }}
-                  chamfer="dual"
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">
-                  {t("organization.orgSlug")}
-                </label>
-                <Input
-                  type="text"
-                  placeholder="e.g. cyberdine-systems"
-                  value={slug}
-                  disabled={isCreationDisabled || isSubmitting}
-                  onChange={(e) => setSlug(e.target.value)}
-                  chamfer="dual"
-                />
-                <p className="text-[11px] text-muted-foreground">
-                  Unique identifier used in URLs and invitations
-                </p>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">
-                  {t("organization.orgDescription")}
-                </label>
-                <Input
-                  type="text"
-                  placeholder="Brief organization purpose"
-                  value={description}
-                  disabled={isCreationDisabled || isSubmitting}
-                  onChange={(e) => setDescription(e.target.value)}
-                  chamfer="dual"
-                />
-              </div>
-
-              {error && (
-                <div className="p-2.5 bg-destructive/15 border border-destructive/40 text-destructive-foreground text-xs font-mono">
-                  {error}
-                </div>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              type="submit"
+              variant="cyber"
+              chamfer="none"
+              size="sm"
+              disabled={isCreationDisabled || isSubmitting || !name.trim()}
+              className="text-xs flex items-center justify-center gap-1.5 cursor-pointer font-semibold"
+            >
+              {isSubmitting ? (
+                <span>{t("common.loading")}</span>
+              ) : (
+                <>
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>{t("organization.createOrg")}</span>
+                </>
               )}
-
-              <div className="pt-3 flex items-center justify-end gap-2 border-t border-border">
-                <Button
-                  type="button"
-                  variant="outline"
-                  chamfer="dual"
-                  onClick={onClose}
-                  disabled={isSubmitting}
-                  size="sm"
-                  className="text-xs cursor-pointer"
-                >
-                  {t("common.cancel")}
-                </Button>
-                <Button
-                  type="submit"
-                  variant="cyber"
-                  chamfer="dual"
-                  size="sm"
-                  disabled={isCreationDisabled || isSubmitting || !name.trim()}
-                  className="text-xs flex items-center gap-1.5 cursor-pointer"
-                >
-                  {isSubmitting ? (
-                    <span>{t("common.loading")}</span>
-                  ) : (
-                    <>
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>{t("organization.createOrg")}</span>
-                    </>
-                  )}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+            </Button>
+          </div>
+        </form>
       </div>
-    </div>
+    </ResponsiveDialog>
   );
-
-  return createPortal(modalContent, document.body);
 }

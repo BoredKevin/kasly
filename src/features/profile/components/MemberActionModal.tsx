@@ -1,20 +1,13 @@
 import { useState } from "react";
-import { createPortal } from "react-dom";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
   Button,
   Input,
   Badge,
 } from "@boredkevin/ui";
+import { ResponsiveDialog } from "../../../ui";
 import {
-  UserCog,
-  X,
   Shield,
   Tag,
   UserMinus,
@@ -212,94 +205,67 @@ function MemberActionModalInner({
   const assignableRoles = roles?.filter((r) => !r.isDefault) ?? [];
 
   return (
-    <Card telemetry="ORG.MEMBER.MGMT" cornerLines className="bg-card border-border shadow-2xl">
-      <CardHeader className="pb-3 border-b border-border">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="p-1.5 bg-primary/10 border border-primary/20 text-primary">
-              <UserCog className="w-5 h-5" />
-            </div>
-            <div>
-              <CardTitle className="text-base font-semibold">
-                Manage {targetMember.displayName}
-              </CardTitle>
-              <CardDescription className="text-xs">
-                {targetMember.email || "Workspace Member Management"}
-              </CardDescription>
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            chamfer="dual"
-            onClick={onClose}
-            className="h-7 w-7 p-0 cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </Button>
-        </div>
+    <div className="space-y-4">
+      {/* Tab Navigation */}
+      <div className="flex items-center gap-1.5 pb-3 border-b border-border overflow-x-auto">
+        <button
+          type="button"
+          onClick={() => setActiveTab("roles")}
+          className={`px-3 py-1.5 text-xs font-mono border rounded transition-colors flex items-center gap-1.5 cursor-pointer shrink-0 ${
+            activeTab === "roles"
+              ? "bg-primary/20 border-primary text-foreground font-semibold"
+              : "bg-muted/20 border-border/60 text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Shield className="w-3.5 h-3.5" />
+          <span>Roles</span>
+        </button>
 
-        {/* Tab Navigation */}
-        <div className="flex items-center gap-1.5 pt-3 border-t border-border/40 mt-3">
+        <button
+          type="button"
+          onClick={() => setActiveTab("nickname")}
+          className={`px-3 py-1.5 text-xs font-mono border rounded transition-colors flex items-center gap-1.5 cursor-pointer shrink-0 ${
+            activeTab === "nickname"
+              ? "bg-primary/20 border-primary text-foreground font-semibold"
+              : "bg-muted/20 border-border/60 text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <Tag className="w-3.5 h-3.5" />
+          <span>Nickname</span>
+        </button>
+
+        {canKick && (
           <button
             type="button"
-            onClick={() => setActiveTab("roles")}
-            className={`px-3 py-1 text-xs font-mono border transition-colors flex items-center gap-1.5 cursor-pointer ${
-              activeTab === "roles"
-                ? "bg-primary/20 border-primary text-foreground font-semibold"
-                : "bg-muted/20 border-border/60 text-muted-foreground hover:text-foreground"
+            onClick={() => setActiveTab("kick")}
+            className={`px-3 py-1.5 text-xs font-mono border rounded transition-colors flex items-center gap-1.5 cursor-pointer shrink-0 ${
+              activeTab === "kick"
+                ? "bg-amber-500/20 border-amber-500 text-amber-300 font-semibold"
+                : "bg-muted/20 border-border/60 text-muted-foreground hover:text-amber-400"
             }`}
           >
-            <Shield className="w-3.5 h-3.5" />
-            <span>Roles</span>
+            <UserMinus className="w-3.5 h-3.5" />
+            <span>Kick</span>
           </button>
+        )}
 
+        {canBan && (
           <button
             type="button"
-            onClick={() => setActiveTab("nickname")}
-            className={`px-3 py-1 text-xs font-mono border transition-colors flex items-center gap-1.5 cursor-pointer ${
-              activeTab === "nickname"
-                ? "bg-primary/20 border-primary text-foreground font-semibold"
-                : "bg-muted/20 border-border/60 text-muted-foreground hover:text-foreground"
+            onClick={() => setActiveTab("ban")}
+            className={`px-3 py-1.5 text-xs font-mono border rounded transition-colors flex items-center gap-1.5 cursor-pointer shrink-0 ${
+              activeTab === "ban"
+                ? "bg-destructive/20 border-destructive text-destructive font-semibold"
+                : "bg-muted/20 border-border/60 text-muted-foreground hover:text-destructive"
             }`}
           >
-            <Tag className="w-3.5 h-3.5" />
-            <span>Nickname</span>
+            <Ban className="w-3.5 h-3.5" />
+            <span>Ban</span>
           </button>
+        )}
+      </div>
 
-          {canKick && (
-            <button
-              type="button"
-              onClick={() => setActiveTab("kick")}
-              className={`px-3 py-1 text-xs font-mono border transition-colors flex items-center gap-1.5 cursor-pointer ${
-                activeTab === "kick"
-                  ? "bg-amber-500/20 border-amber-500 text-amber-300 font-semibold"
-                  : "bg-muted/20 border-border/60 text-muted-foreground hover:text-amber-400"
-              }`}
-            >
-              <UserMinus className="w-3.5 h-3.5" />
-              <span>Kick</span>
-            </button>
-          )}
-
-          {canBan && (
-            <button
-              type="button"
-              onClick={() => setActiveTab("ban")}
-              className={`px-3 py-1 text-xs font-mono border transition-colors flex items-center gap-1.5 cursor-pointer ${
-                activeTab === "ban"
-                  ? "bg-destructive/20 border-destructive text-destructive font-semibold"
-                  : "bg-muted/20 border-border/60 text-muted-foreground hover:text-destructive"
-              }`}
-            >
-              <Ban className="w-3.5 h-3.5" />
-              <span>Ban</span>
-            </button>
-          )}
-        </div>
-      </CardHeader>
-
-      <CardContent className="pt-4 space-y-4">
+      <div className="space-y-4">
         {/* Status Alert Banner */}
         {statusMessage && (
           <div
@@ -583,27 +549,29 @@ function MemberActionModalInner({
             </div>
           </form>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
 export function MemberActionModal(props: MemberActionModalProps) {
-  if (!props.isOpen || !props.targetMember || typeof document === "undefined") return null;
+  if (!props.isOpen || !props.targetMember) return null;
 
-  const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-lg">
-        <MemberActionModalInner
-          key={props.targetMember.userId}
-          onClose={props.onClose}
-          organizationId={props.organizationId}
-          targetMember={props.targetMember}
-          viewerUserId={props.viewerUserId}
-        />
-      </div>
-    </div>
+  return (
+    <ResponsiveDialog
+      isOpen={props.isOpen}
+      onClose={props.onClose}
+      title={`Manage ${props.targetMember.displayName}`}
+      description={props.targetMember.email || "Workspace Member Management"}
+      maxWidth="md"
+    >
+      <MemberActionModalInner
+        key={props.targetMember.userId}
+        onClose={props.onClose}
+        organizationId={props.organizationId}
+        targetMember={props.targetMember}
+        viewerUserId={props.viewerUserId}
+      />
+    </ResponsiveDialog>
   );
-
-  return createPortal(modalContent, document.body);
 }

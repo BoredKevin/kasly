@@ -1,11 +1,6 @@
 import React from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@boredkevin/ui";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { X } from "lucide-react";
 
 export interface ResponsiveDialogProps {
   isOpen: boolean;
@@ -35,29 +30,47 @@ export function ResponsiveDialog({
   className = "",
 }: ResponsiveDialogProps) {
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent
-        className={`w-full ${MAX_WIDTH_MAP[maxWidth]} max-h-[85vh] sm:max-h-[90vh] flex flex-col p-4 sm:p-6 border-border bg-card/95 backdrop-blur-md overflow-hidden ${className}`}
-      >
-        {(title || description) && (
-          <DialogHeader className="pb-3 border-b border-border/60 shrink-0">
-            {title && (
-              <DialogTitle className="text-base font-semibold text-foreground">
-                {title}
-              </DialogTitle>
-            )}
-            {description && (
-              <DialogDescription className="text-xs text-muted-foreground">
-                {description}
-              </DialogDescription>
-            )}
-          </DialogHeader>
-        )}
+    <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogPrimitive.Portal>
+        {/* Backdrop Overlay */}
+        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm transition-opacity duration-200 animate-in fade-in-0" />
 
-        <div className="flex-1 overflow-y-auto min-h-0 pt-3">
-          {children}
+        {/* Positioning Container: Bottom-sheet on mobile, centered modal on desktop */}
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 pointer-events-none">
+          <DialogPrimitive.Content
+            className={`pointer-events-auto relative w-full ${MAX_WIDTH_MAP[maxWidth]} bg-card border-t sm:border border-border/80 rounded-t-[var(--fintech-radius-lg)] sm:rounded-[var(--fintech-radius-lg)] shadow-2xl flex flex-col p-4 sm:p-6 max-h-[90vh] sm:max-h-[85vh] overflow-hidden focus:outline-none transition-all duration-200 animate-in slide-in-from-bottom-4 sm:zoom-in-95 ${className}`}
+          >
+            {/* Header */}
+            {(title || description) && (
+              <div className="pb-3 border-b border-border/60 shrink-0 pr-8 space-y-1">
+                {title && (
+                  <DialogPrimitive.Title className="text-base font-semibold text-foreground tracking-tight">
+                    {title}
+                  </DialogPrimitive.Title>
+                )}
+                {description && (
+                  <DialogPrimitive.Description className="text-xs text-muted-foreground leading-relaxed">
+                    {description}
+                  </DialogPrimitive.Description>
+                )}
+              </div>
+            )}
+
+            {/* Close Button */}
+            <DialogPrimitive.Close
+              className="absolute right-4 top-4 p-1.5 rounded-[var(--fintech-radius-xs)] text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
+              aria-label="Close dialog"
+            >
+              <X className="w-4 h-4" />
+            </DialogPrimitive.Close>
+
+            {/* Scrollable Body */}
+            <div className="flex-1 overflow-y-auto overscroll-contain min-h-0 pt-3">
+              {children}
+            </div>
+          </DialogPrimitive.Content>
         </div>
-      </DialogContent>
-    </Dialog>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }

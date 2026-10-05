@@ -5,7 +5,7 @@ import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import { ResponsiveDialog } from "../../../ui/ResponsiveDialog";
 import { Button, Input } from "@boredkevin/ui";
-import { Sparkles } from "lucide-react";
+import { Sparkles, ChevronDown } from "lucide-react";
 
 interface CreateFundModalProps {
   isOpen: boolean;
@@ -24,6 +24,7 @@ export function CreateFundModal({
   const [name, setName] = useState("");
   const [currency, setCurrency] = useState("IDR");
   const [description, setDescription] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,6 +48,7 @@ export function CreateFundModal({
       setName("");
       setCurrency("IDR");
       setDescription("");
+      setShowAdvanced(false);
       onSuccess?.(fundId);
       onClose();
     } catch (err: unknown) {
@@ -80,40 +82,58 @@ export function CreateFundModal({
             onChange={(e) => setName(e.target.value)}
             chamfer="none"
             required
+            autoFocus
           />
         </div>
 
-        <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-foreground">
-            {t("treasury.createFund.currency", "Currency")} *
-          </label>
-          <Input
-            type="text"
-            placeholder="e.g. IDR, USD, EUR"
-            value={currency}
-            disabled={isSubmitting}
-            onChange={(e) => setCurrency(e.target.value.toUpperCase())}
-            chamfer="none"
-            maxLength={10}
-            required
-          />
-          <p className="text-[11px] text-muted-foreground">
-            Standard currency code (e.g. IDR, USD). Cannot be changed after creation.
-          </p>
-        </div>
+        {/* Collapsible Currency & Description */}
+        <div className="pt-1">
+          <button
+            type="button"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground font-medium transition-colors py-1 cursor-pointer"
+          >
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showAdvanced ? "rotate-180" : ""}`} />
+            <span>{showAdvanced ? "Hide settings" : "Currency & Description (Optional)"}</span>
+            {!showAdvanced && <span className="text-[10px] font-mono text-primary ml-1">({currency})</span>}
+          </button>
 
-        <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-foreground">
-            {t("treasury.createFund.fundDescription", "Description")}
-          </label>
-          <Input
-            type="text"
-            placeholder="Purpose of this fund (optional)"
-            value={description}
-            disabled={isSubmitting}
-            onChange={(e) => setDescription(e.target.value)}
-            chamfer="none"
-          />
+          {showAdvanced && (
+            <div className="space-y-3 pt-2 pl-3 border-l-2 border-border/60 animate-in fade-in-50 duration-150">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground">
+                  {t("treasury.createFund.currency", "Currency")} *
+                </label>
+                <Input
+                  type="text"
+                  placeholder="e.g. IDR, USD, EUR"
+                  value={currency}
+                  disabled={isSubmitting}
+                  onChange={(e) => setCurrency(e.target.value.toUpperCase())}
+                  chamfer="none"
+                  maxLength={10}
+                  required
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Standard currency code. Cannot be changed after creation.
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground">
+                  {t("treasury.createFund.fundDescription", "Description")}
+                </label>
+                <Input
+                  type="text"
+                  placeholder="Purpose of this fund (optional)"
+                  value={description}
+                  disabled={isSubmitting}
+                  onChange={(e) => setDescription(e.target.value)}
+                  chamfer="none"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {error && (
@@ -122,7 +142,7 @@ export function CreateFundModal({
           </div>
         )}
 
-        <div className="pt-3 flex items-center justify-end gap-2 border-t border-border">
+        <div className="pt-3 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2 border-t border-border">
           <Button
             type="button"
             variant="outline"
@@ -140,7 +160,7 @@ export function CreateFundModal({
             chamfer="none"
             size="sm"
             disabled={isSubmitting || !name.trim() || !currency.trim()}
-            className="text-xs flex items-center gap-1.5 cursor-pointer font-semibold"
+            className="text-xs flex items-center justify-center gap-1.5 cursor-pointer font-semibold"
           >
             {isSubmitting ? (
               <span>{t("common.loading", "Creating...")}</span>

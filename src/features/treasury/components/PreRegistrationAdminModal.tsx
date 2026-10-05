@@ -4,17 +4,12 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id, Doc } from "../../../../convex/_generated/dataModel";
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
   Button,
   Input,
   Badge,
 } from "@boredkevin/ui";
+import { ResponsiveDialog } from "../../../ui/ResponsiveDialog";
 import {
-  X,
   Users,
   UserPlus,
   Upload,
@@ -532,37 +527,19 @@ export function PreRegistrationAdminModal({
     }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <Card
-        cornerLines={false}
-        className="w-full max-w-3xl bg-card border-border shadow-2xl overflow-hidden flex flex-col max-h-[90vh] rounded-[var(--fintech-radius-md)]"
-      >
-        <CardHeader className="pb-4 border-b border-border/80 flex flex-row items-center justify-between shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-primary/10 border border-primary/20 text-primary">
-              <Users className="w-5 h-5" />
-            </div>
-            <div>
-              <CardTitle className="text-base font-semibold">
-                {t("treasury.preReg.title")}
-              </CardTitle>
-              <CardDescription className="text-xs">
-                {t("treasury.preReg.description")}
-              </CardDescription>
-            </div>
-          </div>
-
-          <button
-            onClick={onClose}
-            className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </CardHeader>
-
+    <ResponsiveDialog
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t("treasury.preReg.title", "Student Pre-Registration")}
+      description={t("treasury.preReg.description", "Manage pre-registered roster, import data, and share registration links.")}
+      maxWidth="2xl"
+    >
+      <div className="space-y-4 pt-1">
         {/* Global Controls & Toggles Header Banner */}
-        <div className="bg-muted/30 border-b border-border/60 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+        <div className="bg-muted/30 border border-border/60 p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0 rounded-[var(--fintech-radius-sm)]">
           <div className="space-y-1 max-w-sm">
             <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
               {t("treasury.preReg.enableRegLinks")}
@@ -686,8 +663,8 @@ export function PreRegistrationAdminModal({
           </button>
         </div>
 
-        {/* Modal Scrollable Body */}
-        <CardContent className="p-6 overflow-y-auto space-y-4 flex-1">
+        {/* Modal Body */}
+        <div className="space-y-4 pt-2">
           {statusMessage && (
             <div className="p-3 bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs font-mono flex items-center gap-2">
               <CheckCircle className="w-4 h-4 shrink-0" />
@@ -1469,21 +1446,21 @@ export function PreRegistrationAdminModal({
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* ADJUST DUES SUB-MODAL */}
-      {adjustingUser && (
-        <AdjustDuesSubModal
-          organizationId={organizationId}
-          userId={adjustingUser.userId}
-          studentName={adjustingUser.name}
-          onClose={() => setAdjustingUser(null)}
-        />
-      )}
-    </div>
-  );
-}
+        {adjustingUser && (
+          <AdjustDuesSubModal
+            organizationId={organizationId}
+            userId={adjustingUser.userId}
+            studentName={adjustingUser.name}
+            onClose={() => setAdjustingUser(null)}
+          />
+        )}
+      </ResponsiveDialog>
+    );
+  }
 
 interface AdjustDuesSubModalProps {
   organizationId: Id<"organizations">;
@@ -1545,36 +1522,14 @@ function AdjustDuesSubModal({
   };
 
   return (
-    <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-150">
-      <Card
-        cornerLines={false}
-        className="w-full max-w-xl bg-card border-border shadow-2xl overflow-hidden flex flex-col max-h-[85vh] rounded-[var(--fintech-radius-md)]"
-      >
-        <CardHeader className="pb-3 border-b border-border/80 flex flex-row items-center justify-between shrink-0">
-          <div className="flex items-center gap-2">
-            <Coins className="w-5 h-5 text-primary" />
-            <div>
-              <CardTitle className="text-sm font-semibold">
-                {t("treasury.preReg.adjustDuesTitle", { name: studentName })}
-              </CardTitle>
-              <CardDescription className="text-xs font-mono">
-                {t("treasury.preReg.totalOwed")}:{" "}
-                <strong className="text-amber-400 font-bold">
-                  Rp {duesData?.totalUnpaidAmount.toLocaleString() ?? 0}
-                </strong>
-              </CardDescription>
-            </div>
-          </div>
-
-          <button
-            onClick={onClose}
-            className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </CardHeader>
-
-        <CardContent className="p-5 overflow-y-auto space-y-4 flex-1">
+    <ResponsiveDialog
+      isOpen={true}
+      onClose={onClose}
+      title={t("treasury.preReg.adjustDuesTitle", { name: studentName })}
+      description={`${t("treasury.preReg.totalOwed")}: Rp ${duesData?.totalUnpaidAmount.toLocaleString() ?? 0}`}
+      maxWidth="lg"
+    >
+      <div className="space-y-4 pt-1">
           {success && (
             <div className="p-2.5 bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs font-mono flex items-center gap-1.5">
               <CheckCircle className="w-3.5 h-3.5 shrink-0" />
@@ -1706,8 +1661,7 @@ function AdjustDuesSubModal({
               </div>
             )}
           </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+        </div>
+      </ResponsiveDialog>
+    );
+  }

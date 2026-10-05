@@ -17,6 +17,7 @@ import {
   Share2,
   Users,
   User,
+  ChevronDown,
 } from "lucide-react";
 import { MemberSearchSelect } from "./MemberSearchSelect";
 
@@ -51,6 +52,7 @@ function CreateCustomInvoiceModalContent({
   const [amount, setAmount] = useState<number>(50000);
   const [payerName, setPayerName] = useState("");
   const [payerEmail, setPayerEmail] = useState("");
+  const [showOptional, setShowOptional] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -247,10 +249,10 @@ function CreateCustomInvoiceModalContent({
                   </Button>
                 </div>
 
-                {recipientType === "member" && (
+                {recipientType === "member" ? (
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium text-foreground block">
-                      {t("treasury.invoices.selectMemberToInvoice", "Select Member")}
+                      {t("treasury.invoices.selectMemberToInvoice", "Select Member")} *
                     </label>
                     <MemberSearchSelect
                       members={members}
@@ -267,19 +269,39 @@ function CreateCustomInvoiceModalContent({
                       }}
                       placeholder={t("treasury.invoices.selectMemberPrompt", "Search and select a member...")}
                     />
+                    {payerName && (
+                      <p className="text-[11px] text-muted-foreground">
+                        {t("treasury.invoices.invoicingAs", "Invoicing:")} <span className="text-foreground font-medium">{payerName}</span>
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-foreground block">
+                      {t("treasury.invoices.recipientName", "Payer Name")} *
+                    </label>
+                    <Input
+                      type="text"
+                      chamfer="none"
+                      value={payerName}
+                      onChange={(e) => setPayerName(e.target.value)}
+                      placeholder="e.g. John Doe"
+                      required
+                      className="font-sans text-xs"
+                    />
                   </div>
                 )}
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-foreground block">
-                    {t("treasury.invoices.itemTitle")}
+                    {t("treasury.invoices.itemTitle", "Invoice Title")} *
                   </label>
                   <Input
                     type="text"
                     chamfer="none"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder={t("treasury.invoices.itemTitlePlaceholder")}
+                    placeholder={t("treasury.invoices.itemTitlePlaceholder", "e.g. Annual T-Shirt, Event Ticket")}
                     required
                     className="font-sans text-xs"
                   />
@@ -287,20 +309,7 @@ function CreateCustomInvoiceModalContent({
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium text-foreground block">
-                    {t("treasury.invoices.itemDesc")}
-                  </label>
-                  <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Details about this payment..."
-                    rows={2}
-                    className="w-full text-xs bg-muted/20 border border-input rounded-none p-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary font-sans resize-none"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground block">
-                    {t("treasury.invoices.itemAmount")}
+                    {t("treasury.invoices.itemAmount", "Amount (IDR)")} *
                   </label>
                   <Input
                     type="number"
@@ -314,33 +323,63 @@ function CreateCustomInvoiceModalContent({
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground block">
-                    {t("treasury.invoices.recipientName")}
-                  </label>
-                  <Input
-                    type="text"
-                    chamfer="none"
-                    value={payerName}
-                    onChange={(e) => setPayerName(e.target.value)}
-                    placeholder="John Doe"
-                    required
-                    className="font-sans text-xs"
-                  />
-                </div>
+                {/* Collapsible Optional Details */}
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowOptional(!showOptional)}
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground font-medium transition-colors py-1 cursor-pointer"
+                  >
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${showOptional ? "rotate-180" : ""}`} />
+                    <span>{showOptional ? t("treasury.invoices.hideOptional", "Hide optional details") : t("treasury.invoices.showOptional", "+ Add Description & Email (Optional)")}</span>
+                  </button>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground block">
-                    {t("treasury.invoices.recipientEmail")}
-                  </label>
-                  <Input
-                    type="email"
-                    chamfer="none"
-                    value={payerEmail}
-                    onChange={(e) => setPayerEmail(e.target.value)}
-                    placeholder="john@example.com"
-                    className="font-mono text-xs"
-                  />
+                  {showOptional && (
+                    <div className="space-y-3 pt-2 pl-3 border-l-2 border-border/60 animate-in fade-in-50 duration-150">
+                      {recipientType === "member" && (
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-medium text-foreground block">
+                            {t("treasury.invoices.recipientName", "Payer Display Name")}
+                          </label>
+                          <Input
+                            type="text"
+                            chamfer="none"
+                            value={payerName}
+                            onChange={(e) => setPayerName(e.target.value)}
+                            placeholder="John Doe"
+                            className="font-sans text-xs"
+                          />
+                        </div>
+                      )}
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-foreground block">
+                          {t("treasury.invoices.recipientEmail", "Email Address")}
+                        </label>
+                        <Input
+                          type="email"
+                          chamfer="none"
+                          value={payerEmail}
+                          onChange={(e) => setPayerEmail(e.target.value)}
+                          placeholder="john@example.com"
+                          className="font-mono text-xs"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-foreground block">
+                          {t("treasury.invoices.itemDesc", "Description")}
+                        </label>
+                        <textarea
+                          value={description}
+                          onChange={(e) => setDescription(e.target.value)}
+                          placeholder="Details about this payment..."
+                          rows={2}
+                          className="w-full text-xs bg-muted/20 border border-input rounded-none p-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary font-sans resize-none"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="pt-2 flex items-center justify-end gap-2 border-t border-border">
@@ -359,7 +398,7 @@ function CreateCustomInvoiceModalContent({
                     variant="cyber"
                     size="sm"
                     chamfer="none"
-                    disabled={isSubmitting || !title.trim() || amount <= 0 || !payerName.trim()}
+                    disabled={isSubmitting || !title.trim() || amount <= 0 || !payerName.trim() || (recipientType === "member" && !selectedUserId)}
                     className="text-xs cursor-pointer"
                   >
                     {isSubmitting

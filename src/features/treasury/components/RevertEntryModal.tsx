@@ -15,6 +15,7 @@ import {
   KeyRound,
   ShieldCheck,
   AlertTriangle,
+  ChevronDown,
 } from "lucide-react";
 import {
   loadKeypair,
@@ -58,6 +59,7 @@ export function RevertEntryModal({
 
   const [reason, setReason] = useState<string>("");
   const [selectedKeyIdState, setSelectedKeyIdState] = useState<string>("");
+  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
   const [isSigning, setIsSigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -205,64 +207,47 @@ export function RevertEntryModal({
               </div>
             )}
 
-            {/* Target Entry Context Box */}
-            <div className="p-3.5 bg-background/60 border border-border/70 space-y-2.5">
-              <span className="text-[10px] font-mono uppercase text-muted-foreground tracking-wider font-semibold">
-                Original Transaction Details
-              </span>
-              <div className="flex items-center justify-between text-xs font-mono">
+            {/* Target Entry Summary Banner */}
+            <div className="p-3 bg-muted/20 border border-border/70 rounded-[var(--fintech-radius-sm)] flex items-center justify-between gap-3">
+              <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <Badge
                     variant="outline"
-                    className={`text-[10px] font-mono px-1.5 py-0.5 ${isTargetCredit
-                      ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
-                      : "bg-red-500/15 text-red-300 border-red-500/30"
-                      }`}
+                    className={`text-[10px] font-mono px-1.5 py-0.5 ${
+                      isTargetCredit
+                        ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+                        : "bg-red-500/15 text-red-300 border-red-500/30"
+                    }`}
                   >
                     {isTargetCredit ? "CREDIT" : "DEBIT"}
                   </Badge>
-                  <span className="font-bold text-foreground">
+                  <span className="font-bold font-mono text-sm text-foreground">
                     {currency} {entry.amount.toLocaleString()}
                   </span>
                 </div>
-                <span className="text-muted-foreground text-[11px]">
-                  Entry #{entry.sequenceNumber}
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground bg-muted/20 p-2 border border-border/40 font-sans italic break-words [overflow-wrap:anywhere]">
-                "{entry.memo}"
-              </p>
-            </div>
-
-            {/* Compensating Action Notice */}
-            <div className="p-3 bg-amber-500/10 border border-amber-500/30 text-xs space-y-1 text-amber-300">
-              <div className="flex items-center gap-1.5 font-bold font-mono text-[11px]">
-                <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-                <span>Compensating Action:</span>
-              </div>
-              <p className="leading-relaxed text-[11px]">
-                This will append a new <strong>{compensatingDirection.toUpperCase()}</strong> entry of <strong>{currency} {entry.amount.toLocaleString()}</strong> to the chain HEAD, offsetting the balance while preserving the complete append-only history.
-              </p>
-            </div>
-
-            {/* Dues Rollback Notice if linked to dues */}
-            {entry.duesEventId && (
-              <div className="p-3 bg-indigo-500/10 border border-indigo-500/30 text-xs space-y-1 text-indigo-300">
-                <div className="flex items-center gap-1.5 font-bold font-mono text-[11px]">
-                  <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Dues Rollback Notice:</span>
-                </div>
-                <p className="leading-relaxed text-[11px]">
-                  This transaction is linked to a member dues payment cycle. Reverting will also restore the member's dues payment status back to unpaid.
+                <p className="text-xs text-muted-foreground mt-1 truncate max-w-[260px] sm:max-w-md">
+                  "{entry.memo}"
                 </p>
               </div>
-            )}
+              <span className="text-xs font-mono text-muted-foreground shrink-0">
+                #{entry.sequenceNumber}
+              </span>
+            </div>
+
+            {/* Concise Reversal Notice */}
+            <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-[var(--fintech-radius-xs)] text-xs text-amber-300 flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <span className="leading-relaxed">
+                Appends an offsetting <strong>{compensatingDirection.toUpperCase()}</strong> of {currency} {entry.amount.toLocaleString()} to chain HEAD.
+                {entry.duesEventId && " Linked dues status will be restored to unpaid."}
+              </span>
+            </div>
 
             <form
               onSubmit={(e) => {
                 e.preventDefault();
               }}
-              className="space-y-4 pt-1"
+              className="space-y-3.5 pt-1"
             >
               {/* Revert Reason */}
               <div className="space-y-1.5">
@@ -271,75 +256,73 @@ export function RevertEntryModal({
                 </label>
                 <Input
                   type="text"
-                  placeholder="e.g. Duplicate transaction, Client refund, Entry error"
+                  placeholder="e.g. Duplicate entry, refund, clerical error"
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   disabled={isSigning}
                   required
                   chamfer="none"
+                  className="text-xs"
                 />
               </div>
 
-              {/* Signing Key Selector */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-medium text-foreground flex items-center gap-1">
-                    <KeyRound className="w-3.5 h-3.5 text-primary" />
-                    <span>Signing Key *</span>
-                  </label>
-                  {onOpenKeyGen && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      chamfer="none"
-                      onClick={onOpenKeyGen}
-                      className="h-5 text-[10px] text-primary hover:underline font-mono cursor-pointer px-1"
-                    >
-                      + Generate Key
-                    </Button>
-                  )}
-                </div>
+              {/* Advanced / Signing Key Disclosure */}
+              <div className="pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors cursor-pointer py-1"
+                >
+                  <KeyRound className="w-3.5 h-3.5 text-primary" />
+                  <span>Advanced Signing Options</span>
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAdvanced ? "rotate-180" : ""}`} />
+                </button>
 
-                {activeKeys.length > 0 ? (
-                  <select
-                    value={selectedKeyId}
-                    onChange={(e) => setSelectedKeyIdState(e.target.value)}
-                    disabled={isSigning}
-                    className="w-full h-9 px-2.5 bg-background border border-border text-xs text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-                    required
-                  >
-                    {activeKeys.map((k) => (
-                      <option key={k._id} value={k.keyId}>
-                        {k.label || "Unnamed Device"} ({k.keyId.slice(0, 8)}...)
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <div className="p-3 bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300 space-y-2">
-                    <p>No active signing keys found for your account in this organization.</p>
-                    {onOpenKeyGen && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        chamfer="none"
-                        onClick={onOpenKeyGen}
-                        className="text-xs h-7"
-                      >
-                        Generate Keypair Now
-                      </Button>
-                    )}
+                {showAdvanced && (
+                  <div className="mt-2 p-3 bg-muted/20 border border-border/70 rounded-[var(--fintech-radius-sm)] space-y-3 animate-in fade-in-50 duration-150">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-medium text-foreground">
+                          Signing Key
+                        </label>
+                        {onOpenKeyGen && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            chamfer="none"
+                            onClick={onOpenKeyGen}
+                            className="h-5 text-[10px] text-primary hover:underline font-mono cursor-pointer px-1"
+                          >
+                            + Generate Key
+                          </Button>
+                        )}
+                      </div>
+
+                      {activeKeys.length > 0 ? (
+                        <select
+                          value={selectedKeyId}
+                          onChange={(e) => setSelectedKeyIdState(e.target.value)}
+                          disabled={isSigning}
+                          className="w-full h-8 px-2 bg-background border border-border text-xs text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer rounded-[var(--fintech-radius-xs)]"
+                        >
+                          {activeKeys.map((k) => (
+                            <option key={k._id} value={k.keyId}>
+                              {k.label || "Device Key"} ({k.keyId.slice(0, 8)}...)
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <p className="text-xs text-amber-300">No active keys registered on this device.</p>
+                      )}
+                    </div>
+
+                    <p className="text-[11px] text-muted-foreground leading-relaxed flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-primary shrink-0" />
+                      <span>The reverse entry will be cryptographically signed by your browser private key.</span>
+                    </p>
                   </div>
                 )}
-              </div>
-
-              {/* Immutable Security Notice */}
-              <div className="p-2.5 bg-muted/20 border border-border/50 text-[11px] text-muted-foreground flex items-start gap-2">
-                <ShieldCheck className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                <span>
-                  The reverse entry will be cryptographically signed by your browser private key and permanently linked to chain HEAD.
-                </span>
               </div>
 
               {/* Form Action Buttons */}
