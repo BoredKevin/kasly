@@ -334,7 +334,7 @@ export function InvoicePaymentPage({
               asChild
               variant="outline"
               size="sm"
-              chamfer="dual"
+              chamfer="none"
               className="w-full text-xs"
             >
               <Link href="/treasury/invoices">Back to Invoices</Link>

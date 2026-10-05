@@ -34,7 +34,7 @@ export function InvoiceAwaitingView({
           type="button"
           variant="ghost"
           size="sm"
-          chamfer="dual"
+          chamfer="none"
           onClick={onBackToCheckout}
           className="h-8 text-xs font-mono px-2 text-muted-foreground hover:text-foreground cursor-pointer"
         >
@@ -93,7 +93,7 @@ export function InvoiceAwaitingView({
               asChild
               variant="outline"
               size="sm"
-              chamfer="dual"
+              chamfer="none"
               className="w-full text-xs font-mono text-muted-foreground hover:text-foreground border-border/80"
             >
               <a href={invoice.payUrl} target="_blank" rel="noopener noreferrer">
@@ -110,7 +110,7 @@ export function InvoiceAwaitingView({
               type="button"
               variant="outline"
               size="sm"
-              chamfer="dual"
+              chamfer="none"
               disabled={isSimulating}
               onClick={onSimulatePayment}
               className="w-full text-xs font-mono text-amber-400 border-amber-500/40 hover:bg-amber-500/10 cursor-pointer"
@@ -129,7 +129,7 @@ export function InvoiceAwaitingView({
               type="button"
               variant="ghost"
               size="sm"
-              chamfer="dual"
+              chamfer="none"
               onClick={() => setShowQrAgain(!showQrAgain)}
               className="w-full text-xs font-mono text-muted-foreground hover:text-foreground cursor-pointer"
             >

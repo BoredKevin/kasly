@@ -84,7 +84,7 @@ export function InvoicePaymentView({
           type="button"
           variant="ghost"
           size="sm"
-          chamfer="dual"
+          chamfer="none"
           onClick={onBackToCheckout}
           className="h-8 text-xs font-sans font-medium px-2.5 flex items-center gap-1.5 text-muted-foreground hover:text-foreground cursor-pointer"
         >
@@ -137,7 +137,7 @@ export function InvoicePaymentView({
               <Button
                 type="button"
                 variant="cyber"
-                chamfer="dual"
+                chamfer="none"
                 size="default"
                 disabled={isConfirmingClaim}
                 onClick={onConfirmClaim}
@@ -154,7 +154,7 @@ export function InvoicePaymentView({
               <Button
                 type="button"
                 variant="outline"
-                chamfer="dual"
+                chamfer="none"
                 size="default"
                 disabled={isDownloading}
                 onClick={() => void handleDownloadQr()}
@@ -173,7 +173,7 @@ export function InvoicePaymentView({
                 asChild
                 variant="ghost"
                 size="sm"
-                chamfer="dual"
+                chamfer="none"
                 className="w-full text-xs font-sans text-muted-foreground hover:text-foreground"
               >
                 <a href={invoice.payUrl} target="_blank" rel="noopener noreferrer">
@@ -221,7 +221,7 @@ export function InvoicePaymentView({
               type="button"
               variant="cyber"
               size="sm"
-              chamfer="dual"
+              chamfer="none"
               onClick={handleCopyVa}
               className="text-xs flex items-center justify-center gap-1.5 font-mono px-3 h-8 cursor-pointer shrink-0"
             >
@@ -248,7 +248,7 @@ export function InvoicePaymentView({
           <Button
             type="button"
             variant="cyber"
-            chamfer="dual"
+            chamfer="none"
             size="default"
             disabled={isConfirmingClaim}
             onClick={onConfirmClaim}
@@ -284,7 +284,7 @@ export function InvoicePaymentView({
               asChild
               variant="cyber"
               size="default"
-              chamfer="dual"
+              chamfer="none"
               className="w-full text-xs sm:text-sm font-mono font-bold h-11 cursor-pointer"
             >
               <a href={invoice.checkoutUrl} target="_blank" rel="noopener noreferrer">
@@ -305,7 +305,7 @@ export function InvoicePaymentView({
           <Button
             type="button"
             variant="outline"
-            chamfer="dual"
+            chamfer="none"
             size="default"
             disabled={isConfirmingClaim}
             onClick={onConfirmClaim}
@@ -325,7 +325,7 @@ export function InvoicePaymentView({
             type="button"
             variant="secondary"
             size="sm"
-            chamfer="dual"
+            chamfer="none"
             disabled={isSimulating}
             onClick={onSimulatePayment}
             className="text-xs font-sans border-violet-500/40 text-violet-200 hover:bg-violet-500/20 cursor-pointer"
@@ -354,7 +354,7 @@ export function InvoicePaymentView({
           type="button"
           variant="outline"
           size="sm"
-          chamfer="dual"
+          chamfer="none"
           disabled={isCancelling}
           onClick={onCancelInvoice}
           className="h-7 text-xs font-sans text-destructive hover:bg-destructive/10 border-destructive/30 px-2 cursor-pointer"

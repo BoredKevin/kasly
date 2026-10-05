@@ -173,7 +173,7 @@ export function InvoiceCheckoutView({
           asChild
           variant="ghost"
           size="sm"
-          chamfer="dual"
+          chamfer="none"
           className="h-8 text-xs font-mono px-2 text-muted-foreground hover:text-foreground cursor-pointer"
         >
           <Link href="/treasury/invoices">
@@ -640,7 +640,7 @@ export function InvoiceCheckoutView({
                   <Button
                     type="button"
                     variant="cyber"
-                    chamfer="dual"
+                    chamfer="none"
                     size="default"
                     disabled={isInitiating || availableMethodsCount === 0}
                     onClick={handlePayClick}

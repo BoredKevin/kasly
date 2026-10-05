@@ -18,7 +18,7 @@ export function InvoicePaidView({ invoice, onDownloadPdf }: InvoicePaidViewProps
           asChild
           variant="ghost"
           size="sm"
-          chamfer="dual"
+          chamfer="none"
           className="h-8 text-xs font-mono px-2 text-muted-foreground hover:text-foreground cursor-pointer"
         >
           <Link href="/treasury/invoices">
@@ -69,7 +69,7 @@ export function InvoicePaidView({ invoice, onDownloadPdf }: InvoicePaidViewProps
           type="button"
           variant="cyber"
           size="default"
-          chamfer="dual"
+          chamfer="none"
           onClick={onDownloadPdf}
           className="w-full text-xs font-mono flex items-center justify-center gap-2 h-11 cursor-pointer shadow-lg"
         >
