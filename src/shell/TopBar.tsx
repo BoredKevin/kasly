@@ -55,7 +55,15 @@ export function TopBar() {
   const isProfileActive = location.startsWith("/profile");
 
   return (
-    <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md px-4 sm:px-6 h-14 border-b border-border/80 flex items-center justify-between">
+    <header
+      className="sticky top-0 z-30 px-4 sm:px-6 h-14 border-b border-border/80 flex items-center justify-between"
+      style={{
+        backgroundColor: "rgba(10, 10, 12, 0.88)",
+        backdropFilter: "blur(20px) saturate(180%)",
+        WebkitBackdropFilter: "blur(20px) saturate(180%)",
+        boxShadow: "0 4px 20px rgba(0, 0, 0, 0.35)",
+      }}
+    >
       {/* Left: Brand & Desktop Section Navigation */}
       <div className="flex items-center gap-3 sm:gap-6">
         <Link href="/treasury" className="flex items-center gap-2 cursor-pointer group">
