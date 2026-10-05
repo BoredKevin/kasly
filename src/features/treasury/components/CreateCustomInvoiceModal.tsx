@@ -99,7 +99,7 @@ function CreateCustomInvoiceModalContent({
 
   const handleCopyLink = () => {
     if (!invoiceUrl) return;
-    navigator.clipboard.writeText(invoiceUrl);
+    void navigator.clipboard.writeText(invoiceUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

@@ -280,11 +280,11 @@ export const importRoster = mutation({
         .collect();
       availableDuesTarget = events.map((e) => ({ event: e, fundId: args.fundId! }));
     } else {
-      const activeFunds = await ctx.db
+      const allOrgFunds = await ctx.db
         .query("funds")
         .withIndex("by_organizationId", (q) => q.eq("organizationId", args.organizationId))
-        .filter((q) => q.neq(q.field("isArchived"), true))
         .collect();
+      const activeFunds = allOrgFunds.filter((f) => !f.isArchived);
 
       for (const fund of activeFunds) {
         const events = await ctx.db

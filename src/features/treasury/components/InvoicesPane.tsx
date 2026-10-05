@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useAction, useMutation } from "convex/react";
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id, Doc } from "../../../../convex/_generated/dataModel";
@@ -137,6 +137,46 @@ export function InvoicesPane({
     myMembership?.permissions.includes("ADMINISTRATOR") ||
     myMembership?.permissions.includes("MANAGE_TREASURY")
   );
+
+  const handleVerifyPayment = async (invoiceNumber: string) => {
+    try {
+      setVerifyingInvoiceNumber(invoiceNumber);
+      setActionError(null);
+      await verifyAndSettleTemanQrisOrder({ invoiceNumber });
+    } catch (err: any) {
+      setActionError(err?.message || "Failed to verify payment");
+    } finally {
+      setVerifyingInvoiceNumber(null);
+    }
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!invoiceToCancel) return;
+    try {
+      setIsActionLoading(true);
+      setActionError(null);
+      await cancelInvoice({ invoiceNumber: invoiceToCancel.invoiceNumber });
+      setInvoiceToCancel(null);
+    } catch (err: any) {
+      setActionError(err?.message || "Failed to cancel invoice");
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!invoiceToDelete) return;
+    try {
+      setIsActionLoading(true);
+      setActionError(null);
+      await deleteInvoice({ invoiceId: invoiceToDelete._id });
+      setInvoiceToDelete(null);
+    } catch (err: any) {
+      setActionError(err?.message || "Failed to delete invoice");
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
 
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {

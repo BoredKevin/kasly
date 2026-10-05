@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
-import { Id } from "../../../../convex/_generated/dataModel";
+import { Id, Doc } from "../../../../convex/_generated/dataModel";
 import {
   Card,
   CardHeader,
@@ -61,7 +61,7 @@ export function PreRegistrationAdminModal({
   const orgName = org?.name || "Cravion Class";
 
   const funds = useQuery(api.treasury.funds.list, isOpen ? { organizationId } : "skip");
-  const activeFunds = funds?.filter((f) => !f.isArchived) ?? [];
+  const activeFunds = useMemo<Doc<"funds">[]>(() => funds?.filter((f: Doc<"funds">) => !f.isArchived) ?? [], [funds]);
   const [selectedFundId, setSelectedFundId] = useState<Id<"funds"> | null>(null);
 
   useEffect(() => {
@@ -76,13 +76,6 @@ export function PreRegistrationAdminModal({
       ? { organizationId, fundId: selectedFundId }
       : "skip",
   );
-
-  useEffect(() => {
-    if (duesEvents && duesEvents.length > 0) {
-      setSingleDuesCount((prev) => (prev === 0 ? duesEvents.length : prev));
-      setBatchDuesCount((prev) => (prev === 0 ? duesEvents.length : prev));
-    }
-  }, [duesEvents]);
 
   // Single form state
   const [singleName, setSingleName] = useState("");
@@ -99,6 +92,13 @@ export function PreRegistrationAdminModal({
 
   // CSV import state
   const [batchDuesCount, setBatchDuesCount] = useState<number>(0);
+
+  useEffect(() => {
+    if (duesEvents && duesEvents.length > 0) {
+      setSingleDuesCount((prev) => (prev === 0 ? duesEvents.length : prev));
+      setBatchDuesCount((prev) => (prev === 0 ? duesEvents.length : prev));
+    }
+  }, [duesEvents]);
   const [parsedStudents, setParsedStudents] = useState<
     Array<{
       name: string;

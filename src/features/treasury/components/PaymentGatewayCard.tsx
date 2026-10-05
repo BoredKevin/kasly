@@ -132,7 +132,6 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
 
   // Synchronize state when config query resolves
   useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect */
     if (config && !hasInitialized) {
       setIsEnabled(config.isEnabled);
       setWebhookToken(config.webhookToken || "");

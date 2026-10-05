@@ -171,8 +171,8 @@ export function CreateManualDuesModal({
   useEffect(() => {
     if (duesConfig?.amount) {
       setAmountInput(duesConfig.amount.toString());
-    } else if (!amountInput) {
-      setAmountInput("20000");
+    } else {
+      setAmountInput((prev) => prev || "20000");
     }
   }, [duesConfig?.amount, selectedFundId]);
 

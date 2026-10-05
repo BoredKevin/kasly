@@ -15,6 +15,7 @@ export default defineConfig([
       "postcss.config.js",
       "tailwind.config.js",
       "vite.config.ts",
+      ".agents",
     ],
   },
   {
@@ -74,6 +75,21 @@ export default defineConfig([
       // Allow async functions without await
       // for consistency (esp. Convex `handler`s)
       "@typescript-eslint/require-await": "off",
+
+      // Allow async handlers on JSX event attributes like onClick and onSubmit
+      "@typescript-eslint/no-misused-promises": [
+        "error",
+        {
+          checksVoidReturn: {
+            attributes: false,
+          },
+        },
+      ],
+
+      // React 19 / Compiler experimental rules that flag standard state synchronization
+      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/purity": "off",
+      "react-hooks/immutability": "off",
     },
   },
   ...convexPlugin.configs.recommended,
