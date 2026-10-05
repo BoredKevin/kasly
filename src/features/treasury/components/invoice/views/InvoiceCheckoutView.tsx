@@ -2,7 +2,8 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
-import { Card, Button, Badge } from "@boredkevin/ui";
+import { Button, Badge } from "@boredkevin/ui";
+import { Panel } from "../../../../../ui";
 import {
   ArrowLeft,
   QrCode,
@@ -196,10 +197,7 @@ export function InvoiceCheckoutView({
       )}
 
       {/* Order Origin & Bill Items Card */}
-      <Card
-        cornerLines={false}
-        className="bg-card/90 backdrop-blur-md border border-border/80 shadow-md p-4 sm:p-5 space-y-4"
-      >
+      <Panel className="bg-card/90 backdrop-blur-md border border-border/80 shadow-md p-4 sm:p-5 space-y-4">
         {/* Header Bar */}
         <div className="flex items-center justify-between pb-2 border-b border-border/40">
           <span className="text-xs font-mono font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
@@ -308,13 +306,10 @@ export function InvoiceCheckoutView({
             </div>
           )}
         </div>
-      </Card>
+      </Panel>
 
       {/* Payment Method Selector */}
-      <Card
-        cornerLines={false}
-        className="bg-card/90 backdrop-blur-md border border-border/80 shadow-md p-4 sm:p-5 space-y-4"
-      >
+      <Panel className="bg-card/90 backdrop-blur-md border border-border/80 shadow-md p-4 sm:p-5 space-y-4">
         <span className="text-xs font-mono font-bold text-foreground uppercase tracking-wider block">
           {t("treasury.invoices.checkout.selectMethod", "Pilih Metode Pembayaran")}
         </span>
@@ -574,7 +569,7 @@ export function InvoiceCheckoutView({
             Tidak ada metode pembayaran yang tersedia saat ini.
           </div>
         )}
-      </Card>
+      </Panel>
 
       {/* Floating Sticky Bottom Sheet & Action Bar */}
       {typeof document !== "undefined" &&
