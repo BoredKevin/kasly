@@ -29,6 +29,7 @@ export * from "./components/UnifiedMobileFinancialHero";
 export * from "./components/BulkDuesEntryPane";
 export * from "./lib/revertUtils";
 export * from "./types";
+export * from "./dues";
 
 if (typeof window !== "undefined" && window.__updateAppProgress) {
   window.__updateAppProgress(65, "Loading treasury & ledger...");
