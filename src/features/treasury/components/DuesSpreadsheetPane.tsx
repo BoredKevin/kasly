@@ -1,12 +1,14 @@
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useQuery } from "convex/react";
+import { createPortal } from "react-dom";
+import { useQuery, useMutation } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
-import { Id } from "../../../../convex/_generated/dataModel";
+import { Id, Doc } from "../../../../convex/_generated/dataModel";
 import {
   Card,
   CardHeader,
   CardTitle,
+  CardDescription,
   CardContent,
   Button,
 } from "@boredkevin/ui";
@@ -29,8 +31,15 @@ import {
   ZoomIn,
   ZoomOut,
   Download,
+  Ban,
+  X,
+  CreditCard,
+  ArrowRight,
 } from "lucide-react";
 import { ExportDuesModal } from "./ExportDuesModal";
+import { CreateInvoiceModal } from "./CreateInvoiceModal";
+import { InvoiceDetailsModal } from "./InvoiceDetailsModal";
+import { EditInvoiceModal } from "./EditInvoiceModal";
 
 interface DuesSpreadsheetPaneProps {
   organizationId: Id<"organizations">;
@@ -110,6 +119,50 @@ export function DuesSpreadsheetPane({
     myMembership?.permissions.includes("SIGN_TREASURY")
   );
 
+  // Invoice CRUD integration state
+  const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+  const [invoicePrefillUserId, setInvoicePrefillUserId] = useState<Id<"users"> | undefined>(undefined);
+  const [invoicePrefillPeriodCount, setInvoicePrefillPeriodCount] = useState<number | undefined>(undefined);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<Id<"invoices"> | null>(null);
+  const [selectedInvoiceForEdit, setSelectedInvoiceForEdit] = useState<Doc<"invoices"> | null>(null);
+  const [invoiceToCancel, setInvoiceToCancel] = useState<Doc<"invoices"> | null>(null);
+  const [isCancellingInvoice, setIsCancellingInvoice] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [unpaidCellActionTarget, setUnpaidCellActionTarget] = useState<{
+    member: {
+      _id: Id<"members">;
+      userId: Id<"users">;
+      name: string;
+      nickname?: string;
+    };
+    event: {
+      _id: Id<"duesEvents">;
+      periodLabel: string;
+      dueDate: number;
+      amount: number;
+    };
+  } | null>(null);
+
+  const selectedInvoice = useQuery(
+    api.treasury.borderpay.getInvoiceById,
+    selectedInvoiceId ? { invoiceId: selectedInvoiceId } : "skip"
+  );
+  const cancelInvoice = useMutation(api.treasury.borderpay.cancelInvoice);
+
+  const handleConfirmCancel = async () => {
+    if (!invoiceToCancel) return;
+    setIsCancellingInvoice(true);
+    setCancelError(null);
+    try {
+      await cancelInvoice({ invoiceNumber: invoiceToCancel.invoiceNumber });
+      setInvoiceToCancel(null);
+    } catch (err: any) {
+      setCancelError(err.message || "Failed to cancel invoice");
+    } finally {
+      setIsCancellingInvoice(false);
+    }
+  };
+
   // Sync fullscreen change & Escape key listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -160,17 +213,7 @@ export function DuesSpreadsheetPane({
 
   // Fast lookup map for cells: `${memberId}_${duesEventId}` -> cell
   const cellMap = useMemo(() => {
-    const map = new Map<string, {
-      _id: Id<"duesMemberships">;
-      duesEventId: Id<"duesEvents">;
-      fundId: Id<"funds">;
-      memberId: Id<"members">;
-      userId: Id<"users">;
-      hasPaid: boolean;
-      isWaived?: boolean;
-      paidAt?: number;
-      ledgerEntryId?: Id<"ledgerEntries">;
-    }>();
+    const map = new Map<string, NonNullable<typeof spreadsheet>["cells"][number]>();
     if (spreadsheet?.cells) {
       for (const cell of spreadsheet.cells) {
         map.set(`${cell.memberId}_${cell.duesEventId}`, cell);
@@ -670,15 +713,33 @@ export function DuesSpreadsheetPane({
                                 >
                                   {member.nickname || member.name}
                                 </p>
-                                <div className="flex items-center gap-1.5 text-[10px] font-mono">
-                                  {member.unpaidPeriodsCount > 0 ? (
-                                    <span className="text-rose-400 font-semibold truncate">
-                                      {member.unpaidPeriodsCount} {t("treasury.dues.unpaid").toLowerCase()}
-                                    </span>
-                                  ) : (
-                                    <span className="text-emerald-400 font-semibold truncate">
-                                      ✓ {t("treasury.dues.paid")}
-                                    </span>
+                                <div className="flex items-center justify-between gap-1.5 mt-0.5">
+                                  <div className="flex items-center gap-1.5 text-[10px] font-mono min-w-0">
+                                    {member.unpaidPeriodsCount > 0 ? (
+                                      <span className="text-rose-400 font-semibold truncate">
+                                        {member.unpaidPeriodsCount} {t("treasury.dues.unpaid").toLowerCase()}
+                                      </span>
+                                    ) : (
+                                      <span className="text-emerald-400 font-semibold truncate">
+                                        ✓ {t("treasury.dues.paid")}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {canManage && member.unpaidPeriodsCount > 0 && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setInvoicePrefillUserId(member.userId);
+                                        setInvoicePrefillPeriodCount(member.unpaidPeriodsCount);
+                                        setIsInvoiceModalOpen(true);
+                                      }}
+                                      title={t("treasury.invoices.createDuesBtn", "Create Dues Invoice")}
+                                      aria-label={t("treasury.invoices.createDuesBtn", "Create Dues Invoice")}
+                                      className="p-1 rounded text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 border border-cyan-500/20 transition-all cursor-pointer shrink-0"
+                                    >
+                                      <Receipt className="w-3.5 h-3.5" />
+                                    </button>
                                   )}
                                 </div>
                               </div>
@@ -750,7 +811,31 @@ export function DuesSpreadsheetPane({
                             );
                           }
 
-                          // Unpaid / Due cell
+                          // Invoiced cell (Pending payment)
+                          if (cell?.invoiceId) {
+                            return (
+                              <td
+                                key={event._id}
+                                className="p-2 border-r border-border/40 text-center"
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedInvoiceId(cell.invoiceId!);
+                                  }}
+                                  className="w-full py-1.5 px-1.5 sm:px-2 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/25 hover:border-amber-500/60 text-amber-300 rounded transition-all text-center group/cell cursor-pointer shadow-sm"
+                                  title={t("treasury.invoices.actionViewInvoice", "View Existing Invoice")}
+                                >
+                                  <div className="inline-flex items-center justify-center gap-1 text-[10px] sm:text-[11px] font-mono font-medium">
+                                    <Receipt className="w-3 h-3 text-amber-400 shrink-0" />
+                                    <span className="truncate">{t("treasury.invoices.cellInvoiced", "Invoiced")}</span>
+                                  </div>
+                                </button>
+                              </td>
+                            );
+                          }
+
+                          // Unpaid / Due cell without invoice
                           return (
                             <td
                               key={event._id}
@@ -759,7 +844,9 @@ export function DuesSpreadsheetPane({
                               <button
                                 type="button"
                                 onClick={() => {
-                                  if (canSign) {
+                                  if (canManage) {
+                                    setUnpaidCellActionTarget({ member, event });
+                                  } else if (canSign) {
                                     onOpenRecordPayment({
                                       userId: member.userId,
                                       duesEventId: event._id,
@@ -768,11 +855,12 @@ export function DuesSpreadsheetPane({
                                     });
                                   }
                                 }}
-                                disabled={!canSign}
-                                className={`w-full py-1.5 px-1.5 sm:px-2 bg-rose-500/10 border border-rose-500/30 text-rose-300 rounded transition-all text-center group/cell ${canSign
-                                  ? "hover:bg-rose-500/25 hover:border-rose-500/60 cursor-pointer shadow-sm"
-                                  : "opacity-80 cursor-default"
-                                  }`}
+                                disabled={!canSign && !canManage}
+                                className={`w-full py-1.5 px-1.5 sm:px-2 bg-rose-500/10 border border-rose-500/30 text-rose-300 rounded transition-all text-center group/cell ${
+                                  canSign || canManage
+                                    ? "hover:bg-rose-500/25 hover:border-rose-500/60 cursor-pointer shadow-sm"
+                                    : "opacity-80 cursor-default"
+                                }`}
                               >
                                 <div className="inline-flex items-center justify-center gap-1 text-[10px] sm:text-[11px] font-mono font-medium">
                                   <Clock className="w-3 h-3 text-rose-400 shrink-0" />
@@ -796,6 +884,10 @@ export function DuesSpreadsheetPane({
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 border border-emerald-500" />
                 <span className="text-foreground">{t("treasury.dues.paid")}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 border border-amber-500" />
+                <span className="text-foreground">{t("treasury.invoices.cellInvoiced", "Invoiced")}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-400 border border-rose-500" />
@@ -879,6 +971,226 @@ export function DuesSpreadsheetPane({
           currentPageIndex={safePageIndex}
           weeksPerPage={WEEKS_PER_PAGE}
         />
+      )}
+
+      {/* Create Dues Invoice Modal */}
+      {fundId && (
+        <CreateInvoiceModal
+          isOpen={isInvoiceModalOpen}
+          onClose={() => {
+            setIsInvoiceModalOpen(false);
+            setInvoicePrefillUserId(undefined);
+            setInvoicePrefillPeriodCount(undefined);
+          }}
+          organizationId={organizationId}
+          fundId={fundId}
+          targetUserId={invoicePrefillUserId}
+          prefillPeriodCount={invoicePrefillPeriodCount}
+          initialMode="admin"
+        />
+      )}
+
+      {/* Invoice Details Modal */}
+      <InvoiceDetailsModal
+        isOpen={Boolean(selectedInvoiceId && selectedInvoice)}
+        onClose={() => setSelectedInvoiceId(null)}
+        invoice={selectedInvoice || null}
+        canManage={canManage}
+        onEdit={(inv) => {
+          setSelectedInvoiceId(null);
+          setSelectedInvoiceForEdit(inv);
+        }}
+        onCancel={(inv) => {
+          setSelectedInvoiceId(null);
+          setInvoiceToCancel(inv);
+        }}
+      />
+
+      {/* Edit Invoice Modal */}
+      <EditInvoiceModal
+        isOpen={Boolean(selectedInvoiceForEdit)}
+        onClose={() => setSelectedInvoiceForEdit(null)}
+        invoice={selectedInvoiceForEdit}
+      />
+
+      {/* Cancel Confirmation Modal */}
+      {invoiceToCancel && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in-0">
+          <div className="w-full max-w-md">
+            <Card cornerLines className="bg-card/95 backdrop-blur-md border-border shadow-2xl">
+              <CardHeader className="pb-3 border-b border-border">
+                <div className="flex items-center gap-3">
+                  <div className="p-1.5 bg-amber-500/15 border border-amber-500/30 text-amber-400">
+                    <Ban className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base font-semibold">
+                      {t("treasury.invoices.cancelConfirmTitle", "Cancel Invoice")}
+                    </CardTitle>
+                    <CardDescription className="text-xs font-mono">
+                      {invoiceToCancel.invoiceNumber}
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-4 space-y-4">
+                {cancelError && (
+                  <div className="p-2.5 bg-destructive/15 border border-destructive/40 text-destructive-foreground text-xs font-mono">
+                    {cancelError}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {t(
+                    "treasury.invoices.cancelConfirmDesc",
+                    `Are you sure you want to cancel invoice ${invoiceToCancel.invoiceNumber}? The invoice will no longer be payable and reserved dues cycles will be released.`,
+                    { number: invoiceToCancel.invoiceNumber }
+                  )}
+                </p>
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    chamfer="dual"
+                    disabled={isCancellingInvoice}
+                    onClick={() => {
+                      setInvoiceToCancel(null);
+                      setCancelError(null);
+                    }}
+                    className="text-xs cursor-pointer"
+                  >
+                    {t("common.cancel")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="cyber"
+                    size="sm"
+                    chamfer="dual"
+                    disabled={isCancellingInvoice}
+                    onClick={() => void handleConfirmCancel()}
+                    className="text-xs cursor-pointer bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30"
+                  >
+                    {isCancellingInvoice
+                      ? t("treasury.invoices.cancelling", "Cancelling...")
+                      : t("treasury.invoices.confirmCancel", "Yes, Cancel Invoice")}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Unpaid Cell Action Selection Modal */}
+      {unpaidCellActionTarget && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in-0">
+          <div className="w-full max-w-md">
+            <Card cornerLines className="bg-card/95 backdrop-blur-md border-border shadow-2xl">
+              <CardHeader className="pb-3 border-b border-border">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-1.5 bg-primary/10 border border-primary/30 text-primary">
+                      <Receipt className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-sm font-semibold">
+                        {t(
+                          "treasury.invoices.cellActionPrompt",
+                          `Dues Action: ${unpaidCellActionTarget.member.nickname || unpaidCellActionTarget.member.name}`,
+                          { name: unpaidCellActionTarget.member.nickname || unpaidCellActionTarget.member.name }
+                        )}
+                      </CardTitle>
+                      <CardDescription className="text-xs font-mono">
+                        {unpaidCellActionTarget.event.periodLabel} — {new Intl.NumberFormat(undefined, { style: "currency", currency: currency || "IDR", maximumFractionDigits: 0 }).format(unpaidCellActionTarget.event.amount)}
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setUnpaidCellActionTarget(null)}
+                    className="p-1 hover:bg-muted/40 rounded text-muted-foreground hover:text-foreground cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </CardHeader>
+
+              <CardContent className="pt-4 space-y-3">
+                {/* Option 1: Create Online Dues Invoice */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const target = unpaidCellActionTarget;
+                    setUnpaidCellActionTarget(null);
+                    setInvoicePrefillUserId(target.member.userId);
+                    setInvoicePrefillPeriodCount(1);
+                    setIsInvoiceModalOpen(true);
+                  }}
+                  className="w-full p-3.5 bg-card/60 hover:bg-card border border-primary/30 hover:border-primary rounded text-left transition-all group flex items-start justify-between gap-3 cursor-pointer shadow-sm hover:shadow-[0_0_12px_rgba(34,211,238,0.2)]"
+                >
+                  <div className="space-y-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="w-4 h-4 text-primary shrink-0" />
+                      <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
+                        {t("treasury.invoices.actionCreateInvoice", "Create Online Dues Invoice")}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      {t("treasury.invoices.actionCreateInvoiceDesc", "Generate a shareable QRIS or Virtual Account invoice link for this cycle.")}
+                    </p>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0 mt-1" />
+                </button>
+
+                {/* Option 2: Record Manual Cash Payment */}
+                {canSign && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const target = unpaidCellActionTarget;
+                      setUnpaidCellActionTarget(null);
+                      onOpenRecordPayment({
+                        userId: target.member.userId,
+                        duesEventId: target.event._id,
+                        periodCount: 1,
+                        fundId: fundId ?? undefined,
+                      });
+                    }}
+                    className="w-full p-3.5 bg-card/60 hover:bg-card border border-emerald-500/30 hover:border-emerald-500 rounded text-left transition-all group flex items-start justify-between gap-3 cursor-pointer shadow-sm hover:shadow-[0_0_12px_rgba(16,185,129,0.2)]"
+                  >
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span className="text-xs font-semibold text-foreground group-hover:text-emerald-400 transition-colors">
+                          {t("treasury.invoices.actionRecordManual", "Record Manual Cash Payment")}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground leading-relaxed">
+                        {t("treasury.invoices.actionRecordManualDesc", "Sign and commit cash or bank transfer credit directly to the ledger.")}
+                      </p>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-emerald-400 group-hover:translate-x-0.5 transition-all shrink-0 mt-1" />
+                  </button>
+                )}
+
+                <div className="pt-2 flex justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    chamfer="dual"
+                    onClick={() => setUnpaidCellActionTarget(null)}
+                    className="text-xs cursor-pointer"
+                  >
+                    {t("common.cancel")}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );
