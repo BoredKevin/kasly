@@ -27,7 +27,8 @@ export * from "./components/MemberDuesBanner";
 export * from "./components/CompactBalanceBanner";
 export * from "./components/UnifiedMobileFinancialHero";
 export * from "./components/BulkDuesEntryPane";
-export * from "./utils/revertUtils";
+export * from "./lib/revertUtils";
+export * from "./types";
 
 if (typeof window !== "undefined" && window.__updateAppProgress) {
   window.__updateAppProgress(65, "Loading treasury & ledger...");

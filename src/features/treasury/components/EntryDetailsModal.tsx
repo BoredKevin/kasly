@@ -4,7 +4,6 @@ import { useQuery } from "convex/react";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
-import { Id } from "../../../../convex/_generated/dataModel";
 import {
   Card,
   CardHeader,
@@ -35,27 +34,9 @@ import {
   findReversalForEntry,
   findTargetEntry,
 } from "../utils/revertUtils";
+import { LedgerEntryItem } from "../types";
 
-export interface LedgerEntryItem {
-  _id: Id<"ledgerEntries">;
-  _creationTime: number;
-  organizationId: Id<"organizations">;
-  fundId: Id<"funds">;
-  sequenceNumber: number;
-  previousHash: string;
-  entryHash: string;
-  timestamp: number;
-  direction: string;
-  amount: number;
-  memo: string;
-  keyId: string;
-  signerId: Id<"users">;
-  signerName?: string;
-  signature: string;
-  transferId?: string;
-  entryType?: string;
-  duesEventId?: Id<"duesEvents">;
-}
+export type { LedgerEntryItem };
 
 interface EntryDetailsModalProps {
   isOpen: boolean;

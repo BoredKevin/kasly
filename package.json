@@ -19,6 +19,7 @@
     "typecheck": "tsc -b",
     "build": "npm run typecheck && npx vite build",
     "lint": "npm run typecheck && eslint . --report-unused-disable-directives --max-warnings 0",
+    "test": "vitest run",
     "preview": "vite preview"
   },
   "dependencies": {
