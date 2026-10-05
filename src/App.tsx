@@ -47,132 +47,124 @@ export default function App() {
   const { t } = useTranslation();
 
   return (
-    <>
-      {/* Authenticated Workspace Flow (With Navbar & Treasury Sidebar) */}
-      <Authenticated>
-        <Layout>
-          <Switch>
-            <Route path="/">
-              <Redirect to="/treasury" />
-            </Route>
-            <Route path="/claim">
-              <ClaimRegistrationView />
-            </Route>
-            <Route path="/register">
-              <ClaimRegistrationView />
-            </Route>
-            <Route path="/profile">
-              <UserProfileView />
-            </Route>
-            <Route path="/organization">
-              <OrganizationView />
-            </Route>
-            <Route path="/organization/roles">
-              <OrganizationView />
-            </Route>
-            <Route path="/organization/invites">
-              <OrganizationView />
-            </Route>
-            <Route path="/organization/members">
-              <OrganizationView />
-            </Route>
-            <Route path="/treasury">
-              <TreasuryErrorBoundary>
-                <TreasuryView />
-              </TreasuryErrorBoundary>
-            </Route>
-            <Route path="/treasury/ledger">
-              <TreasuryErrorBoundary>
-                <TreasuryView />
-              </TreasuryErrorBoundary>
-            </Route>
-            <Route path="/treasury/dues">
-              <TreasuryErrorBoundary>
-                <TreasuryView />
-              </TreasuryErrorBoundary>
-            </Route>
-            <Route path="/treasury/bulk-dues">
-              <TreasuryErrorBoundary>
-                <TreasuryView />
-              </TreasuryErrorBoundary>
-            </Route>
-            <Route path="/treasury/dues/bulk">
-              <TreasuryErrorBoundary>
-                <TreasuryView />
-              </TreasuryErrorBoundary>
-            </Route>
-            <Route path="/treasury/keys">
-              <TreasuryErrorBoundary>
-                <TreasuryView />
-              </TreasuryErrorBoundary>
-            </Route>
-            <Route path="/treasury/admin">
-              <TreasuryErrorBoundary>
-                <TreasuryView />
-              </TreasuryErrorBoundary>
-            </Route>
-            <Route path="/treasury/invoices">
-              <TreasuryErrorBoundary>
-                <TreasuryView />
-              </TreasuryErrorBoundary>
-            </Route>
-            <Route path="/invoice/:invoiceNumber/pay">
-              {(params) => (
-                <InvoicePaymentPage
-                  invoiceNumber={params.invoiceNumber}
-                  initialView="payment"
-                />
-              )}
-            </Route>
-            <Route path="/invoice/:invoiceNumber">
-              {(params) => <InvoicePaymentPage invoiceNumber={params.invoiceNumber} />}
-            </Route>
-            {/* Canonical Transaction URL inside Workspace */}
-            <Route path="/tx/:hash">
-              {(params) => (
-                <TreasuryErrorBoundary>
-                  <TreasuryView activeTab="entry" entryIdentifier={params.hash} />
-                </TreasuryErrorBoundary>
-              )}
-            </Route>
-            {/* Root Short URL inside Workspace */}
-            <Route path="/:identifier">
-              {(params) => {
-                if (RESERVED_ROOT_PATHS.has(params.identifier.toLowerCase())) {
-                  return <Redirect to="/treasury" />;
-                }
-                return (
-                  <TreasuryErrorBoundary>
-                    <TreasuryView
-                      activeTab="entry"
-                      entryIdentifier={params.identifier}
-                    />
-                  </TreasuryErrorBoundary>
-                );
-              }}
-            </Route>
-            <Route>
-              <Redirect to="/treasury" />
-            </Route>
-          </Switch>
-        </Layout>
-      </Authenticated>
+    <Switch>
+      {/* Isolated Standalone Invoice Checkout & Payment Routes (No Workspace Layout contamination) */}
+      <Route path="/invoice/:invoiceNumber/pay">
+        {(params) => (
+          <InvoicePaymentPage
+            invoiceNumber={params.invoiceNumber}
+            initialView="payment"
+          />
+        )}
+      </Route>
+      <Route path="/invoice/:invoiceNumber">
+        {(params) => <InvoicePaymentPage invoiceNumber={params.invoiceNumber} />}
+      </Route>
 
-      {/* Unauthenticated Flow (Centered Entry Card, No Navbar / Sidebar) */}
-      <Unauthenticated>
-        <Switch>
-          {/* Public Invoice Payment Route (No Auth Required) */}
-          <Route path="/invoice/:invoiceNumber/pay">
-            {(params) => (
-              <InvoicePaymentPage
-                invoiceNumber={params.invoiceNumber}
-                initialView="payment"
-              />
-            )}
-          </Route>
-          <Route path="/invoice/:invoiceNumber">
-            {(params) => <InvoicePaymentPage invoiceNumber={params.invoiceNumber} />}
-          </Route>
+      {/* Main Application Routes */}
+      <Route>
+        {/* Authenticated Workspace Flow (With Navbar & Treasury Sidebar) */}
+        <Authenticated>
+          <Layout>
+            <Switch>
+              <Route path="/">
+                <Redirect to="/treasury" />
+              </Route>
+              <Route path="/claim">
+                <ClaimRegistrationView />
+              </Route>
+              <Route path="/register">
+                <ClaimRegistrationView />
+              </Route>
+              <Route path="/profile">
+                <UserProfileView />
+              </Route>
+              <Route path="/organization">
+                <OrganizationView />
+              </Route>
+              <Route path="/organization/roles">
+                <OrganizationView />
+              </Route>
+              <Route path="/organization/invites">
+                <OrganizationView />
+              </Route>
+              <Route path="/organization/members">
+                <OrganizationView />
+              </Route>
+              <Route path="/treasury">
+                <TreasuryErrorBoundary>
+                  <TreasuryView />
+                </TreasuryErrorBoundary>
+              </Route>
+              <Route path="/treasury/ledger">
+                <TreasuryErrorBoundary>
+                  <TreasuryView />
+                </TreasuryErrorBoundary>
+              </Route>
+              <Route path="/treasury/dues">
+                <TreasuryErrorBoundary>
+                  <TreasuryView />
+                </TreasuryErrorBoundary>
+              </Route>
+              <Route path="/treasury/bulk-dues">
+                <TreasuryErrorBoundary>
+                  <TreasuryView />
+                </TreasuryErrorBoundary>
+              </Route>
+              <Route path="/treasury/dues/bulk">
+                <TreasuryErrorBoundary>
+                  <TreasuryView />
+                </TreasuryErrorBoundary>
+              </Route>
+              <Route path="/treasury/keys">
+                <TreasuryErrorBoundary>
+                  <TreasuryView />
+                </TreasuryErrorBoundary>
+              </Route>
+              <Route path="/treasury/admin">
+                <TreasuryErrorBoundary>
+                  <TreasuryView />
+                </TreasuryErrorBoundary>
+              </Route>
+              <Route path="/treasury/invoices">
+                <TreasuryErrorBoundary>
+                  <TreasuryView />
+                </TreasuryErrorBoundary>
+              </Route>
+              {/* Canonical Transaction URL inside Workspace */}
+              <Route path="/tx/:hash">
+                {(params) => (
+                  <TreasuryErrorBoundary>
+                    <TreasuryView activeTab="entry" entryIdentifier={params.hash} />
+                  </TreasuryErrorBoundary>
+                )}
+              </Route>
+              {/* Root Short URL inside Workspace */}
+              <Route path="/:identifier">
+                {(params) => {
+                  if (RESERVED_ROOT_PATHS.has(params.identifier.toLowerCase())) {
+                    return <Redirect to="/treasury" />;
+                  }
+                  return (
+                    <TreasuryErrorBoundary>
+                      <TreasuryView
+                        activeTab="entry"
+                        entryIdentifier={params.identifier}
+                      />
+                    </TreasuryErrorBoundary>
+                  );
+                }}
+              </Route>
+              <Route>
+                <Redirect to="/treasury" />
+              </Route>
+            </Switch>
+          </Layout>
+        </Authenticated>
+
+        {/* Unauthenticated Flow (Centered Entry Card, No Navbar / Sidebar) */}
+        <Unauthenticated>
+          <Switch>
 
           {/* Canonical Transaction URL (Centered, No Navbar/Sidebar) */}
           <Route path="/tx/:hash">
@@ -277,6 +269,7 @@ export default function App() {
           </Route>
         </Switch>
       </Unauthenticated>
-    </>
-  );
+    </Route>
+  </Switch>
+);
 }
