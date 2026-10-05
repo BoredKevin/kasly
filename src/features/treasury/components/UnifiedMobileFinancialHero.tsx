@@ -5,7 +5,6 @@ import { StatusPill } from "../../../ui/StatusPill";
 import { Button } from "@boredkevin/ui";
 import {
   Landmark,
-  ChevronDown,
   CheckCircle2,
   Receipt,
   CreditCard,
@@ -47,9 +46,6 @@ interface UnifiedMobileFinancialHeroProps {
 
 export function UnifiedMobileFinancialHero({
   fund,
-  funds,
-  activeFundId,
-  onSelectFund,
   unpaidPeriods,
   canSign,
   onOpenPayDues,
@@ -67,43 +63,31 @@ export function UnifiedMobileFinancialHero({
 
   return (
     <Panel className="p-4 sm:p-5 space-y-4">
-      {/* Top Row: Fund Name & Small Saldo */}
+      {/* Top Row: Clean Status Icon & Saldo Kas with Quick Record */}
       <div className="flex items-center justify-between gap-3 pb-3 border-b border-border/60">
-        {/* Fund Switcher / Identification */}
-        <div className="flex items-center gap-2.5 min-w-0">
+        {/* Left: Treasury Ledger Anchor */}
+        <div className="flex items-center gap-2 min-w-0">
           <div className="p-1.5 bg-primary/10 border border-primary/20 text-primary rounded-[var(--fintech-radius-sm)] shrink-0">
             <Landmark className="w-4 h-4" />
           </div>
-
-          {funds && funds.length > 1 ? (
-            <div className="relative min-w-0 max-w-[160px] sm:max-w-[260px]">
-              <select
-                value={activeFundId ?? ""}
-                onChange={(e) => onSelectFund(e.target.value as Id<"funds">)}
-                className="w-full h-8 px-2.5 pr-7 bg-background border border-border rounded-[var(--fintech-radius-sm)] text-xs sm:text-sm font-semibold text-foreground focus:outline-none focus:border-primary appearance-none cursor-pointer truncate"
-              >
-                {funds.map((f) => (
-                  <option key={f._id} value={f._id}>
-                    {f.name} ({f.currency})
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 absolute right-2 top-2.5 pointer-events-none text-muted-foreground" />
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="text-sm font-semibold text-foreground truncate">
-                {fund?.name ?? "Treasury"}
-              </span>
-              <StatusPill tone="info" dot={false}>
-                {currency}
-              </StatusPill>
-            </div>
-          )}
         </div>
 
-        {/* Small Saldo Metric & Quick Record Button */}
-        <div className="flex items-center gap-3 shrink-0">
+        {/* Right: Quick Record Action & Saldo Kas */}
+        <div className="flex items-center gap-3 shrink-0 ml-auto">
+          {canSign && !fund?.isArchived && onOpenRecordPayment && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              chamfer="none"
+              onClick={onOpenRecordPayment}
+              className="h-7 text-xs px-2.5 flex items-center gap-1.5 cursor-pointer"
+            >
+              <PenLine className="w-3 h-3 text-primary" />
+              <span>{t("nav.recordPayment", "Record")}</span>
+            </Button>
+          )}
+
           <div className="text-right">
             <span className="text-[10px] uppercase text-muted-foreground tracking-wider block font-medium">
               {t("treasury.overview.treasuryBalance", "Treasury Balance")}
@@ -115,20 +99,6 @@ export function UnifiedMobileFinancialHero({
               </span>
             </div>
           </div>
-
-          {canSign && !fund?.isArchived && onOpenRecordPayment && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              chamfer="none"
-              onClick={onOpenRecordPayment}
-              className="h-7 text-xs px-2.5 flex items-center gap-1.5 cursor-pointer ml-1"
-            >
-              <PenLine className="w-3 h-3 text-primary" />
-              <span>Record</span>
-            </Button>
-          )}
         </div>
       </div>
 

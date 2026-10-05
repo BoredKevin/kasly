@@ -2,15 +2,23 @@ import { Authenticated, useQuery } from "convex/react";
 import { Link, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { api } from "../../convex/_generated/api";
-import { Id } from "../../convex/_generated/dataModel";
 import { useActiveWorkspace } from "../contexts";
-import { LanguageToggle } from "../components/common";
 import { SignOutButton } from "../features/auth";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  Button,
+} from "@boredkevin/ui";
 import {
   Landmark,
   Building2,
   User,
   ChevronDown,
+  Check,
 } from "lucide-react";
 
 export function TopBar() {
@@ -62,21 +70,46 @@ export function TopBar() {
         {/* Organization Switcher Dropdown (If > 1 org) or Org Badge */}
         <Authenticated>
           {orgs && orgs.length > 1 ? (
-            <div className="relative">
-              <select
-                value={effectiveOrgId ?? ""}
-                onChange={(e) => setActiveOrgId(e.target.value as Id<"organizations">)}
-                className="h-7 pl-2 pr-6 bg-muted/30 border border-border/70 rounded-[var(--fintech-radius-sm)] text-xs font-medium text-foreground appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary max-w-[140px] truncate"
-                aria-label="Select organization"
-              >
-                {orgs.map((org) => (
-                  <option key={org._id} value={org._id}>
-                    {org.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-3 h-3 absolute right-1.5 top-2 pointer-events-none text-muted-foreground" />
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  chamfer="none"
+                  className="h-7 px-2 bg-muted/30 hover:bg-muted/60 border-border/70 text-xs font-medium text-foreground flex items-center gap-1.5 cursor-pointer max-w-[140px]"
+                  aria-label="Select organization"
+                >
+                  <Building2 className="w-3 h-3 text-muted-foreground shrink-0" />
+                  <span className="truncate">
+                    {orgs.find((org) => org._id === effectiveOrgId)?.name ?? "Organization"}
+                  </span>
+                  <ChevronDown className="w-3 h-3 text-muted-foreground shrink-0 ml-auto" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48 p-1">
+                <DropdownMenuLabel className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground px-2 py-1">
+                  {t("nav.organization", "Organizations")}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {orgs.map((org) => {
+                  const isSelected = org._id === effectiveOrgId;
+                  return (
+                    <DropdownMenuItem
+                      key={org._id}
+                      onClick={() => setActiveOrgId(org._id)}
+                      className={`flex items-center justify-between px-2 py-1.5 text-xs rounded-[var(--fintech-radius-xs)] cursor-pointer ${
+                        isSelected
+                          ? "bg-primary/10 text-primary font-semibold"
+                          : "text-foreground hover:bg-muted/50"
+                      }`}
+                    >
+                      <span className="truncate">{org.name}</span>
+                      {isSelected && <Check className="w-3.5 h-3.5 text-primary shrink-0 ml-1" />}
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : orgs && orgs.length === 1 ? (
             <span className="hidden sm:inline-block text-xs font-medium text-muted-foreground border-l border-border/60 pl-3">
               {orgs[0].name}
@@ -124,32 +157,70 @@ export function TopBar() {
         </Authenticated>
       </div>
 
-      {/* Right: Active Fund Selector, Language Toggle & User Actions */}
+      {/* Right: Active Fund Selector & User Actions */}
       <div className="flex items-center gap-2 sm:gap-3">
         <Authenticated>
-          {/* Fund Selector Pill (Universal) */}
+          {/* Fund Selector Dropdown (Universal) */}
           {funds && funds.length > 0 && isTreasuryActive && (
-            <div className="relative">
-              <select
-                value={currentFund?._id ?? ""}
-                onChange={(e) => setActiveFundId(e.target.value as Id<"funds">)}
-                className="h-7 pl-2 pr-6 bg-muted/40 hover:bg-muted/60 border border-border/80 rounded-[var(--fintech-radius-sm)] text-xs font-medium text-foreground appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary max-w-[150px] sm:max-w-[200px] truncate"
-                aria-label="Active treasury fund"
-              >
-                {funds.map((fund) => (
-                  <option key={fund._id} value={fund._id}>
-                    {fund.name} ({fund.currency})
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-3 h-3 absolute right-1.5 top-2 pointer-events-none text-muted-foreground" />
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  chamfer="none"
+                  className="h-8 px-2.5 sm:px-3 bg-muted/40 hover:bg-muted/70 active:bg-muted/80 border-border/80 hover:border-primary/40 text-xs font-medium text-foreground flex items-center gap-1.5 sm:gap-2 cursor-pointer shadow-xs"
+                  aria-label="Select active treasury fund"
+                >
+                  <Landmark className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span className="font-semibold text-xs text-foreground truncate max-w-[100px] sm:max-w-[160px]">
+                    {currentFund?.name ?? "Treasury"}
+                  </span>
+                  {currentFund?.currency && (
+                    <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 shrink-0">
+                      {currentFund.currency}
+                    </span>
+                  )}
+                  <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0 ml-0.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 p-1">
+                <DropdownMenuLabel className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground px-2 py-1.5">
+                  {t("treasury.funds.title", "Treasury Funds")}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {funds.map((fund) => {
+                  const isSelected = fund._id === currentFund?._id;
+                  return (
+                    <DropdownMenuItem
+                      key={fund._id}
+                      onClick={() => setActiveFundId(fund._id)}
+                      className={`flex items-center justify-between px-2.5 py-2 cursor-pointer text-xs rounded-[var(--fintech-radius-xs)] transition-colors ${
+                        isSelected
+                          ? "bg-primary/10 text-primary font-semibold"
+                          : "text-foreground hover:bg-muted/50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <Landmark
+                          className={`w-3.5 h-3.5 shrink-0 ${
+                            isSelected ? "text-primary" : "text-muted-foreground"
+                          }`}
+                        />
+                        <span className="truncate">{fund.name}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                        <span className="text-[10px] font-mono px-1 py-0.5 rounded bg-muted text-muted-foreground border border-border/50">
+                          {fund.currency}
+                        </span>
+                        {isSelected && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
+                      </div>
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
-        </Authenticated>
 
-        <LanguageToggle />
-
-        <Authenticated>
           <div className="hidden sm:block">
             <SignOutButton />
           </div>

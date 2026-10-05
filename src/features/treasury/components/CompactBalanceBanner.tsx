@@ -11,7 +11,6 @@ import {
   Plus,
   PenLine,
   ShieldAlert,
-  ChevronDown,
 } from "lucide-react";
 
 interface FundItem {
@@ -36,9 +35,6 @@ interface CompactBalanceBannerProps {
 
 export function CompactBalanceBanner({
   fund,
-  funds,
-  activeFundId,
-  onSelectFund,
   canSign,
   canAdmin,
   onOpenRecordPayment,
@@ -77,41 +73,33 @@ export function CompactBalanceBanner({
   return (
     <Panel className="shadow-sm">
       <CardContent className="p-3 sm:p-3.5 flex flex-wrap items-center justify-between gap-3">
-        {/* Left: Fund Selector & Identification */}
-        <div className="flex items-center gap-2.5 min-w-0">
+        {/* Left: Treasury Ledger Anchor */}
+        <div className="flex items-center gap-2 min-w-0">
           <div className="p-1.5 bg-primary/10 border border-primary/30 text-primary rounded-[var(--fintech-radius-sm)] shrink-0">
             <Landmark className="w-4 h-4" />
           </div>
-
-          {funds && funds.length > 1 ? (
-            <div className="relative min-w-0 max-w-[170px] sm:max-w-[220px]">
-              <select
-                value={activeFundId ?? ""}
-                onChange={(e) => onSelectFund(e.target.value as Id<"funds">)}
-                className="w-full h-8 px-2.5 pr-7 bg-muted/30 border border-border/80 rounded-[var(--fintech-radius-sm)] text-xs font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer truncate"
-              >
-                {funds.map((f) => (
-                  <option key={f._id} value={f._id}>
-                    {f.name} ({f.currency})
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 absolute right-2 top-2.5 pointer-events-none text-muted-foreground" />
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-xs font-semibold text-foreground truncate max-w-[140px] sm:max-w-[200px]">
-                {fund.name}
-              </span>
-              <StatusPill tone="info">
-                {fund.currency}
-              </StatusPill>
-            </div>
-          )}
         </div>
 
-        {/* Right: Balance Display, Health Indicator & Quick Action */}
+        {/* Right: Quick Action & Balance Display */}
         <div className="flex items-center gap-3 sm:gap-4 shrink-0 ml-auto">
+          {/* Quick Record Action for Treasurers */}
+          {canSign && !fund.isArchived && onOpenRecordPayment && (
+            <Button
+              type="button"
+              variant={isFrozen ? "destructive" : "outline"}
+              size="sm"
+              chamfer="none"
+              disabled={isFrozen}
+              onClick={onOpenRecordPayment}
+              className="h-8 text-xs px-2.5 flex items-center gap-1.5 cursor-pointer shrink-0 border-border/80 hover:border-primary/40 font-medium"
+              title={isFrozen ? "Ledger is frozen" : t("nav.recordPayment", "Record Payment")}
+              aria-label={t("nav.recordPayment", "Record Payment")}
+            >
+              <PenLine className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{t("nav.recordPayment", "Record Payment")}</span>
+            </Button>
+          )}
+
           {/* Balance Amount */}
           <div className="text-right space-y-0.5">
             <div className="text-[10px] uppercase text-muted-foreground tracking-wider flex items-center justify-end gap-1.5 font-medium">
@@ -144,24 +132,6 @@ export function CompactBalanceBanner({
               </span>
             </div>
           </div>
-
-          {/* Quick Record Action for Treasurers */}
-          {canSign && !fund.isArchived && onOpenRecordPayment && (
-            <Button
-              type="button"
-              variant={isFrozen ? "destructive" : "outline"}
-              size="sm"
-              chamfer="none"
-              disabled={isFrozen}
-              onClick={onOpenRecordPayment}
-              className="h-8 text-xs px-2.5 flex items-center gap-1.5 cursor-pointer shrink-0 border-border/80 hover:border-primary/40 font-medium"
-              title={isFrozen ? "Ledger is frozen" : t("nav.recordPayment", "Record Payment")}
-              aria-label={t("nav.recordPayment", "Record Payment")}
-            >
-              <PenLine className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{t("nav.recordPayment", "Record Payment")}</span>
-            </Button>
-          )}
         </div>
       </CardContent>
     </Panel>

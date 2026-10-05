@@ -14,7 +14,6 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  ShieldCheck,
   ScrollText,
 } from "lucide-react";
 import { RevertEntryModal, TargetLedgerEntry } from "../components/RevertEntryModal";
@@ -255,25 +254,13 @@ export function LedgerTimeline({
                     {/* Right Side: Amount & Proof Drawer Action */}
                     <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2.5 sm:pt-0 border-t sm:border-t-0 border-border/40 sm:flex-col sm:items-end sm:gap-2">
                       <div
-                        className={`font-mono text-base font-bold tabular-nums text-right ${
-                          isCredit ? "text-emerald-400" : "text-foreground"
-                        }`}
+                        className={`font-mono text-base font-bold tabular-nums text-right ${isCredit ? "text-emerald-400" : "text-foreground"
+                          }`}
                       >
                         {isCredit ? "+" : "-"}{fund?.currency} {entry.amount.toLocaleString()}
                       </div>
 
                       <div className="flex items-center gap-1.5">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setSelectedEntryForProof(entry)}
-                          className="h-7 px-2 text-xs text-muted-foreground hover:text-primary flex items-center gap-1 cursor-pointer"
-                          title="View cryptographic verification proof"
-                        >
-                          <ShieldCheck className="w-3.5 h-3.5 text-primary" />
-                          <span>Audit Proof</span>
-                        </Button>
 
                         <Button
                           type="button"
