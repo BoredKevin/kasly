@@ -1,23 +1,16 @@
 import { useState } from "react";
-import { createPortal } from "react-dom";
 import { useQuery, useMutation } from "convex/react";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
+import { ResponsiveDialog } from "../../../ui";
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
   Button,
   Input,
 } from "@boredkevin/ui";
 import {
-  FileText,
   AlertCircle,
-  X,
   Check,
   Copy,
   ExternalLink,
@@ -113,38 +106,8 @@ function CreateCustomInvoiceModalContent({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <Card telemetry="TREASURY.CREATE_CUSTOM_INVOICE" cornerLines className="bg-card border-border shadow-2xl">
-          <CardHeader className="pb-4 border-b border-border">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="p-1.5 bg-primary/10 border border-primary/30 text-primary">
-                  <FileText className="w-5 h-5" />
-                </div>
-                <div>
-                  <CardTitle className="text-base font-semibold">
-                    {t("treasury.invoices.customModalTitle")}
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    {t("treasury.invoices.customModalDesc")}
-                  </CardDescription>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                chamfer="dual"
-                onClick={onClose}
-                className="h-7 w-7 p-0 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          </CardHeader>
-
-          <CardContent className="pt-5">
-            {createdInvoiceNumber ? (
+    <div className="space-y-4 pt-1">
+      {createdInvoiceNumber ? (
               <div className="space-y-5 text-center py-2">
                 <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 mx-auto flex items-center justify-center">
                   <Check className="w-6 h-6" />
@@ -187,7 +150,7 @@ function CreateCustomInvoiceModalContent({
                     type="button"
                     variant="cyber"
                     size="sm"
-                    chamfer="dual"
+                    chamfer="none"
                     onClick={handleCopyLink}
                     className="w-full text-xs font-mono flex items-center justify-center gap-2 cursor-pointer"
                   >
@@ -208,7 +171,7 @@ function CreateCustomInvoiceModalContent({
                     type="button"
                     variant="outline"
                     size="sm"
-                    chamfer="dual"
+                    chamfer="none"
                     onClick={handleShareWhatsApp}
                     className="w-full text-xs flex items-center justify-center gap-2 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 cursor-pointer"
                   >
@@ -220,7 +183,7 @@ function CreateCustomInvoiceModalContent({
                     type="button"
                     variant="ghost"
                     size="sm"
-                    chamfer="dual"
+                    chamfer="none"
                     onClick={() => {
                       onClose();
                       setLocation(`/invoice/${createdInvoiceNumber}`);
@@ -237,7 +200,7 @@ function CreateCustomInvoiceModalContent({
                     type="button"
                     variant="outline"
                     size="sm"
-                    chamfer="dual"
+                    chamfer="none"
                     onClick={onClose}
                     className="text-xs cursor-pointer"
                   >
@@ -260,7 +223,7 @@ function CreateCustomInvoiceModalContent({
                     type="button"
                     variant={recipientType === "member" ? "cyber" : "ghost"}
                     size="sm"
-                    chamfer="dual"
+                    chamfer="none"
                     onClick={() => setRecipientType("member")}
                     className="text-xs flex items-center justify-center gap-1.5 h-7 cursor-pointer"
                   >
@@ -272,7 +235,7 @@ function CreateCustomInvoiceModalContent({
                     type="button"
                     variant={recipientType === "guest" ? "cyber" : "ghost"}
                     size="sm"
-                    chamfer="dual"
+                    chamfer="none"
                     onClick={() => {
                       setRecipientType("guest");
                       setSelectedUserId("");
@@ -313,7 +276,7 @@ function CreateCustomInvoiceModalContent({
                   </label>
                   <Input
                     type="text"
-                    chamfer="dual"
+                    chamfer="none"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder={t("treasury.invoices.itemTitlePlaceholder")}
@@ -341,7 +304,7 @@ function CreateCustomInvoiceModalContent({
                   </label>
                   <Input
                     type="number"
-                    chamfer="dual"
+                    chamfer="none"
                     min="1000"
                     step="500"
                     value={amount}
@@ -357,7 +320,7 @@ function CreateCustomInvoiceModalContent({
                   </label>
                   <Input
                     type="text"
-                    chamfer="dual"
+                    chamfer="none"
                     value={payerName}
                     onChange={(e) => setPayerName(e.target.value)}
                     placeholder="John Doe"
@@ -372,7 +335,7 @@ function CreateCustomInvoiceModalContent({
                   </label>
                   <Input
                     type="email"
-                    chamfer="dual"
+                    chamfer="none"
                     value={payerEmail}
                     onChange={(e) => setPayerEmail(e.target.value)}
                     placeholder="john@example.com"
@@ -385,7 +348,7 @@ function CreateCustomInvoiceModalContent({
                     type="button"
                     variant="outline"
                     size="sm"
-                    chamfer="dual"
+                    chamfer="none"
                     onClick={onClose}
                     className="text-xs cursor-pointer"
                   >
@@ -395,7 +358,7 @@ function CreateCustomInvoiceModalContent({
                     type="submit"
                     variant="cyber"
                     size="sm"
-                    chamfer="dual"
+                    chamfer="none"
                     disabled={isSubmitting || !title.trim() || amount <= 0 || !payerName.trim()}
                     className="text-xs cursor-pointer"
                   >
@@ -406,9 +369,6 @@ function CreateCustomInvoiceModalContent({
                 </div>
               </form>
             )}
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }
@@ -419,14 +379,24 @@ export function CreateCustomInvoiceModal({
   organizationId,
   fundId,
 }: CreateCustomInvoiceModalProps) {
-  if (!isOpen || typeof document === "undefined") return null;
+  const { t } = useTranslation();
 
-  return createPortal(
-    <CreateCustomInvoiceModalContent
+  return (
+    <ResponsiveDialog
+      isOpen={isOpen}
       onClose={onClose}
-      organizationId={organizationId}
-      fundId={fundId}
-    />,
-    document.body
+      title={t("treasury.invoices.customModalTitle", "Create Custom Invoice")}
+      description={t(
+        "treasury.invoices.customModalDesc",
+        "Generate a standalone invoice with custom amount and purpose."
+      )}
+      maxWidth="md"
+    >
+      <CreateCustomInvoiceModalContent
+        onClose={onClose}
+        organizationId={organizationId}
+        fundId={fundId}
+      />
+    </ResponsiveDialog>
   );
 }

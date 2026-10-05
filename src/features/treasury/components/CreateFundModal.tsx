@@ -1,19 +1,11 @@
 import { useState } from "react";
-import { createPortal } from "react-dom";
 import { useMutation } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  Button,
-  Input,
-} from "@boredkevin/ui";
-import { Landmark, X, Sparkles } from "lucide-react";
+import { ResponsiveDialog } from "../../../ui/ResponsiveDialog";
+import { Button, Input } from "@boredkevin/ui";
+import { Sparkles } from "lucide-react";
 
 interface CreateFundModalProps {
   isOpen: boolean;
@@ -36,8 +28,6 @@ export function CreateFundModal({
   const [error, setError] = useState<string | null>(null);
 
   const createFund = useMutation(api.treasury.funds.create);
-
-  if (!isOpen || typeof document === "undefined") return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,134 +56,103 @@ export function CreateFundModal({
     }
   };
 
-  const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-md">
-        <Card telemetry="TREASURY.CREATE_FUND" cornerLines className="bg-card border-border shadow-2xl">
-          <CardHeader className="pb-4 border-b border-border">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="p-1.5 bg-primary/10 border border-primary/20 text-primary">
-                  <Landmark className="w-5 h-5" />
-                </div>
-                <div>
-                  <CardTitle className="text-base font-semibold">
-                    {t("treasury.createFund.title")}
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    {t("treasury.createFund.description")}
-                  </CardDescription>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                chamfer="dual"
-                onClick={onClose}
-                className="h-7 w-7 p-0 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          </CardHeader>
+  return (
+    <ResponsiveDialog
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t("treasury.createFund.title", "Create Treasury Fund")}
+      description={t(
+        "treasury.createFund.description",
+        "Add an isolated account for dues, projects, or operating cash."
+      )}
+      maxWidth="md"
+    >
+      <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4 pt-1">
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold text-foreground">
+            {t("treasury.createFund.fundName", "Fund Name")} *
+          </label>
+          <Input
+            type="text"
+            placeholder="e.g. General Operating Fund, Event Pool"
+            value={name}
+            disabled={isSubmitting}
+            onChange={(e) => setName(e.target.value)}
+            chamfer="none"
+            required
+          />
+        </div>
 
-          <CardContent className="pt-5">
-            <form
-              onSubmit={(e) => {
-                void handleSubmit(e);
-              }}
-              className="space-y-4"
-            >
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">
-                  {t("treasury.createFund.fundName")} *
-                </label>
-                <Input
-                  type="text"
-                  placeholder="e.g. General Operating Fund, Event Pool"
-                  value={name}
-                  disabled={isSubmitting}
-                  onChange={(e) => setName(e.target.value)}
-                  chamfer="dual"
-                  required
-                />
-              </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold text-foreground">
+            {t("treasury.createFund.currency", "Currency")} *
+          </label>
+          <Input
+            type="text"
+            placeholder="e.g. IDR, USD, EUR"
+            value={currency}
+            disabled={isSubmitting}
+            onChange={(e) => setCurrency(e.target.value.toUpperCase())}
+            chamfer="none"
+            maxLength={10}
+            required
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Standard currency code (e.g. IDR, USD). Cannot be changed after creation.
+          </p>
+        </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">
-                  {t("treasury.createFund.currency")} *
-                </label>
-                <Input
-                  type="text"
-                  placeholder="e.g. IDR, USD, EUR"
-                  value={currency}
-                  disabled={isSubmitting}
-                  onChange={(e) => setCurrency(e.target.value.toUpperCase())}
-                  chamfer="dual"
-                  maxLength={10}
-                  required
-                />
-                <p className="text-[11px] text-muted-foreground">
-                  Standard currency code (e.g. IDR, USD). Cannot be changed after creation.
-                </p>
-              </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold text-foreground">
+            {t("treasury.createFund.fundDescription", "Description")}
+          </label>
+          <Input
+            type="text"
+            placeholder="Purpose of this fund (optional)"
+            value={description}
+            disabled={isSubmitting}
+            onChange={(e) => setDescription(e.target.value)}
+            chamfer="none"
+          />
+        </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">
-                  {t("treasury.createFund.fundDescription")}
-                </label>
-                <Input
-                  type="text"
-                  placeholder="Purpose of this fund"
-                  value={description}
-                  disabled={isSubmitting}
-                  onChange={(e) => setDescription(e.target.value)}
-                  chamfer="dual"
-                />
-              </div>
+        {error && (
+          <div className="p-2.5 bg-destructive/15 border border-destructive/40 text-destructive-foreground text-xs rounded-[var(--fintech-radius-sm)]">
+            {error}
+          </div>
+        )}
 
-              {error && (
-                <div className="p-2.5 bg-destructive/15 border border-destructive/40 text-destructive-foreground text-xs font-mono">
-                  {error}
-                </div>
-              )}
-
-              <div className="pt-3 flex items-center justify-end gap-2 border-t border-border">
-                <Button
-                  type="button"
-                  variant="outline"
-                  chamfer="dual"
-                  onClick={onClose}
-                  disabled={isSubmitting}
-                  size="sm"
-                  className="text-xs cursor-pointer"
-                >
-                  {t("common.cancel")}
-                </Button>
-                <Button
-                  type="submit"
-                  variant="cyber"
-                  chamfer="dual"
-                  size="sm"
-                  disabled={isSubmitting || !name.trim() || !currency.trim()}
-                  className="text-xs flex items-center gap-1.5 cursor-pointer"
-                >
-                  {isSubmitting ? (
-                    <span>{t("common.loading")}</span>
-                  ) : (
-                    <>
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>{t("treasury.createFund.submit")}</span>
-                    </>
-                  )}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+        <div className="pt-3 flex items-center justify-end gap-2 border-t border-border">
+          <Button
+            type="button"
+            variant="outline"
+            chamfer="none"
+            onClick={onClose}
+            disabled={isSubmitting}
+            size="sm"
+            className="text-xs cursor-pointer"
+          >
+            {t("common.cancel", "Cancel")}
+          </Button>
+          <Button
+            type="submit"
+            variant="cyber"
+            chamfer="none"
+            size="sm"
+            disabled={isSubmitting || !name.trim() || !currency.trim()}
+            className="text-xs flex items-center gap-1.5 cursor-pointer font-semibold"
+          >
+            {isSubmitting ? (
+              <span>{t("common.loading", "Creating...")}</span>
+            ) : (
+              <>
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>{t("treasury.createFund.submit", "Create Fund")}</span>
+              </>
+            )}
+          </Button>
+        </div>
+      </form>
+    </ResponsiveDialog>
   );
-
-  return createPortal(modalContent, document.body);
 }

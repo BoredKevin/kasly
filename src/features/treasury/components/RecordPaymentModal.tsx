@@ -1,21 +1,15 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { createPortal } from "react-dom";
 import { useMutation, useQuery, useConvex } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
+import { ResponsiveDialog } from "../../../ui";
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
   Button,
   Input,
 } from "@boredkevin/ui";
 import {
   PenLine,
-  X,
   ArrowUpRight,
   ArrowDownLeft,
   KeyRound,
@@ -345,54 +339,27 @@ export function RecordPaymentModal({
     holdTimerRef.current = requestAnimationFrame(update);
   };
 
-  if (!isOpen || typeof document === "undefined") return null;
-
   const currentFund = funds?.find((f) => f._id === selectedFundId);
 
-  const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-lg">
-        <Card telemetry="TREASURY.RECORD" cornerLines className="bg-card border-border shadow-2xl">
-          <CardHeader className="pb-4 border-b border-border">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="p-1.5 bg-primary/10 border border-primary/20 text-primary">
-                  {paymentMode === "dues" ? (
-                    <CalendarDays className="w-5 h-5" />
-                  ) : (
-                    <PenLine className="w-5 h-5" />
-                  )}
-                </div>
-                <div>
-                  <CardTitle className="text-base font-semibold">
-                    {paymentMode === "dues" ? t("treasury.dues.recordPayment") : t("treasury.ledger.recordEntry")}
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    {paymentMode === "dues"
-                      ? "Cryptographically sign and credit member dues payment into the treasury"
-                      : "Digitally sign and commit an immutable treasury transaction"}
-                  </CardDescription>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                chamfer="dual"
-                onClick={onClose}
-                className="h-7 w-7 p-0 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          </CardHeader>
-
-          <CardContent className="pt-5">
-            {/* Mode Switcher Tabs */}
-            <div className="grid grid-cols-2 gap-2 mb-4 p-1 bg-muted/40 border border-border/80">
+  return (
+    <ResponsiveDialog
+      isOpen={isOpen}
+      onClose={onClose}
+      title={paymentMode === "dues" ? t("treasury.dues.recordPayment", "Record Dues Payment") : t("treasury.ledger.recordEntry", "Record Ledger Entry")}
+      description={
+        paymentMode === "dues"
+          ? "Cryptographically sign and credit member dues payment into the treasury."
+          : "Digitally sign and commit an immutable treasury transaction."
+      }
+      maxWidth="lg"
+    >
+      <div className="pt-2 space-y-4">
+        {/* Mode Switcher Tabs */}
+        <div className="grid grid-cols-2 gap-2 p-1 bg-muted/40 border border-border/70 rounded-[var(--fintech-radius-sm)]">
               <Button
                 type="button"
                 variant={paymentMode === "manual" ? "cyber" : "ghost"}
-                chamfer="dual"
+                chamfer="none"
                 size="sm"
                 onClick={() => {
                   setPaymentMode("manual");
@@ -410,7 +377,7 @@ export function RecordPaymentModal({
               <Button
                 type="button"
                 variant={paymentMode === "dues" ? "cyber" : "ghost"}
-                chamfer="dual"
+                chamfer="none"
                 size="sm"
                 onClick={() => {
                   setPaymentMode("dues");
@@ -444,7 +411,7 @@ export function RecordPaymentModal({
                   <Button
                     type="button"
                     variant="outline"
-                    chamfer="dual"
+                    chamfer="none"
                     onClick={onClose}
                     size="sm"
                     className="text-xs cursor-pointer"
@@ -455,7 +422,7 @@ export function RecordPaymentModal({
                     <Button
                       type="button"
                       variant="cyber"
-                      chamfer="dual"
+                      chamfer="none"
                       size="sm"
                       onClick={() => {
                         onClose();
@@ -487,7 +454,7 @@ export function RecordPaymentModal({
                   <Button
                     type="button"
                     variant="outline"
-                    chamfer="dual"
+                    chamfer="none"
                     onClick={onClose}
                     size="sm"
                     className="text-xs cursor-pointer"
@@ -498,7 +465,7 @@ export function RecordPaymentModal({
                     <Button
                       type="button"
                       variant="cyber"
-                      chamfer="dual"
+                      chamfer="none"
                       size="sm"
                       onClick={() => {
                         onClose();
@@ -530,7 +497,7 @@ export function RecordPaymentModal({
                         <Button
                           type="button"
                           variant={direction === "credit" ? "cyber" : "ghost"}
-                          chamfer="dual"
+                          chamfer="none"
                           size="sm"
                           onClick={() => setDirection("credit")}
                           className={`h-8 text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer transition-all ${direction === "credit"
@@ -544,7 +511,7 @@ export function RecordPaymentModal({
                         <Button
                           type="button"
                           variant={direction === "debit" ? "cyber" : "ghost"}
-                          chamfer="dual"
+                          chamfer="none"
                           size="sm"
                           onClick={() => setDirection("debit")}
                           className={`h-8 text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer transition-all ${direction === "debit"
@@ -577,7 +544,7 @@ export function RecordPaymentModal({
                           const val = e.target.value.replace(/[^0-9]/g, "");
                           setAmountInput(val);
                         }}
-                        chamfer="dual"
+                        chamfer="none"
                         required
                       />
                       {amountInput && (
@@ -598,7 +565,7 @@ export function RecordPaymentModal({
                         value={memo}
                         disabled={isSigning}
                         onChange={(e) => setMemo(e.target.value)}
-                        chamfer="dual"
+                        chamfer="none"
                         required
                       />
                     </div>
@@ -655,7 +622,7 @@ export function RecordPaymentModal({
                                   type="button"
                                   variant="outline"
                                   size="sm"
-                                  chamfer="dual"
+                                  chamfer="none"
                                   disabled={isSigning || duesPeriodCount <= 1}
                                   onClick={() => setDuesPeriodCount((prev) => Math.max(1, prev - 1))}
                                   className="h-8 w-8 p-0 flex items-center justify-center cursor-pointer shrink-0 disabled:opacity-40"
@@ -685,7 +652,7 @@ export function RecordPaymentModal({
                                   type="button"
                                   variant="outline"
                                   size="sm"
-                                  chamfer="dual"
+                                  chamfer="none"
                                   disabled={isSigning || duesPeriodCount >= unpaidPeriods.length}
                                   onClick={() => setDuesPeriodCount((prev) => Math.min(unpaidPeriods.length, prev + 1))}
                                   className="h-8 w-8 p-0 flex items-center justify-center cursor-pointer shrink-0 disabled:opacity-40"
@@ -728,7 +695,7 @@ export function RecordPaymentModal({
                         placeholder={defaultDuesMemo || "e.g. Member Dues Payment"}
                         disabled={isSigning}
                         onChange={(e) => setCustomDuesMemo(e.target.value)}
-                        chamfer="dual"
+                        chamfer="none"
                         required
                       />
                     </div>
@@ -826,7 +793,7 @@ export function RecordPaymentModal({
                     <Button
                       type="button"
                       variant="outline"
-                      chamfer="dual"
+                      chamfer="none"
                       onClick={onClose}
                       disabled={isSigning || isHolding}
                       size="sm"
@@ -837,7 +804,7 @@ export function RecordPaymentModal({
                     <Button
                       type="button"
                       variant="cyber"
-                      chamfer="dual"
+                      chamfer="none"
                       size="sm"
                       disabled={isSubmitDisabled}
                       onPointerDown={startHold}
@@ -892,11 +859,7 @@ export function RecordPaymentModal({
                 </div>
               </form>
             )}
-          </CardContent>
-        </Card>
       </div>
-    </div>
+    </ResponsiveDialog>
   );
-
-  return createPortal(modalContent, document.body);
 }

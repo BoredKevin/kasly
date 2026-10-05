@@ -1,22 +1,15 @@
 import { useState, useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
 import { useQuery, useMutation, useConvex } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
+import { ResponsiveDialog } from "../../../ui";
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
   Button,
   Input,
   Badge,
 } from "@boredkevin/ui";
 import {
-  RotateCcw,
-  X,
   Lock,
   Sparkles,
   KeyRound,
@@ -194,40 +187,16 @@ export function RevertEntryModal({
     holdTimerRef.current = requestAnimationFrame(update);
   };
 
-  const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-lg">
-        <Card telemetry="TREASURY.REVERT_ENTRY" cornerLines className="bg-card border-border shadow-2xl">
-          <CardHeader className="pb-4 border-b border-border/80">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="p-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400">
-                  <RotateCcw className="w-5 h-5" />
-                </div>
-                <div>
-                  <CardTitle className="text-base font-semibold">
-                    {t("treasury.ledger.revertEntry")} #{entry.sequenceNumber}
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    Append an offsetting compensating transaction to HEAD
-                  </CardDescription>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                chamfer="dual"
-                disabled={isSigning}
-                onClick={onClose}
-                className="h-7 w-7 p-0 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          </CardHeader>
-
-          <CardContent className="pt-5 space-y-4">
-            {error && (
+  return (
+    <ResponsiveDialog
+      isOpen={isOpen}
+      onClose={onClose}
+      title={`${t("treasury.ledger.revertEntry", "Revert Transaction")} #${entry.sequenceNumber}`}
+      description="Append an offsetting compensating transaction to HEAD."
+      maxWidth="lg"
+    >
+      <div className="pt-2 space-y-4">
+        {error && (
               <div className="p-3 bg-destructive/10 border border-destructive/40 text-xs font-mono text-destructive-foreground space-y-1">
                 <p className="font-bold uppercase tracking-wider text-[10px]">
                   Revert Error
@@ -307,7 +276,7 @@ export function RevertEntryModal({
                   onChange={(e) => setReason(e.target.value)}
                   disabled={isSigning}
                   required
-                  chamfer="dual"
+                  chamfer="none"
                 />
               </div>
 
@@ -323,7 +292,7 @@ export function RevertEntryModal({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      chamfer="dual"
+                      chamfer="none"
                       onClick={onOpenKeyGen}
                       className="h-5 text-[10px] text-primary hover:underline font-mono cursor-pointer px-1"
                     >
@@ -354,7 +323,7 @@ export function RevertEntryModal({
                         type="button"
                         variant="outline"
                         size="sm"
-                        chamfer="dual"
+                        chamfer="none"
                         onClick={onOpenKeyGen}
                         className="text-xs h-7"
                       >
@@ -380,7 +349,7 @@ export function RevertEntryModal({
                     type="button"
                     variant="outline"
                     size="sm"
-                    chamfer="dual"
+                    chamfer="none"
                     disabled={isSigning || isHolding}
                     onClick={onClose}
                     className="cursor-pointer text-xs"
@@ -391,7 +360,7 @@ export function RevertEntryModal({
                     type="button"
                     variant="cyber"
                     size="sm"
-                    chamfer="dual"
+                    chamfer="none"
                     disabled={isSubmitDisabled}
                     onPointerDown={startHold}
                     onPointerUp={stopHold}
@@ -440,11 +409,7 @@ export function RevertEntryModal({
                 )}
               </div>
             </form>
-          </CardContent>
-        </Card>
       </div>
-    </div>
+    </ResponsiveDialog>
   );
-
-  return createPortal(modalContent, document.body);
 }

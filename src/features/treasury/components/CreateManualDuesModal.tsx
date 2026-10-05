@@ -1,22 +1,16 @@
 import { useState, useEffect, useMemo } from "react";
-import { createPortal } from "react-dom";
 import { useQuery, useMutation } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
+import { ResponsiveDialog } from "../../../ui";
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
   Button,
   Input,
   Badge,
 } from "@boredkevin/ui";
 import {
   CalendarPlus,
-  X,
   History,
   Clock,
   Sparkles,
@@ -390,47 +384,21 @@ export function CreateManualDuesModal({
     "July", "August", "September", "October", "November", "December",
   ];
 
-  if (!isOpen || typeof document === "undefined") return null;
-
-  const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-xl max-h-[90vh] flex flex-col">
-        <Card telemetry="TREASURY.CREATE_PAST_DUES_MODAL" cornerLines className="bg-card border-border shadow-2xl flex flex-col overflow-hidden">
-          <CardHeader className="pb-4 border-b border-border shrink-0">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="p-1.5 bg-primary/10 border border-primary/20 text-primary">
-                  <CalendarPlus className="w-5 h-5" />
-                </div>
-                <div>
-                  <CardTitle className="text-base font-semibold">
-                    Create Dues Cycles
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    Generate dues obligations for a single date or batch range of past periods
-                  </CardDescription>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                chamfer="dual"
-                onClick={onClose}
-                disabled={isSubmitting}
-                className="h-7 w-7 p-0 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          </CardHeader>
-
-          <CardContent className="pt-4 overflow-y-auto space-y-4">
-            {/* Mode Switcher Tabs */}
-            <div className="grid grid-cols-2 gap-2 p-1 bg-muted/40 border border-border/80">
+  return (
+    <ResponsiveDialog
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Create Dues Cycles"
+      description="Generate dues obligations for a single date or batch range of past periods."
+      maxWidth="xl"
+    >
+      <div className="pt-2 space-y-4">
+        {/* Mode Switcher Tabs */}
+        <div className="grid grid-cols-2 gap-2 p-1 bg-muted/40 border border-border/80 rounded-[var(--fintech-radius-sm)]">
               <Button
                 type="button"
                 variant={creationMode === "range" ? "cyber" : "ghost"}
-                chamfer="dual"
+                chamfer="none"
                 size="sm"
                 onClick={() => {
                   setCreationMode("range");
@@ -447,7 +415,7 @@ export function CreateManualDuesModal({
               <Button
                 type="button"
                 variant={creationMode === "single" ? "cyber" : "ghost"}
-                chamfer="dual"
+                chamfer="none"
                 size="sm"
                 onClick={() => {
                   setCreationMode("single");
@@ -509,7 +477,7 @@ export function CreateManualDuesModal({
                     const val = e.target.value.replace(/[^0-9]/g, "");
                     setAmountInput(val);
                   }}
-                  chamfer="dual"
+                  chamfer="none"
                   className="font-mono text-xs"
                   required
                 />
@@ -530,7 +498,7 @@ export function CreateManualDuesModal({
                       <Button
                         type="button"
                         variant={rangeType === "weeks" ? "cyber" : "outline"}
-                        chamfer="dual"
+                        chamfer="none"
                         size="sm"
                         onClick={() => setRangeType("weeks")}
                         className="h-7 text-[11px] px-2 cursor-pointer font-mono"
@@ -540,7 +508,7 @@ export function CreateManualDuesModal({
                       <Button
                         type="button"
                         variant={rangeType === "months" ? "cyber" : "outline"}
-                        chamfer="dual"
+                        chamfer="none"
                         size="sm"
                         onClick={() => setRangeType("months")}
                         className="h-7 text-[11px] px-2 cursor-pointer font-mono"
@@ -550,7 +518,7 @@ export function CreateManualDuesModal({
                       <Button
                         type="button"
                         variant={rangeType === "dates" ? "cyber" : "outline"}
-                        chamfer="dual"
+                        chamfer="none"
                         size="sm"
                         onClick={() => setRangeType("dates")}
                         className="h-7 text-[11px] px-2 cursor-pointer font-mono"
@@ -595,7 +563,7 @@ export function CreateManualDuesModal({
                               type="button"
                               variant="outline"
                               size="sm"
-                              chamfer="dual"
+                              chamfer="none"
                               disabled={isSubmitting || startWeek <= 1}
                               onClick={() => setStartWeek((prev) => Math.max(1, prev - 1))}
                               className="h-8 w-7 p-0 flex items-center justify-center cursor-pointer"
@@ -618,7 +586,7 @@ export function CreateManualDuesModal({
                               type="button"
                               variant="outline"
                               size="sm"
-                              chamfer="dual"
+                              chamfer="none"
                               disabled={isSubmitting || startWeek >= 53}
                               onClick={() => setStartWeek((prev) => Math.min(53, prev + 1))}
                               className="h-8 w-7 p-0 flex items-center justify-center cursor-pointer"
@@ -639,7 +607,7 @@ export function CreateManualDuesModal({
                               type="button"
                               variant="outline"
                               size="sm"
-                              chamfer="dual"
+                              chamfer="none"
                               disabled={isSubmitting || endWeek <= 1}
                               onClick={() => setEndWeek((prev) => Math.max(1, prev - 1))}
                               className="h-8 w-7 p-0 flex items-center justify-center cursor-pointer"
@@ -662,7 +630,7 @@ export function CreateManualDuesModal({
                               type="button"
                               variant="outline"
                               size="sm"
-                              chamfer="dual"
+                              chamfer="none"
                               disabled={isSubmitting || endWeek >= 53}
                               onClick={() => setEndWeek((prev) => Math.min(53, prev + 1))}
                               className="h-8 w-7 p-0 flex items-center justify-center cursor-pointer"
@@ -680,7 +648,7 @@ export function CreateManualDuesModal({
                           type="button"
                           variant="outline"
                           size="sm"
-                          chamfer="dual"
+                          chamfer="none"
                           disabled={isSubmitting}
                           onClick={() => handleWeekPreset(20, 35)}
                           className="h-6 text-[10px] font-mono px-2 border-border/80 hover:border-primary cursor-pointer"
@@ -691,7 +659,7 @@ export function CreateManualDuesModal({
                           type="button"
                           variant="outline"
                           size="sm"
-                          chamfer="dual"
+                          chamfer="none"
                           disabled={isSubmitting}
                           onClick={() => handleWeekPreset(1, 13)}
                           className="h-6 text-[10px] font-mono px-2 border-border/80 hover:border-primary cursor-pointer"
@@ -702,7 +670,7 @@ export function CreateManualDuesModal({
                           type="button"
                           variant="outline"
                           size="sm"
-                          chamfer="dual"
+                          chamfer="none"
                           disabled={isSubmitting}
                           onClick={() => handleWeekPreset(14, 26)}
                           className="h-6 text-[10px] font-mono px-2 border-border/80 hover:border-primary cursor-pointer"
@@ -713,7 +681,7 @@ export function CreateManualDuesModal({
                           type="button"
                           variant="outline"
                           size="sm"
-                          chamfer="dual"
+                          chamfer="none"
                           disabled={isSubmitting}
                           onClick={() => handleWeekPreset(27, 39)}
                           className="h-6 text-[10px] font-mono px-2 border-border/80 hover:border-primary cursor-pointer"
@@ -724,7 +692,7 @@ export function CreateManualDuesModal({
                           type="button"
                           variant="outline"
                           size="sm"
-                          chamfer="dual"
+                          chamfer="none"
                           disabled={isSubmitting}
                           onClick={() => handleWeekPreset(1, currentIso.week)}
                           className="h-6 text-[10px] font-mono px-2 border-border/80 hover:border-primary cursor-pointer"
@@ -816,7 +784,7 @@ export function CreateManualDuesModal({
                           value={rangeStartDate}
                           disabled={isSubmitting}
                           onChange={(e) => setRangeStartDate(e.target.value)}
-                          chamfer="dual"
+                          chamfer="none"
                           className="h-8 font-mono text-xs cursor-pointer"
                         />
                       </div>
@@ -829,7 +797,7 @@ export function CreateManualDuesModal({
                           value={rangeEndDate}
                           disabled={isSubmitting}
                           onChange={(e) => setRangeEndDate(e.target.value)}
-                          chamfer="dual"
+                          chamfer="none"
                           className="h-8 font-mono text-xs cursor-pointer"
                         />
                       </div>
@@ -844,7 +812,7 @@ export function CreateManualDuesModal({
                           value={rangeIntervalDays}
                           disabled={isSubmitting}
                           onChange={(e) => setRangeIntervalDays(parseInt(e.target.value, 10) || 7)}
-                          chamfer="dual"
+                          chamfer="none"
                           className="h-8 font-mono text-xs"
                         />
                       </div>
@@ -927,7 +895,7 @@ export function CreateManualDuesModal({
                         type="button"
                         variant="outline"
                         size="sm"
-                        chamfer="dual"
+                        chamfer="none"
                         disabled={isSubmitting}
                         onClick={() => handleSinglePreset(0)}
                         className="h-7 text-[11px] font-mono px-1 border-border/80 hover:border-primary cursor-pointer"
@@ -938,7 +906,7 @@ export function CreateManualDuesModal({
                         type="button"
                         variant="outline"
                         size="sm"
-                        chamfer="dual"
+                        chamfer="none"
                         disabled={isSubmitting}
                         onClick={() => handleSinglePreset(1)}
                         className="h-7 text-[11px] font-mono px-1 border-border/80 hover:border-primary cursor-pointer"
@@ -949,7 +917,7 @@ export function CreateManualDuesModal({
                         type="button"
                         variant="outline"
                         size="sm"
-                        chamfer="dual"
+                        chamfer="none"
                         disabled={isSubmitting}
                         onClick={() => handleSinglePreset(2)}
                         className="h-7 text-[11px] font-mono px-1 border-border/80 hover:border-primary cursor-pointer"
@@ -960,7 +928,7 @@ export function CreateManualDuesModal({
                         type="button"
                         variant="outline"
                         size="sm"
-                        chamfer="dual"
+                        chamfer="none"
                         disabled={isSubmitting}
                         onClick={() => handleSinglePreset(3)}
                         className="h-7 text-[11px] font-mono px-1 border-border/80 hover:border-primary cursor-pointer"
@@ -1002,7 +970,7 @@ export function CreateManualDuesModal({
                         setDateInput(e.target.value);
                         setError(null);
                       }}
-                      chamfer="dual"
+                      chamfer="none"
                       className="font-mono text-xs cursor-pointer"
                       required
                     />
@@ -1025,7 +993,7 @@ export function CreateManualDuesModal({
                       value={customLabel}
                       disabled={isSubmitting}
                       onChange={(e) => setCustomLabel(e.target.value)}
-                      chamfer="dual"
+                      chamfer="none"
                       className="text-xs font-mono"
                     />
                     <p className="text-[10px] text-muted-foreground font-mono">
@@ -1082,7 +1050,7 @@ export function CreateManualDuesModal({
                 <Button
                   type="button"
                   variant="outline"
-                  chamfer="dual"
+                  chamfer="none"
                   onClick={onClose}
                   disabled={isSubmitting}
                   size="sm"
@@ -1093,7 +1061,7 @@ export function CreateManualDuesModal({
                 <Button
                   type="submit"
                   variant="cyber"
-                  chamfer="dual"
+                  chamfer="none"
                   size="sm"
                   disabled={
                     isSubmitting ||
@@ -1122,11 +1090,7 @@ export function CreateManualDuesModal({
                 </Button>
               </div>
             </form>
-          </CardContent>
-        </Card>
       </div>
-    </div>
+    </ResponsiveDialog>
   );
-
-  return createPortal(modalContent, document.body);
 }

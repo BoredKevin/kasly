@@ -1,24 +1,17 @@
 import { useState } from "react";
-import { createPortal } from "react-dom";
 import { useQuery, useMutation } from "convex/react";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
+import { ResponsiveDialog } from "../../../ui";
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
   Button,
   Badge,
 } from "@boredkevin/ui";
 import {
-  CreditCard,
   CalendarDays,
   AlertCircle,
-  X,
   Check,
   Copy,
   ExternalLink,
@@ -156,37 +149,7 @@ function CreateInvoiceModalContent({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <Card telemetry="TREASURY.DUES_INVOICE" cornerLines className="bg-card border-border shadow-2xl">
-          <CardHeader className="pb-4 border-b border-border">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="p-1.5 bg-primary/10 border border-primary/30 text-primary">
-                  <CreditCard className="w-5 h-5" />
-                </div>
-                <div>
-                  <CardTitle className="text-base font-semibold">
-                    {t("treasury.invoices.payDuesTitle")}
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    {fund?.name} • {t("treasury.invoices.duesSelectionHelp")}
-                  </CardDescription>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                chamfer="dual"
-                onClick={onClose}
-                className="h-7 w-7 p-0 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          </CardHeader>
-
-          <CardContent className="pt-5 space-y-4">
+    <div className="space-y-4 pt-1">
             {/* Success State View */}
             {createdInvoiceNumber ? (
               <div className="py-4 space-y-5 animate-in fade-in zoom-in-95">
@@ -234,7 +197,7 @@ function CreateInvoiceModalContent({
                     type="button"
                     variant="cyber"
                     size="sm"
-                    chamfer="dual"
+                    chamfer="none"
                     onClick={handleCopyLink}
                     className="w-full text-xs flex items-center justify-center gap-2 cursor-pointer h-9"
                   >
@@ -256,7 +219,7 @@ function CreateInvoiceModalContent({
                       asChild
                       variant="outline"
                       size="sm"
-                      chamfer="dual"
+                      chamfer="none"
                       className="text-xs flex items-center justify-center gap-1.5 cursor-pointer h-8 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10"
                     >
                       <a href={getWhatsAppShareUrl()} target="_blank" rel="noopener noreferrer">
@@ -269,7 +232,7 @@ function CreateInvoiceModalContent({
                       asChild
                       variant="outline"
                       size="sm"
-                      chamfer="dual"
+                      chamfer="none"
                       className="text-xs flex items-center justify-center gap-1.5 cursor-pointer h-8"
                     >
                       <a
@@ -289,7 +252,7 @@ function CreateInvoiceModalContent({
                     type="button"
                     variant="outline"
                     size="sm"
-                    chamfer="dual"
+                    chamfer="none"
                     onClick={onClose}
                     className="text-xs cursor-pointer"
                   >
@@ -354,7 +317,7 @@ function CreateInvoiceModalContent({
                           type="button"
                           variant={currentCount === 1 ? "cyber" : "outline"}
                           size="sm"
-                          chamfer="dual"
+                          chamfer="none"
                           onClick={() => setPeriodCount(1)}
                           className="text-xs cursor-pointer"
                         >
@@ -366,7 +329,7 @@ function CreateInvoiceModalContent({
                             type="button"
                             variant={currentCount === 2 ? "cyber" : "outline"}
                             size="sm"
-                            chamfer="dual"
+                            chamfer="none"
                             onClick={() => setPeriodCount(2)}
                             className="text-xs cursor-pointer"
                           >
@@ -378,7 +341,7 @@ function CreateInvoiceModalContent({
                           type="button"
                           variant={currentCount === maxPeriods ? "cyber" : "outline"}
                           size="sm"
-                          chamfer="dual"
+                          chamfer="none"
                           onClick={() => setPeriodCount(maxPeriods)}
                           className="text-xs cursor-pointer"
                         >
@@ -428,7 +391,7 @@ function CreateInvoiceModalContent({
                     type="button"
                     variant="outline"
                     size="sm"
-                    chamfer="dual"
+                    chamfer="none"
                     onClick={onClose}
                     className="text-xs cursor-pointer"
                   >
@@ -440,7 +403,7 @@ function CreateInvoiceModalContent({
                       type="button"
                       variant="cyber"
                       size="sm"
-                      chamfer="dual"
+                      chamfer="none"
                       disabled={isSubmitting}
                       onClick={() => {
                         void handleProceed();
@@ -455,9 +418,6 @@ function CreateInvoiceModalContent({
                 </div>
               </>
             )}
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }
@@ -471,17 +431,29 @@ export function CreateInvoiceModal({
   prefillPeriodCount,
   initialMode,
 }: CreateInvoiceModalProps) {
-  if (!isOpen || typeof document === "undefined") return null;
+  const { t } = useTranslation();
+  const fund = useQuery(api.treasury.funds.get, fundId ? { fundId } : "skip");
 
-  return createPortal(
-    <CreateInvoiceModalContent
+  return (
+    <ResponsiveDialog
+      isOpen={isOpen}
       onClose={onClose}
-      organizationId={organizationId}
-      fundId={fundId}
-      targetUserId={targetUserId}
-      prefillPeriodCount={prefillPeriodCount}
-      initialMode={initialMode}
-    />,
-    document.body
+      title={t("treasury.invoices.payDuesTitle", "Pay Member Dues")}
+      description={
+        fund
+          ? `${fund.name} • ${t("treasury.invoices.duesSelectionHelp", "Generate online invoice for member dues")}`
+          : undefined
+      }
+      maxWidth="md"
+    >
+      <CreateInvoiceModalContent
+        onClose={onClose}
+        organizationId={organizationId}
+        fundId={fundId}
+        targetUserId={targetUserId}
+        prefillPeriodCount={prefillPeriodCount}
+        initialMode={initialMode}
+      />
+    </ResponsiveDialog>
   );
 }

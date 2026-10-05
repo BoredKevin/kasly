@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import {
-  Card,
   CardHeader,
   CardTitle,
   CardDescription,
@@ -12,6 +11,7 @@ import {
   Button,
   Badge,
 } from "@boredkevin/ui";
+import { Panel } from "../../../ui";
 import {
   ShieldCheck,
   KeyRound,
@@ -131,7 +131,7 @@ export function AdminPane({ organizationId, activeFundId, onOpenCreateFund }: Ad
       <PaymentGatewayCard organizationId={organizationId} />
 
       {/* Section 1: Pending Key Approvals */}
-      <Card telemetry="TREASURY.PENDING_KEYS" cornerLines className="bg-card border-border shadow-lg">
+      <Panel className="shadow-lg">
         <CardHeader className="pb-4 border-b border-border/80">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
@@ -213,7 +213,7 @@ export function AdminPane({ organizationId, activeFundId, onOpenCreateFund }: Ad
                       type="button"
                       variant="outline"
                       size="sm"
-                      chamfer="dual"
+                      chamfer="none"
                       disabled={processingId === item._id}
                       onClick={() => {
                         void handleRejectKey(item._id);
@@ -228,7 +228,7 @@ export function AdminPane({ organizationId, activeFundId, onOpenCreateFund }: Ad
                       type="button"
                       variant="cyber"
                       size="sm"
-                      chamfer="dual"
+                      chamfer="none"
                       disabled={processingId === item._id}
                       onClick={() => {
                         void handleApproveKey(item._id);
@@ -244,10 +244,10 @@ export function AdminPane({ organizationId, activeFundId, onOpenCreateFund }: Ad
             </div>
           )}
         </CardContent>
-      </Card>
+      </Panel>
 
       {/* Section 2: Active Trusted Keys */}
-      <Card telemetry="TREASURY.ACTIVE_KEYS" cornerLines className="bg-card border-border shadow-lg">
+      <Panel className="shadow-lg">
         <CardHeader className="pb-4 border-b border-border/80">
           <div className="flex items-center gap-2.5">
             <div className="p-1.5 bg-primary/10 border border-primary/20 text-primary">
@@ -339,7 +339,7 @@ export function AdminPane({ organizationId, activeFundId, onOpenCreateFund }: Ad
                           type="button"
                           variant="outline"
                           size="sm"
-                          chamfer="dual"
+                          chamfer="none"
                           disabled={processingId === key._id}
                           onClick={() => {
                             void handleRevokeKey(key._id);
@@ -357,10 +357,10 @@ export function AdminPane({ organizationId, activeFundId, onOpenCreateFund }: Ad
             </div>
           )}
         </CardContent>
-      </Card>
+      </Panel>
 
       {/* Section 3: Fund Management */}
-      <Card telemetry="TREASURY.FUNDS" cornerLines className="bg-card border-border shadow-lg">
+      <Panel className="shadow-lg">
         <CardHeader className="pb-4 border-b border-border/80">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-2.5">
@@ -381,7 +381,7 @@ export function AdminPane({ organizationId, activeFundId, onOpenCreateFund }: Ad
               type="button"
               variant="cyber"
               size="sm"
-              chamfer="dual"
+              chamfer="none"
               onClick={onOpenCreateFund}
               className="text-xs flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
             >
@@ -454,7 +454,7 @@ export function AdminPane({ organizationId, activeFundId, onOpenCreateFund }: Ad
                           type="button"
                           variant="outline"
                           size="sm"
-                          chamfer="dual"
+                          chamfer="none"
                           disabled={processingId === fund._id}
                           onClick={() => {
                             void handleUnarchiveFund(fund._id);
@@ -469,7 +469,7 @@ export function AdminPane({ organizationId, activeFundId, onOpenCreateFund }: Ad
                           type="button"
                           variant="outline"
                           size="sm"
-                          chamfer="dual"
+                          chamfer="none"
                           disabled={processingId === fund._id}
                           onClick={() => {
                             void handleArchiveFund(fund._id);
@@ -487,7 +487,7 @@ export function AdminPane({ organizationId, activeFundId, onOpenCreateFund }: Ad
             </div>
           )}
         </CardContent>
-      </Card>
+      </Panel>
 
       {/* Section 4: Automated Dues Schedule Configuration */}
       <DuesScheduleSection
@@ -497,7 +497,7 @@ export function AdminPane({ organizationId, activeFundId, onOpenCreateFund }: Ad
       />
 
       {/* Section 5: Public Transaction Proof Links Setting */}
-      <Card telemetry="TREASURY.PUBLIC_RECEIPTS" cornerLines className="bg-card border-border shadow-lg">
+      <Panel className="shadow-lg">
         <CardHeader className="pb-4 border-b border-border/80">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-2.5">
@@ -518,7 +518,7 @@ export function AdminPane({ organizationId, activeFundId, onOpenCreateFund }: Ad
               type="button"
               variant={appSettings?.enablePublicLedgerReceipts !== false ? "default" : "outline"}
               size="sm"
-              chamfer="dual"
+              chamfer="none"
               onClick={async () => {
                 const current = appSettings?.enablePublicLedgerReceipts !== false;
                 await togglePublicReceipts({ enabled: !current });
@@ -539,10 +539,10 @@ export function AdminPane({ organizationId, activeFundId, onOpenCreateFund }: Ad
             </Button>
           </div>
         </CardHeader>
-      </Card>
+      </Panel>
 
       {/* Section 6: Pre-Registered Student Roster & Settings */}
-      <Card telemetry="TREASURY.PRE_REG" cornerLines className="bg-card border-border shadow-lg">
+      <Panel className="shadow-lg">
         <CardHeader className="pb-4 border-b border-border/80">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-2.5">
@@ -563,7 +563,7 @@ export function AdminPane({ organizationId, activeFundId, onOpenCreateFund }: Ad
               type="button"
               variant="cyber"
               size="sm"
-              chamfer="dual"
+              chamfer="none"
               onClick={() => setIsPreRegModalOpen(true)}
               className="text-xs flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
             >
@@ -572,7 +572,7 @@ export function AdminPane({ organizationId, activeFundId, onOpenCreateFund }: Ad
             </Button>
           </div>
         </CardHeader>
-      </Card>
+      </Panel>
 
       {/* Pre-Registration Admin Modal */}
       <PreRegistrationAdminModal
@@ -707,7 +707,7 @@ function DuesScheduleSection({
   const dayOfWeekNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
   return (
-    <Card telemetry="TREASURY.DUES_CONFIG" cornerLines className="bg-card border-border shadow-lg">
+    <Panel className="shadow-lg">
       <CardHeader className="pb-4 border-b border-border/80">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
@@ -836,7 +836,7 @@ function DuesScheduleSection({
                   type="button"
                   variant="outline"
                   size="sm"
-                  chamfer="dual"
+                  chamfer="none"
                   onClick={handleStartEdit}
                   className="text-xs cursor-pointer"
                 >
@@ -847,7 +847,7 @@ function DuesScheduleSection({
                   type="button"
                   variant={duesConfig?.isEnabled ? "destructive" : "cyber"}
                   size="sm"
-                  chamfer="dual"
+                  chamfer="none"
                   onClick={() => {
                     void handleToggleActive();
                   }}
@@ -861,7 +861,7 @@ function DuesScheduleSection({
                 type="button"
                 variant="cyber"
                 size="sm"
-                chamfer="dual"
+                chamfer="none"
                 onClick={() => setIsCreateDuesModalOpen(true)}
                 className="text-xs flex items-center gap-1.5 cursor-pointer shadow-sm"
               >
@@ -980,7 +980,7 @@ function DuesScheduleSection({
                 type="button"
                 variant="outline"
                 size="sm"
-                chamfer="dual"
+                chamfer="none"
                 onClick={() => setIsEditing(false)}
                 className="text-xs cursor-pointer"
               >
@@ -991,7 +991,7 @@ function DuesScheduleSection({
                 type="submit"
                 variant="cyber"
                 size="sm"
-                chamfer="dual"
+                chamfer="none"
                 disabled={isSaving}
                 className="text-xs cursor-pointer"
               >
@@ -1011,7 +1011,7 @@ function DuesScheduleSection({
           setStatusMessage(`New dues cycle created for ${currentFund?.name || "fund"}! Check the Dues & Payments view.`);
         }}
       />
-    </Card>
+    </Panel>
   );
 }
 

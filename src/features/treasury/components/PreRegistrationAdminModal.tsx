@@ -535,9 +535,8 @@ export function PreRegistrationAdminModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
       <Card
-        telemetry="TREASURY.PRE_REG_MODAL"
-        cornerLines
-        className="w-full max-w-3xl bg-card border-border shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        cornerLines={false}
+        className="w-full max-w-3xl bg-card border-border shadow-2xl overflow-hidden flex flex-col max-h-[90vh] rounded-[var(--fintech-radius-md)]"
       >
         <CardHeader className="pb-4 border-b border-border/80 flex flex-row items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
@@ -590,7 +589,7 @@ export function PreRegistrationAdminModal({
               type="button"
               variant={isRegLinksEnabled ? "cyber" : "outline"}
               size="sm"
-              chamfer="dual"
+              chamfer="none"
               onClick={handleToggleRegistrationLinksSetting}
               className="text-xs cursor-pointer gap-1.5 h-7"
             >
@@ -611,7 +610,7 @@ export function PreRegistrationAdminModal({
               type="button"
               variant={isPreRegRequired ? "cyber" : "outline"}
               size="sm"
-              chamfer="dual"
+              chamfer="none"
               onClick={handleToggleGlobalSetting}
               className="text-xs cursor-pointer gap-1.5 h-7"
             >
@@ -728,7 +727,7 @@ export function PreRegistrationAdminModal({
                       type="button"
                       variant="cyber"
                       size="sm"
-                      chamfer="dual"
+                      chamfer="none"
                       onClick={() => handleCopyRegistrationLink(lastAddedStudent.token, "single_post")}
                       className="text-xs h-7 cursor-pointer flex items-center gap-1"
                     >
@@ -749,7 +748,7 @@ export function PreRegistrationAdminModal({
                       type="button"
                       variant="outline"
                       size="sm"
-                      chamfer="dual"
+                      chamfer="none"
                       onClick={() =>
                         handleCopyWhatsAppMessage(
                           lastAddedStudent.name,
@@ -776,7 +775,7 @@ export function PreRegistrationAdminModal({
                       type="button"
                       variant="outline"
                       size="sm"
-                      chamfer="dual"
+                      chamfer="none"
                       onClick={() =>
                         handleOpenWhatsAppShare(
                           lastAddedStudent.name,
@@ -803,7 +802,7 @@ export function PreRegistrationAdminModal({
                     value={singleName}
                     onChange={(e) => setSingleName(e.target.value)}
                     placeholder="e.g. Kevin Sanjaya"
-                    chamfer="dual"
+                    chamfer="none"
                     required
                   />
                 </div>
@@ -819,7 +818,7 @@ export function PreRegistrationAdminModal({
                       onChange={(e) => setSingleNisn(e.target.value)}
                       placeholder="10 numeric digits"
                       maxLength={10}
-                      chamfer="dual"
+                      chamfer="none"
                       required
                     />
                   </div>
@@ -834,7 +833,7 @@ export function PreRegistrationAdminModal({
                       onChange={(e) => setSingleBirthYear(e.target.value)}
                       placeholder="e.g. 2008"
                       maxLength={4}
-                      chamfer="dual"
+                      chamfer="none"
                       required
                     />
                   </div>
@@ -849,7 +848,7 @@ export function PreRegistrationAdminModal({
                     value={singlePhone}
                     onChange={(e) => setSinglePhone(e.target.value)}
                     placeholder="e.g. 08123456789"
-                    chamfer="dual"
+                    chamfer="none"
                     required
                   />
                 </div>
@@ -934,7 +933,7 @@ export function PreRegistrationAdminModal({
                 <Button
                   type="submit"
                   variant="cyber"
-                  chamfer="dual"
+                  chamfer="none"
                   disabled={isSubmittingSingle}
                   className="w-full mt-3 cursor-pointer"
                 >
@@ -969,7 +968,7 @@ export function PreRegistrationAdminModal({
                       type="button"
                       variant="cyber"
                       size="sm"
-                      chamfer="dual"
+                      chamfer="none"
                       onClick={handleDownloadImportedBatchCsv}
                       className="text-xs cursor-pointer flex items-center gap-1.5 shrink-0"
                     >
@@ -996,7 +995,7 @@ export function PreRegistrationAdminModal({
                             type="button"
                             variant="outline"
                             size="sm"
-                            chamfer="dual"
+                            chamfer="none"
                             onClick={() => handleCopyRegistrationLink(s.token, `batch_${idx}`)}
                             className="h-6 text-[10px] px-2 cursor-pointer flex items-center gap-1"
                           >
@@ -1012,7 +1011,7 @@ export function PreRegistrationAdminModal({
                             type="button"
                             variant="outline"
                             size="sm"
-                            chamfer="dual"
+                            chamfer="none"
                             onClick={() => handleOpenWhatsAppShare(s.name, s.token, s.phone)}
                             className="h-6 text-[10px] px-2 text-emerald-400 hover:bg-emerald-500/10 cursor-pointer flex items-center gap-1"
                           >
@@ -1104,7 +1103,7 @@ export function PreRegistrationAdminModal({
                   type="button"
                   variant="outline"
                   size="sm"
-                  chamfer="dual"
+                  chamfer="none"
                   onClick={() => fileInputRef.current?.click()}
                   className="text-xs cursor-pointer"
                 >
@@ -1127,7 +1126,7 @@ export function PreRegistrationAdminModal({
                       type="button"
                       variant="cyber"
                       size="sm"
-                      chamfer="dual"
+                      chamfer="none"
                       disabled={isImportingCsv || parsedStudents.filter((s) => s.isValid).length === 0}
                       onClick={handleImportParsedCsv}
                       className="text-xs cursor-pointer"
@@ -1203,7 +1202,7 @@ export function PreRegistrationAdminModal({
                     type="button"
                     variant="outline"
                     size="sm"
-                    chamfer="dual"
+                    chamfer="none"
                     onClick={handleExportUnclaimedRosterCsv}
                     className="text-xs cursor-pointer flex items-center gap-1.5 h-7"
                   >
@@ -1254,7 +1253,7 @@ export function PreRegistrationAdminModal({
                                   type="button"
                                   variant="outline"
                                   size="sm"
-                                  chamfer="dual"
+                                  chamfer="none"
                                   onClick={() =>
                                     handleCopyRegistrationLink(
                                       member.registrationToken!,
@@ -1280,7 +1279,7 @@ export function PreRegistrationAdminModal({
                                   type="button"
                                   variant="outline"
                                   size="sm"
-                                  chamfer="dual"
+                                  chamfer="none"
                                   onClick={() =>
                                     handleCopyWhatsAppMessage(
                                       member.name,
@@ -1302,7 +1301,7 @@ export function PreRegistrationAdminModal({
                                   type="button"
                                   variant="outline"
                                   size="sm"
-                                  chamfer="dual"
+                                  chamfer="none"
                                   onClick={() =>
                                     handleOpenWhatsAppShare(
                                       member.name,
@@ -1351,7 +1350,7 @@ export function PreRegistrationAdminModal({
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                chamfer="dual"
+                                chamfer="none"
                                 onClick={() =>
                                   setAdjustingUser({
                                     userId: member.userId,
@@ -1395,7 +1394,7 @@ export function PreRegistrationAdminModal({
                     type="button"
                     variant={activeTemplatePreset === "standard" ? "cyber" : "outline"}
                     size="sm"
-                    chamfer="dual"
+                    chamfer="none"
                     onClick={() => setActiveTemplatePreset("standard")}
                     className="text-xs h-7 cursor-pointer"
                   >
@@ -1405,7 +1404,7 @@ export function PreRegistrationAdminModal({
                     type="button"
                     variant={activeTemplatePreset === "short" ? "cyber" : "outline"}
                     size="sm"
-                    chamfer="dual"
+                    chamfer="none"
                     onClick={() => setActiveTemplatePreset("short")}
                     className="text-xs h-7 cursor-pointer"
                   >
@@ -1415,7 +1414,7 @@ export function PreRegistrationAdminModal({
                     type="button"
                     variant={activeTemplatePreset === "english" ? "cyber" : "outline"}
                     size="sm"
-                    chamfer="dual"
+                    chamfer="none"
                     onClick={() => setActiveTemplatePreset("english")}
                     className="text-xs h-7 cursor-pointer"
                   >
@@ -1425,7 +1424,7 @@ export function PreRegistrationAdminModal({
                     type="button"
                     variant={activeTemplatePreset === "custom" ? "cyber" : "outline"}
                     size="sm"
-                    chamfer="dual"
+                    chamfer="none"
                     onClick={() => setActiveTemplatePreset("custom")}
                     className="text-xs h-7 cursor-pointer"
                   >
@@ -1548,9 +1547,8 @@ function AdjustDuesSubModal({
   return (
     <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-150">
       <Card
-        telemetry="TREASURY.ADJUST_DUES_MODAL"
-        cornerLines
-        className="w-full max-w-xl bg-card border-border shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+        cornerLines={false}
+        className="w-full max-w-xl bg-card border-border shadow-2xl overflow-hidden flex flex-col max-h-[85vh] rounded-[var(--fintech-radius-md)]"
       >
         <CardHeader className="pb-3 border-b border-border/80 flex flex-row items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
@@ -1632,7 +1630,7 @@ function AdjustDuesSubModal({
                         type="button"
                         variant={cycle.hasPaid ? "cyber" : "outline"}
                         size="sm"
-                        chamfer="dual"
+                        chamfer="none"
                         onClick={() => handleTogglePaid(cycle.membershipId)}
                         className="h-6 text-[10px] px-2 cursor-pointer flex items-center gap-1"
                       >
@@ -1696,7 +1694,7 @@ function AdjustDuesSubModal({
                       type="button"
                       variant="cyber"
                       size="sm"
-                      chamfer="dual"
+                      chamfer="none"
                       onClick={() => handleAssign(ev.duesEventId)}
                       className="h-6 text-[10px] px-2 cursor-pointer flex items-center gap-1"
                     >
