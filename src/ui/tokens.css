@@ -1,0 +1,31 @@
+/* Fintech & Clean B2B Dark Palette tokens */
+:root {
+  --fintech-card: 0 0% 5.5%;
+  --fintech-card-hover: 0 0% 7%;
+  --fintech-border: 0 0% 14.9%;
+  --fintech-border-subtle: 0 0% 12%;
+  --fintech-muted: 0 0% 63%;
+  --fintech-radius-sm: 6px;
+  --fintech-radius-md: 10px;
+  --fintech-radius-lg: 14px;
+}
+
+/* Seamless override of Card borders & surfaces */
+.fintech-panel {
+  background-color: hsl(0 0% 5.5% / 0.9);
+  border-color: hsl(0 0% 14.9%);
+  border-radius: var(--fintech-radius-md);
+}
+
+.fintech-row {
+  border-bottom: 1px solid hsl(0 0% 14.9% / 0.6);
+  transition: background-color 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fintech-row:hover {
+  background-color: hsl(0 0% 100% / 0.025);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}

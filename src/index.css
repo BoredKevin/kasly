@@ -1,4 +1,5 @@
 @import "@boredkevin/ui/theme.css";
+@import "./ui/tokens.css";
 @import "tailwindcss";
 
 @theme {
