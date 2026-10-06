@@ -13,14 +13,16 @@ import {
   CreditCard,
   ArrowRight,
   Landmark,
-  LayoutGrid,
-  List,
+  Download,
+  Users,
+  CalendarPlus,
 } from "lucide-react";
 import { useFormat } from "../../../hooks/useFormat";
 import { DuesMemberItem, DuesEventItem, DuesCellItem } from "../types/dues";
 import { MemberDuesList } from "./MemberDuesList";
 import { MemberDuesSheet } from "./MemberDuesSheet";
-import { DuesGrid } from "./DuesGrid";
+// Note: DuesGrid is temporarily disabled per user request
+// import { DuesGrid } from "./DuesGrid";
 import { ExportDuesModal } from "./ExportDuesModal";
 import { CreateInvoiceModal } from "../components/CreateInvoiceModal";
 import { InvoiceDetailsModal } from "../invoices/InvoiceDetailsModal";
@@ -59,8 +61,7 @@ export function DuesSpreadsheetPane({
   const { t } = useTranslation();
   const { money: formatMoney } = useFormat();
 
-  // View mode switcher: default to list on small screens, grid on desktop
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  // Grid view is temporarily disabled per user request, defaulting to list/members view
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [selectedMemberForSheet, setSelectedMemberForSheet] = useState<DuesMemberItem | null>(null);
 
@@ -218,8 +219,8 @@ export function DuesSpreadsheetPane({
         />
       </div>
 
-      {/* View Switcher Header (Visible on Desktop / Responsive) */}
-      <div className="flex items-center justify-between gap-3">
+      {/* Header with Title and Actions */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-base font-semibold text-foreground">
             {t("treasury.dues.title", "Member Dues")}
@@ -229,78 +230,70 @@ export function DuesSpreadsheetPane({
           </p>
         </div>
 
-        {/* View Mode Toggle: Grid vs Member List */}
-        <div className="flex items-center bg-card border border-border rounded-[var(--fintech-radius-sm)] p-0.5">
-          <button
-            type="button"
-            onClick={() => setViewMode("grid")}
-            className={`px-2.5 py-1 text-xs rounded-[var(--fintech-radius-sm)] transition-colors flex items-center gap-1.5 cursor-pointer ${
-              viewMode === "grid"
-                ? "bg-primary/15 text-primary font-semibold"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-            title="Grid Spreadsheet View"
-          >
-            <LayoutGrid className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Grid</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("list")}
-            className={`px-2.5 py-1 text-xs rounded-[var(--fintech-radius-sm)] transition-colors flex items-center gap-1.5 cursor-pointer ${
-              viewMode === "list"
-                ? "bg-primary/15 text-primary font-semibold"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-            title="Member List View"
-          >
-            <List className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Members</span>
-          </button>
+        {/* Action buttons (Grid view is disabled for now) */}
+        <div className="flex items-center gap-2">
+          {fundName && (
+            <Button
+              type="button"
+              variant="outline"
+              chamfer="none"
+              size="sm"
+              onClick={() => setIsExportModalOpen(true)}
+              disabled={events.length === 0}
+              className="h-8 text-xs flex items-center gap-1.5 cursor-pointer"
+              title="Export dues to PDF or JSON"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{t("treasury.dues.export", "Export")}</span>
+            </Button>
+          )}
+
+          {canSign && onOpenBulkDues && (
+            <Button
+              type="button"
+              variant="cyber"
+              chamfer="none"
+              size="sm"
+              onClick={onOpenBulkDues}
+              className="h-8 text-xs flex items-center gap-1.5 cursor-pointer font-semibold"
+              title="Record dues payments for multiple members in batch"
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Bulk Entry</span>
+            </Button>
+          )}
+
+          {canManage && onOpenCreateDues && (
+            <Button
+              type="button"
+              variant="outline"
+              chamfer="none"
+              size="sm"
+              onClick={onOpenCreateDues}
+              className="h-8 text-xs flex items-center gap-1.5 cursor-pointer"
+              title={t("treasury.dues.manualCreateCycle", "Create Cycle")}
+            >
+              <CalendarPlus className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{t("treasury.dues.manualCreateCycle", "Create Cycle")}</span>
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Main View Area: Grid vs Member List */}
-      {viewMode === "grid" ? (
-        <DuesGrid
-          members={members}
-          events={events}
-          cellMap={cellMap}
-          currency={currency}
-          canManage={canManage}
-          canSign={canSign}
-          fundName={fundName}
-          onOpenRecordPayment={onOpenRecordPayment}
-          onOpenEntryDetails={onOpenEntryDetails}
-          onOpenInvoiceDetails={(invId) => setSelectedInvoiceId(invId)}
-          onOpenCreateInvoice={(prefill) => {
-            setInvoicePrefillUserId(prefill.userId);
-            setInvoicePrefillPeriodCount(prefill.periodCount);
-            setIsInvoiceModalOpen(true);
-          }}
-          onOpenUnpaidAction={({ member, event }) => {
-            setUnpaidCellActionTarget({ member, event });
-          }}
-          onOpenCreateDues={onOpenCreateDues}
-          onOpenBulkDues={onOpenBulkDues}
-          onOpenExport={() => setIsExportModalOpen(true)}
-          onSelectMember={(member) => setSelectedMemberForSheet(member)}
-        />
-      ) : (
-        <MemberDuesList
-          members={members}
-          events={events}
-          cellMap={cellMap}
-          currency={currency}
-          canManage={canManage}
-          onSelectMember={(member) => setSelectedMemberForSheet(member)}
-          onOpenCreateInvoice={(prefill) => {
-            setInvoicePrefillUserId(prefill.userId);
-            setInvoicePrefillPeriodCount(prefill.periodCount);
-            setIsInvoiceModalOpen(true);
-          }}
-        />
-      )}
+      {/* Main View Area: Member List (Grid view disabled for now) */}
+      <MemberDuesList
+        members={members}
+        events={events}
+        cellMap={cellMap}
+        currency={currency}
+        canManage={canManage}
+        onSelectMember={(member) => setSelectedMemberForSheet(member)}
+        onOpenCreateInvoice={(prefill) => {
+          setInvoicePrefillUserId(prefill.userId);
+          setInvoicePrefillPeriodCount(prefill.periodCount);
+          setIsInvoiceModalOpen(true);
+        }}
+      />
 
       {/* Member Dues Sheet */}
       <MemberDuesSheet
