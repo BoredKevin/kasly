@@ -36,7 +36,7 @@ export function StatusPill({
   tone = "neutral",
   icon,
   children,
-  dot = true,
+  dot = false,
   className = "",
   ...props
 }: StatusPillProps) {

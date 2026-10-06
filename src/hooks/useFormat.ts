@@ -23,11 +23,20 @@ export function useFormat() {
           return `${currency} ${amount.toLocaleString(locale)}`;
         }
       }
-      return formatter.format(amount);
+      return formatter.format(amount).replace(/\u00A0/g, " ").replace(/\s+/g, " ");
     };
 
     const number = (val: number): string => {
       return val.toLocaleString(locale);
+    };
+
+    const time = (timestamp: number | Date): string => {
+      const d = typeof timestamp === "number" ? new Date(timestamp) : timestamp;
+      return new Intl.DateTimeFormat(locale, {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: locale !== "id-ID",
+      }).format(d);
     };
 
     const date = (
@@ -48,8 +57,9 @@ export function useFormat() {
         month: "short",
         day: "numeric",
         year: "numeric",
-        hour: "numeric",
-        minute: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: locale !== "id-ID",
       }).format(d);
     };
 
@@ -74,6 +84,7 @@ export function useFormat() {
       money,
       number,
       date,
+      time,
       dateTime,
       relative,
       locale,

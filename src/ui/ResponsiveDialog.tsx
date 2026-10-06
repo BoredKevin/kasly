@@ -33,10 +33,10 @@ export function ResponsiveDialog({
     <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogPrimitive.Portal>
         {/* Backdrop Overlay */}
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm transition-opacity duration-200 animate-in fade-in-0" />
+        <DialogPrimitive.Overlay className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm transition-opacity duration-200 animate-in fade-in-0" />
 
         {/* Positioning Container: Bottom-sheet on mobile, centered modal on desktop */}
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 pointer-events-none">
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 pointer-events-none">
           <DialogPrimitive.Content
             className={`pointer-events-auto relative w-full ${MAX_WIDTH_MAP[maxWidth]} bg-card border-t sm:border border-border/80 rounded-t-[var(--fintech-radius-lg)] sm:rounded-[var(--fintech-radius-lg)] shadow-2xl flex flex-col p-4 sm:p-6 max-h-[90vh] sm:max-h-[85vh] overflow-hidden focus:outline-none transition-all duration-200 animate-in slide-in-from-bottom-4 sm:zoom-in-95 ${className}`}
           >
