@@ -1,4 +1,4 @@
-import { Authenticated, useQuery } from "convex/react";
+import { Authenticated, useQuery, useConvexAuth } from "convex/react";
 import { Link, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { api } from "../../convex/_generated/api";
@@ -25,14 +25,18 @@ import {
 export function TopBar() {
   const { t } = useTranslation();
   const [location] = useLocation();
+  const { isAuthenticated } = useConvexAuth();
   const { activeOrgId, setActiveOrgId, activeFundId, setActiveFundId } = useActiveWorkspace();
 
-  const orgs = useQuery(api.organizations.listMine);
+  const orgs = useQuery(
+    api.organizations.listMine,
+    isAuthenticated ? {} : "skip"
+  );
   const effectiveOrgId = activeOrgId ?? orgs?.[0]?._id;
 
   const funds = useQuery(
     api.treasury.funds.list,
-    effectiveOrgId ? { organizationId: effectiveOrgId } : "skip"
+    isAuthenticated && effectiveOrgId ? { organizationId: effectiveOrgId } : "skip"
   );
 
   // If user has orgs but activeOrgId is not set, set it
@@ -66,7 +70,10 @@ export function TopBar() {
     >
       {/* Left: Brand & Desktop Section Navigation */}
       <div className="flex items-center gap-3 sm:gap-6">
-        <Link href="/treasury" className="flex items-center gap-2 cursor-pointer group">
+        <Link
+          href={isAuthenticated ? "/treasury" : "/login"}
+          className="flex items-center gap-2 cursor-pointer group"
+        >
           <div className="w-7 h-7 rounded-[var(--fintech-radius-sm)] bg-primary/10 border border-primary/30 flex items-center justify-center text-primary font-bold font-mono text-xs group-hover:bg-primary/20 transition-colors">
             K
           </div>
