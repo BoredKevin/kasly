@@ -759,7 +759,7 @@ export function RecordPaymentModal({
                                   <div className="pt-2 space-y-1.5 max-h-36 overflow-y-auto pr-1 animate-in fade-in duration-150">
                                     {selectedPeriodsToPay.map((p) => (
                                       <div
-                                        key={p.periodId || p.membershipId}
+                                        key={p.membershipId}
                                         className="flex items-center justify-between py-1 px-2 rounded-[var(--fintech-radius-sm)] bg-background/50 border border-border/40 text-[11px]"
                                       >
                                         <span className="truncate font-medium text-foreground">{p.periodLabel}</span>
