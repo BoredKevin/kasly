@@ -248,9 +248,10 @@ export function LedgerTimeline({
               type="button"
               variant="outline"
               size="sm"
+              chamfer="none"
               disabled={currentPage <= 1}
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              className="h-7 px-2 cursor-pointer"
+              className="h-7 px-2 cursor-pointer rounded-[var(--fintech-radius-sm)]"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
             </Button>
@@ -258,9 +259,10 @@ export function LedgerTimeline({
               type="button"
               variant="outline"
               size="sm"
+              chamfer="none"
               disabled={currentPage >= totalPages}
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              className="h-7 px-2 cursor-pointer"
+              className="h-7 px-2 cursor-pointer rounded-[var(--fintech-radius-sm)]"
             >
               <ChevronRight className="w-3.5 h-3.5" />
             </Button>

@@ -129,26 +129,27 @@ export function LedgerPane({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className={`${canSign && !fund?.isArchived ? "grid grid-cols-2" : "flex"} sm:flex sm:items-center gap-2 w-full sm:w-auto`}>
             <Button
               type="button"
               variant="outline"
               size="sm"
+              chamfer="none"
               disabled={isVerifying || !fundId}
               onClick={() => {
                 void handleVerifyChain();
               }}
-              className="h-8 text-xs flex items-center gap-1.5 cursor-pointer"
+              className="h-8 text-xs flex items-center justify-center gap-1.5 cursor-pointer rounded-[var(--fintech-radius-sm)] font-medium"
             >
               {isVerifying ? (
                 <>
                   <Sparkles className="w-3.5 h-3.5 animate-spin text-primary" />
-                  <span>Verifying Chain...</span>
+                  <span className="truncate">{t("treasury.ledger.verifying", "Verifying Chain...")}</span>
                 </>
               ) : (
                 <>
                   <ShieldCheck className="w-3.5 h-3.5 text-primary" />
-                  <span>Verify Chain</span>
+                  <span className="truncate">{t("treasury.ledger.verifyChain", "Verify Chain")}</span>
                 </>
               )}
             </Button>
@@ -158,12 +159,19 @@ export function LedgerPane({
                 type="button"
                 variant={isFrozen ? "destructive" : "default"}
                 size="sm"
+                chamfer="none"
                 disabled={isFrozen}
                 onClick={onOpenRecordPayment}
-                className="h-8 text-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                className={`h-8 text-xs flex items-center justify-center gap-1.5 cursor-pointer rounded-[var(--fintech-radius-sm)] font-medium ${
+                  isFrozen
+                    ? ""
+                    : "bg-primary text-primary-foreground hover:bg-primary/90"
+                } disabled:opacity-50`}
               >
                 <Lock className="w-3.5 h-3.5" />
-                <span>{isFrozen ? "Ledger Frozen" : t("nav.recordPayment", "Record Entry")}</span>
+                <span className="truncate">
+                  {isFrozen ? t("treasury.ledger.frozen", "Ledger Frozen") : t("nav.recordPayment", "Record Entry")}
+                </span>
               </Button>
             )}
           </div>
