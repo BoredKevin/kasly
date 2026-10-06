@@ -106,16 +106,10 @@ export function OrganizationSidebar({
           <Link
             href="/organization"
             onClick={() => handleTabClick("overview")}
-            style={{
-              backgroundColor:
-                currentActiveTab === "overview"
-                  ? "rgba(255, 255, 255, 0.08)"
-                  : "rgba(255, 255, 255, 0.03)",
-            }}
             className={`w-full p-3 flex items-center justify-between border transition-all text-left cursor-pointer ${
               currentActiveTab === "overview"
-                ? "border-primary/60 text-foreground font-semibold shadow-md"
-                : "border-border/70 text-muted-foreground hover:text-foreground hover:border-border hover:bg-white/5"
+                ? "bg-muted/60 border-primary/60 text-foreground font-semibold shadow-xs"
+                : "bg-muted/20 border-border/70 text-muted-foreground hover:text-foreground hover:border-border hover:bg-muted/40"
             }`}
           >
             <div className="flex items-center gap-3">
@@ -137,16 +131,10 @@ export function OrganizationSidebar({
             <Link
               href="/organization/roles"
               onClick={() => handleTabClick("roles")}
-              style={{
-                backgroundColor:
-                  currentActiveTab === "roles"
-                    ? "rgba(255, 255, 255, 0.08)"
-                    : "rgba(255, 255, 255, 0.03)",
-              }}
               className={`w-full p-3 flex items-center justify-between border transition-all text-left cursor-pointer ${
                 currentActiveTab === "roles"
-                  ? "border-primary/60 text-foreground font-semibold shadow-md"
-                  : "border-border/70 text-muted-foreground hover:text-foreground hover:border-border hover:bg-white/5"
+                  ? "bg-muted/60 border-primary/60 text-foreground font-semibold shadow-xs"
+                  : "bg-muted/20 border-border/70 text-muted-foreground hover:text-foreground hover:border-border hover:bg-muted/40"
               }`}
             >
               <div className="flex items-center gap-3">
@@ -174,16 +162,10 @@ export function OrganizationSidebar({
             <Link
               href="/organization/invites"
               onClick={() => handleTabClick("invites")}
-              style={{
-                backgroundColor:
-                  currentActiveTab === "invites"
-                    ? "rgba(255, 255, 255, 0.08)"
-                    : "rgba(255, 255, 255, 0.03)",
-              }}
               className={`w-full p-3 flex items-center justify-between border transition-all text-left cursor-pointer ${
                 currentActiveTab === "invites"
-                  ? "border-primary/60 text-foreground font-semibold shadow-md"
-                  : "border-border/70 text-muted-foreground hover:text-foreground hover:border-border hover:bg-white/5"
+                  ? "bg-muted/60 border-primary/60 text-foreground font-semibold shadow-xs"
+                  : "bg-muted/20 border-border/70 text-muted-foreground hover:text-foreground hover:border-border hover:bg-muted/40"
               }`}
             >
               <div className="flex items-center gap-3">
@@ -220,16 +202,10 @@ export function OrganizationSidebar({
             <Link
               href="/organization/members"
               onClick={() => handleTabClick("members")}
-              style={{
-                backgroundColor:
-                  currentActiveTab === "members"
-                    ? "rgba(255, 255, 255, 0.08)"
-                    : "rgba(255, 255, 255, 0.03)",
-              }}
               className={`w-full p-3 flex items-center justify-between border transition-all text-left cursor-pointer ${
                 currentActiveTab === "members"
-                  ? "border-primary/60 text-foreground font-semibold shadow-md"
-                  : "border-border/70 text-muted-foreground hover:text-foreground hover:border-border hover:bg-white/5"
+                  ? "bg-muted/60 border-primary/60 text-foreground font-semibold shadow-xs"
+                  : "bg-muted/20 border-border/70 text-muted-foreground hover:text-foreground hover:border-border hover:bg-muted/40"
               }`}
             >
               <div className="flex items-center gap-3">
@@ -268,10 +244,7 @@ export function OrganizationSidebar({
           )}
         </div>
 
-        <div
-          style={{ backgroundColor: "rgba(255, 255, 255, 0.03)" }}
-          className="p-3 border border-border/70 space-y-3"
-        >
+        <div className="p-3 border border-border/70 bg-muted/20 space-y-3">
           {orgs && orgs.length > 0 ? (
             <div className="relative">
               <select

@@ -11,24 +11,29 @@ export interface StatusPillProps extends React.HTMLAttributes<HTMLSpanElement> {
 
 const TONE_STYLES: Record<StatusTone, { badge: string; dot: string }> = {
   neutral: {
-    badge: "bg-muted/40 text-muted-foreground border-border/80",
-    dot: "bg-muted-foreground/80",
+    badge:
+      "bg-[hsl(var(--status-neutral-bg))] text-[hsl(var(--status-neutral))] border-[hsl(var(--status-neutral-border))]",
+    dot: "bg-[hsl(var(--status-neutral))]",
   },
   success: {
-    badge: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
-    dot: "bg-emerald-400",
+    badge:
+      "bg-[hsl(var(--status-success-bg))] text-[hsl(var(--status-success))] border-[hsl(var(--status-success-border))]",
+    dot: "bg-[hsl(var(--status-success))]",
   },
   warning: {
-    badge: "bg-amber-500/10 text-amber-400 border-amber-500/30",
-    dot: "bg-amber-400",
+    badge:
+      "bg-[hsl(var(--status-warning-bg))] text-[hsl(var(--status-warning))] border-[hsl(var(--status-warning-border))]",
+    dot: "bg-[hsl(var(--status-warning))]",
   },
   danger: {
-    badge: "bg-rose-500/10 text-rose-400 border-rose-500/30",
-    dot: "bg-rose-400",
+    badge:
+      "bg-[hsl(var(--status-danger-bg))] text-[hsl(var(--status-danger))] border-[hsl(var(--status-danger-border))]",
+    dot: "bg-[hsl(var(--status-danger))]",
   },
   info: {
-    badge: "bg-sky-500/10 text-sky-400 border-sky-500/30",
-    dot: "bg-sky-400",
+    badge:
+      "bg-[hsl(var(--status-info-bg))] text-[hsl(var(--status-info))] border-[hsl(var(--status-info-border))]",
+    dot: "bg-[hsl(var(--status-info))]",
   },
 };
 
@@ -48,7 +53,10 @@ export function StatusPill({
       {...props}
     >
       {dot && !icon && (
-        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${styles.dot}`} aria-hidden="true" />
+        <span
+          className={`w-1.5 h-1.5 rounded-full shrink-0 ${styles.dot}`}
+          aria-hidden="true"
+        />
       )}
       {icon && <span className="shrink-0">{icon}</span>}
       <span className="truncate">{children}</span>

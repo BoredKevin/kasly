@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../convex/_generated/api";
 import { useActiveWorkspace } from "../contexts";
 import { SignOutButton } from "../features/auth";
+import { ThemeToggle, LanguageToggle } from "../components/common";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -58,10 +59,9 @@ export function TopBar() {
     <header
       className="sticky top-0 z-30 px-4 sm:px-6 h-14 border-b border-border/80 flex items-center justify-between"
       style={{
-        backgroundColor: "rgba(10, 10, 12, 0.88)",
+        backgroundColor: "hsl(var(--background) / 0.85)",
         backdropFilter: "blur(20px) saturate(180%)",
         WebkitBackdropFilter: "blur(20px) saturate(180%)",
-        boxShadow: "0 4px 20px rgba(0, 0, 0, 0.35)",
       }}
     >
       {/* Left: Brand & Desktop Section Navigation */}
@@ -228,7 +228,15 @@ export function TopBar() {
               </DropdownMenuContent>
             </DropdownMenu>
           )}
+        </Authenticated>
 
+        {/* Global Desktop Toggles */}
+        <div className="hidden sm:flex items-center gap-1.5">
+          <ThemeToggle compact />
+          <LanguageToggle compact />
+        </div>
+
+        <Authenticated>
           <div className="hidden sm:block">
             <SignOutButton />
           </div>
