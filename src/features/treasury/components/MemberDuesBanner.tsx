@@ -115,11 +115,11 @@ export function MemberDuesBanner({
           <div className="flex items-center gap-2 pt-1 sm:pt-0">
             <Button
               type="button"
-              variant="cyber"
+              variant="default"
               chamfer="none"
               size="sm"
               onClick={onOpenPayDues}
-              className="w-full sm:w-auto h-9 text-xs font-semibold px-4 flex items-center justify-center gap-2 cursor-pointer shadow-md"
+              className="w-full sm:w-auto h-9 text-xs font-semibold px-4 flex items-center justify-center gap-2 cursor-pointer shadow-md bg-primary text-primary-foreground hover:bg-primary/90"
             >
               <CreditCard className="w-3.5 h-3.5" />
               <span>{t("treasury.overview.payDuesNow", "Pay Dues Now")}</span>
@@ -191,9 +191,6 @@ export function MemberDuesBanner({
             <h4 className="text-sm font-semibold text-emerald-300">
               {t("treasury.overview.allDuesPaidTitle", "All Dues Paid")}
             </h4>
-            <StatusPill tone="success">
-              {t("treasury.overview.inGoodStanding", "Good Standing")}
-            </StatusPill>
           </div>
           <p className="text-xs text-muted-foreground">
             {t("treasury.overview.allDuesPaidSubtitle", "You have no outstanding dues.")}

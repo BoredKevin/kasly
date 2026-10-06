@@ -44,7 +44,15 @@
     "yesterday": "yesterday",
     "daysAgo": "{{count}}d ago"
   },
+  "theme": {
+    "switchToLight": "Switch to light mode",
+    "switchToDark": "Switch to dark mode",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
   "nav": {
+    "theme": "Appearance",
     "userProfile": "User Profile",
     "organization": "Organization",
     "treasury": "Treasury",
@@ -276,6 +284,9 @@
     "ledger": {
       "title": "Cryptographic Ledger",
       "description": "Immutable, hash-linked financial audit trail signed with ECDSA P-256.",
+      "verifyChain": "Verify Chain",
+      "verifying": "Verifying Chain...",
+      "frozen": "Ledger Frozen",
       "recordEntry": "Record Ledger Entry",
       "entryNumber": "Entry #{{seq}}",
       "credit": "Credit",
@@ -651,6 +662,15 @@
       "payDuesTitle": "Pay Membership Dues",
       "selectPeriodCount": "Number of Unpaid Cycles to Pay",
       "payAllCycles": "Pay All Unpaid ({{count}} cycles)",
+      "numberOfPeriods": "Number of Periods to Pay",
+      "maxAvailableCycles": "Max available: {{count}} cycle(s)",
+      "cyclesToPay": "Cycles to pay:",
+      "coveredCycles": "Covered Cycle(s):",
+      "calculatedTotal": "Calculated Total:",
+      "cycleSingle": "1 Cycle",
+      "cyclesMultiple": "{{count}} Cycles",
+      "allCycles": "All ({{count}})",
+      "viewCycleBreakdown": "Cycle Breakdown",
       "duesSelectionHelp": "Pays your oldest unpaid dues cycles in order.",
       "generateInvoiceBtn": "Proceed to Payment",
       "generatingInvoice": "Generating Invoice...",

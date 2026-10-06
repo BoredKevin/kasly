@@ -111,7 +111,7 @@ export function UnifiedMobileFinancialHero({
           </div>
 
           <div className="space-y-1">
-            <div className="text-3xl sm:text-4xl font-bold font-sans tabular-nums tracking-tight text-amber-300">
+            <div className="text-3xl sm:text-4xl font-bold font-sans tabular-nums tracking-tight text-amber-400">
               {formatMoney(totalUnpaid, currency)}
             </div>
 
@@ -157,9 +157,6 @@ export function UnifiedMobileFinancialHero({
             <span className="text-xl sm:text-2xl font-bold tracking-tight text-emerald-400">
               {t("treasury.overview.allDuesPaidTitle", "All Dues Paid")}
             </span>
-            <StatusPill tone="success">
-              {t("treasury.overview.inGoodStanding", "Good Standing")}
-            </StatusPill>
           </div>
 
           <p className="text-xs text-muted-foreground">

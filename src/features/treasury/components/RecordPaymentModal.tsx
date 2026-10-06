@@ -130,6 +130,7 @@ export function RecordPaymentModal({
   const duesUserId = prefillUserId ?? manualDuesUserId;
 
   const [duesPeriodCount, setDuesPeriodCount] = useState<number>(prefillPeriodCount);
+  const [showDuesBreakdown, setShowDuesBreakdown] = useState<boolean>(false);
   const [customDuesMemo, setCustomDuesMemo] = useState<string>("");
 
   const [selectedKeyIdState, setSelectedKeyIdState] = useState<string>("");
@@ -594,91 +595,181 @@ export function RecordPaymentModal({
 
                     {/* Dues Periods & Amount Calculation */}
                     {duesUserId && (
-                      <div className="space-y-3 p-3 bg-muted/20 border border-border/80 rounded">
+                      <div className="space-y-3 p-3.5 sm:p-4 bg-muted/20 border border-border/80 rounded-[var(--fintech-radius-sm)] font-sans shadow-xs">
                         {unpaidPeriods === undefined ? (
-                          <div className="py-2 text-xs font-mono text-muted-foreground animate-pulse">
+                          <div className="py-2 text-xs font-mono text-muted-foreground animate-pulse text-center">
                             Loading unpaid dues cycles...
                           </div>
                         ) : unpaidPeriods.length === 0 ? (
-                          <div className="flex items-center gap-2 text-emerald-400 text-xs font-mono py-1">
-                            <CheckCircle2 className="w-4 h-4" />
-                            <span>This member has no outstanding dues! All periods are paid.</span>
+                          <div className="flex items-center gap-2 text-primary text-xs py-1">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                            <span className="font-medium text-foreground">This member has no outstanding dues! All periods are paid.</span>
                           </div>
                         ) : (
                           <>
-                            <div className="flex items-center justify-between">
-                              <label className="text-xs font-medium text-foreground">
-                                Number of Periods to Pay
+                            {/* Header row */}
+                            <div className="flex items-center justify-between gap-2">
+                              <label className="text-xs font-semibold text-foreground tracking-tight">
+                                {t("treasury.invoices.numberOfPeriods", "Number of Periods to Pay")}
                               </label>
-                              <span className="text-[11px] font-mono text-muted-foreground">
-                                Max available: {unpaidPeriods.length} cycle(s)
+                              <span className="inline-flex items-center text-[11px] font-mono font-medium text-muted-foreground bg-muted/50 border border-border/60 px-2 py-0.5 rounded-[var(--fintech-radius-sm)]">
+                                {t("treasury.invoices.maxAvailableCycles", "Max available: {{count}} cycle(s)", {
+                                  count: unpaidPeriods.length,
+                                })}
                               </span>
                             </div>
 
-                            <div className="flex items-center justify-between gap-3 pt-1">
-                              <span className="text-xs text-muted-foreground">
-                                Cycles to pay:
-                              </span>
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  chamfer="none"
-                                  disabled={isSigning || duesPeriodCount <= 1}
-                                  onClick={() => setDuesPeriodCount((prev) => Math.max(1, prev - 1))}
-                                  className="h-8 w-8 p-0 flex items-center justify-center cursor-pointer shrink-0 disabled:opacity-40"
-                                  title="Decrease periods"
-                                >
-                                  <Minus className="w-3.5 h-3.5" />
-                                </Button>
+                            {/* Stepper & Preset Controls */}
+                            <div className="space-y-2.5 pt-0.5">
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="text-sm sm:text-base font-bold text-foreground">
+                                  {t("treasury.invoices.cyclesToPay", "Cycles to pay:")}
+                                </span>
 
-                                <input
-                                  type="text"
-                                  inputMode="numeric"
-                                  value={duesPeriodCount}
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    chamfer="none"
+                                    disabled={isSigning || duesPeriodCount <= 1}
+                                    onClick={() => setDuesPeriodCount((prev) => Math.max(1, prev - 1))}
+                                    className="h-9 w-9 p-0 flex items-center justify-center cursor-pointer shrink-0 disabled:opacity-30 rounded-[var(--fintech-radius-sm)] border-border/80 bg-background hover:bg-muted/50 text-foreground transition-all active:scale-95 shadow-xs"
+                                    title="Decrease periods"
+                                  >
+                                    <Minus className="w-4 h-4" />
+                                  </Button>
+
+                                  <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={duesPeriodCount}
+                                    disabled={isSigning}
+                                    onChange={(e) => {
+                                      const raw = e.target.value.replace(/[^0-9]/g, "");
+                                      if (!raw) {
+                                        setDuesPeriodCount(1);
+                                        return;
+                                      }
+                                      const val = parseInt(raw, 10);
+                                      setDuesPeriodCount(Math.min(unpaidPeriods.length, Math.max(1, val)));
+                                    }}
+                                    className="h-9 w-12 p-0 text-center font-sans font-bold text-base bg-background border border-border/80 rounded-[var(--fintech-radius-sm)] text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary tabular-nums shrink-0 shadow-xs"
+                                  />
+
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    chamfer="none"
+                                    disabled={isSigning || duesPeriodCount >= unpaidPeriods.length}
+                                    onClick={() => setDuesPeriodCount((prev) => Math.min(unpaidPeriods.length, prev + 1))}
+                                    className="h-9 w-9 p-0 flex items-center justify-center cursor-pointer shrink-0 disabled:opacity-30 rounded-[var(--fintech-radius-sm)] border-border/80 bg-background hover:bg-muted/50 text-foreground transition-all active:scale-95 shadow-xs"
+                                    title="Increase periods"
+                                  >
+                                    <Plus className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </div>
+
+                              {/* Quick Preset Chips */}
+                              <div className="flex items-center gap-1.5 pt-0.5">
+                                <button
+                                  type="button"
                                   disabled={isSigning}
-                                  onChange={(e) => {
-                                    const raw = e.target.value.replace(/[^0-9]/g, "");
-                                    if (!raw) {
-                                      setDuesPeriodCount(1);
-                                      return;
-                                    }
-                                    const val = parseInt(raw, 10);
-                                    setDuesPeriodCount(Math.min(unpaidPeriods.length, Math.max(1, val)));
-                                  }}
-                                  className="h-8 w-8 p-0 text-center font-mono font-bold text-sm bg-background border border-border text-primary focus:outline-none focus:border-primary shrink-0"
-                                />
-
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  chamfer="none"
-                                  disabled={isSigning || duesPeriodCount >= unpaidPeriods.length}
-                                  onClick={() => setDuesPeriodCount((prev) => Math.min(unpaidPeriods.length, prev + 1))}
-                                  className="h-8 w-8 p-0 flex items-center justify-center cursor-pointer shrink-0 disabled:opacity-40"
-                                  title="Increase periods"
+                                  onClick={() => setDuesPeriodCount(1)}
+                                  className={`px-3 py-1.5 text-xs font-medium rounded-[var(--fintech-radius-sm)] border transition-all cursor-pointer ${
+                                    duesPeriodCount === 1
+                                      ? "bg-primary text-primary-foreground border-primary font-semibold shadow-xs"
+                                      : "bg-background/80 border-border/70 text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                                  }`}
                                 >
-                                  <Plus className="w-3.5 h-3.5" />
-                                </Button>
+                                  {t("treasury.invoices.cycleSingle", "1 Cycle")}
+                                </button>
+
+                                {unpaidPeriods.length > 1 && (
+                                  <button
+                                    type="button"
+                                    disabled={isSigning}
+                                    onClick={() => setDuesPeriodCount(2)}
+                                    className={`px-3 py-1.5 text-xs font-medium rounded-[var(--fintech-radius-sm)] border transition-all cursor-pointer ${
+                                      duesPeriodCount === 2
+                                        ? "bg-primary text-primary-foreground border-primary font-semibold shadow-xs"
+                                        : "bg-background/80 border-border/70 text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                                    }`}
+                                  >
+                                    {t("treasury.invoices.cyclesMultiple", "{{count}} Cycles", { count: 2 })}
+                                  </button>
+                                )}
+
+                                <button
+                                  type="button"
+                                  disabled={isSigning}
+                                  onClick={() => setDuesPeriodCount(unpaidPeriods.length)}
+                                  className={`px-3 py-1.5 text-xs font-medium rounded-[var(--fintech-radius-sm)] border transition-all cursor-pointer ${
+                                    duesPeriodCount === unpaidPeriods.length
+                                      ? "bg-primary text-primary-foreground border-primary font-semibold shadow-xs"
+                                      : "bg-background/80 border-border/70 text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                                  }`}
+                                >
+                                  {t("treasury.invoices.allCycles", "All ({{count}})", { count: unpaidPeriods.length })}
+                                </button>
                               </div>
                             </div>
 
-                            {/* Covered cycles preview */}
-                            <div className="pt-2 border-t border-border/60 space-y-1 text-xs font-mono">
-                              <div className="flex items-center justify-between text-muted-foreground text-[11px]">
-                                <span>Covered Cycle(s):</span>
-                                <span className="text-foreground font-semibold">
+                            {/* Divider & Preview Summary */}
+                            <div className="pt-3 border-t border-border/60 space-y-2.5">
+                              <div className="flex items-center justify-between gap-2 text-sm">
+                                <span className="text-muted-foreground font-medium flex items-center gap-2 shrink-0">
+                                  <CalendarDays className="w-4 h-4 text-muted-foreground" />
+                                  {t("treasury.invoices.coveredCycles", "Covered Cycle(s):")}
+                                </span>
+                                <span className="text-foreground font-semibold text-right truncate max-w-[210px] sm:max-w-none">
                                   {formatPeriodsRange(selectedPeriodsToPay)}
                                 </span>
                               </div>
 
-                              <div className="flex items-center justify-between text-muted-foreground text-[11px] pt-1">
-                                <span>Calculated Total Credit:</span>
-                                <span className="text-emerald-400 font-bold text-sm">
+                              <div className="flex items-center justify-between gap-2 text-sm pt-0.5">
+                                <span className="text-muted-foreground font-medium">
+                                  {t("treasury.invoices.calculatedTotal", "Calculated Total:")}
+                                </span>
+                                <span className="text-base font-bold text-primary font-sans tabular-nums text-right">
                                   {currentFund?.currency ?? "IDR"} {duesCalculatedAmount.toLocaleString("id-ID")}
                                 </span>
+                              </div>
+
+                              {/* Expandable Breakdown Toggle */}
+                              <div className="pt-2 border-t border-border/40">
+                                <button
+                                  type="button"
+                                  onClick={() => setShowDuesBreakdown((prev) => !prev)}
+                                  className="flex items-center justify-between w-full py-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                                >
+                                  <span>
+                                    {t("treasury.invoices.viewCycleBreakdown", "Rincian Siklus")} ({selectedPeriodsToPay.length})
+                                  </span>
+                                  <ChevronDown
+                                    className={`w-4 h-4 transition-transform duration-200 ${
+                                      showDuesBreakdown ? "rotate-180" : ""
+                                    }`}
+                                  />
+                                </button>
+
+                                {showDuesBreakdown && (
+                                  <div className="pt-2 space-y-1.5 max-h-36 overflow-y-auto pr-1 animate-in fade-in duration-150">
+                                    {selectedPeriodsToPay.map((p) => (
+                                      <div
+                                        key={p.periodId || p.membershipId}
+                                        className="flex items-center justify-between py-1 px-2 rounded-[var(--fintech-radius-sm)] bg-background/50 border border-border/40 text-[11px]"
+                                      >
+                                        <span className="truncate font-medium text-foreground">{p.periodLabel}</span>
+                                        <span className="text-muted-foreground shrink-0 tabular-nums font-sans">
+                                          {currentFund?.currency || "IDR"} {p.amount.toLocaleString("id-ID")}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </>

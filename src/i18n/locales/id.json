@@ -44,7 +44,15 @@
     "yesterday": "kemarin",
     "daysAgo": "{{count}} hr lalu"
   },
+  "theme": {
+    "switchToLight": "Beralih ke mode terang",
+    "switchToDark": "Beralih ke mode gelap",
+    "light": "Terang",
+    "dark": "Gelap",
+    "system": "Sistem"
+  },
   "nav": {
+    "theme": "Tema",
     "userProfile": "Profil Pengguna",
     "organization": "Organisasi",
     "treasury": "Treasury",
@@ -275,7 +283,10 @@
     },
     "ledger": {
       "title": "Buku Kas",
-      "description": "Jejak audit keuangan yang tidak dapat diubah, terhubung secara hash dan ditandani dengan ECDSA P-256.",
+      "description": "Jejak audit keuangan yang tidak dapat diubah, terhubung secara hash dan ditandai dengan ECDSA P-256.",
+      "verifyChain": "Verifikasi Rantai",
+      "verifying": "Memverifikasi Rantai...",
+      "frozen": "Buku Kas Dibekukan",
       "recordEntry": "Catat Entri Kas",
       "entryNumber": "Entri #{{seq}}",
       "credit": "Kredit",
@@ -651,6 +662,15 @@
       "payDuesTitle": "Bayar Tunggakan Anggota",
       "selectPeriodCount": "Jumlah Periode Tunggakan yang Dibayar",
       "payAllCycles": "Bayar Semua Tunggakan ({{count}} periode)",
+      "numberOfPeriods": "Jumlah Periode Tunggakan",
+      "maxAvailableCycles": "Maks. {{count}} siklus tersedia",
+      "cyclesToPay": "Siklus yang dibayar:",
+      "coveredCycles": "Siklus Tercover:",
+      "calculatedTotal": "Total Tagihan:",
+      "cycleSingle": "1 Siklus",
+      "cyclesMultiple": "{{count}} Siklus",
+      "allCycles": "Semua ({{count}})",
+      "viewCycleBreakdown": "Rincian Siklus",
       "duesSelectionHelp": "Membayar periode tunggakan tertua Anda secara berurutan.",
       "generateInvoiceBtn": "Lanjut ke Pembayaran",
       "generatingInvoice": "Membuat Faktur...",
