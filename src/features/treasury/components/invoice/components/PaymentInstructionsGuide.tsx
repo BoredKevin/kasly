@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Card } from "@boredkevin/ui";
+import { Panel } from "../../../../../ui";
 import {
   Smartphone,
   ScanLine,
@@ -15,29 +15,23 @@ export function PaymentInstructionsGuide() {
   const [activeTab, setActiveTab] = useState<"same" | "other">("same");
 
   return (
-    <Card
-      cornerLines={false}
-      className="p-4 sm:p-5 bg-card/90 backdrop-blur-md border border-border/80 shadow-md space-y-4 max-w-sm sm:max-w-md mx-auto font-sans"
-    >
+    <Panel className="p-4 sm:p-5 bg-card border border-border/80 rounded-[var(--fintech-radius-md)] shadow-sm space-y-4 max-w-sm sm:max-w-md mx-auto font-sans">
       {/* Header & Section Title */}
       <div className="flex items-center justify-between pb-1 border-b border-border/40">
-        <h4 className="font-sans text-sm sm:text-base font-bold text-foreground tracking-tight">
+        <h4 className="font-sans text-sm font-semibold text-foreground">
           {t("treasury.invoices.checkout.howToPay", "How to Pay:")}
         </h4>
-        <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest">
-          [GUIDE // QRIS]
-        </span>
       </div>
 
       {/* Mode Switcher Tabs */}
-      <div className="grid grid-cols-2 p-1 bg-muted/20 border border-border/60 rounded-lg gap-1">
+      <div className="grid grid-cols-2 p-1 bg-muted/20 border border-border/60 rounded-[var(--fintech-radius-sm)] gap-1">
         <button
           type="button"
           onClick={() => setActiveTab("same")}
-          className={`flex items-center justify-center gap-1.5 py-2 px-2 text-xs font-sans font-semibold rounded-md transition-all cursor-pointer ${
+          className={`flex items-center justify-center gap-1.5 py-1.5 px-2 text-xs font-sans font-medium rounded-[var(--fintech-radius-sm)] transition-colors cursor-pointer ${
             activeTab === "same"
-              ? "bg-primary/20 text-primary border border-primary/40 shadow-sm"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+              ? "bg-card text-foreground font-semibold shadow-xs border border-border/60"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
           <Smartphone className={`w-3.5 h-3.5 ${activeTab === "same" ? "text-primary" : "text-muted-foreground"}`} />
@@ -47,10 +41,10 @@ export function PaymentInstructionsGuide() {
         <button
           type="button"
           onClick={() => setActiveTab("other")}
-          className={`flex items-center justify-center gap-1.5 py-2 px-2 text-xs font-sans font-semibold rounded-md transition-all cursor-pointer ${
+          className={`flex items-center justify-center gap-1.5 py-1.5 px-2 text-xs font-sans font-medium rounded-[var(--fintech-radius-sm)] transition-colors cursor-pointer ${
             activeTab === "other"
-              ? "bg-primary/20 text-primary border border-primary/40 shadow-sm"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+              ? "bg-card text-foreground font-semibold shadow-xs border border-border/60"
+              : "text-muted-foreground hover:text-foreground"
           }`}
         >
           <Camera className={`w-3.5 h-3.5 ${activeTab === "other" ? "text-primary" : "text-muted-foreground"}`} />
@@ -64,11 +58,11 @@ export function PaymentInstructionsGuide() {
           <>
             {/* Step 1: Download / Screenshot */}
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-primary shrink-0 mt-0.5">
-                <ImageIcon className="w-4 h-4" />
+              <div className="w-7 h-7 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0 mt-0.5">
+                <ImageIcon className="w-3.5 h-3.5" />
               </div>
               <div className="space-y-0.5 text-xs font-sans">
-                <p className="font-bold text-foreground text-xs sm:text-[13px]">
+                <p className="font-semibold text-foreground text-xs sm:text-[13px]">
                   1. {t("treasury.invoices.checkout.samePhoneStep1Title", "Download or Screenshot QRIS")}
                 </p>
                 <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
@@ -79,11 +73,11 @@ export function PaymentInstructionsGuide() {
 
             {/* Step 2: Open App */}
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-primary shrink-0 mt-0.5">
-                <Smartphone className="w-4 h-4" />
+              <div className="w-7 h-7 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0 mt-0.5">
+                <Smartphone className="w-3.5 h-3.5" />
               </div>
               <div className="space-y-0.5 text-xs font-sans">
-                <p className="font-bold text-foreground text-xs sm:text-[13px]">
+                <p className="font-semibold text-foreground text-xs sm:text-[13px]">
                   2. {t("treasury.invoices.checkout.samePhoneStep2Title", "Open m-Banking or E-Wallet")}
                 </p>
                 <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
@@ -94,11 +88,11 @@ export function PaymentInstructionsGuide() {
 
             {/* Step 3: Scan from Gallery */}
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-primary shrink-0 mt-0.5">
-                <ScanLine className="w-4 h-4" />
+              <div className="w-7 h-7 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0 mt-0.5">
+                <ScanLine className="w-3.5 h-3.5" />
               </div>
               <div className="space-y-0.5 text-xs font-sans">
-                <p className="font-bold text-foreground text-xs sm:text-[13px]">
+                <p className="font-semibold text-foreground text-xs sm:text-[13px]">
                   3. {t("treasury.invoices.checkout.samePhoneStep3Title", "Scan from Gallery")}
                 </p>
                 <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
@@ -109,11 +103,11 @@ export function PaymentInstructionsGuide() {
 
             {/* Step 4: Verify & Pay */}
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-primary shrink-0 mt-0.5">
-                <CreditCard className="w-4 h-4" />
+              <div className="w-7 h-7 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0 mt-0.5">
+                <CreditCard className="w-3.5 h-3.5" />
               </div>
               <div className="space-y-0.5 text-xs font-sans">
-                <p className="font-bold text-foreground text-xs sm:text-[13px]">
+                <p className="font-semibold text-foreground text-xs sm:text-[13px]">
                   4. {t("treasury.invoices.checkout.samePhoneStep4Title", "Verify Details & Pay")}
                 </p>
                 <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
@@ -124,11 +118,11 @@ export function PaymentInstructionsGuide() {
 
             {/* Step 5: Check Status */}
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
-                <CheckCircle2 className="w-4 h-4" />
+              <div className="w-7 h-7 rounded-full bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
+                <CheckCircle2 className="w-3.5 h-3.5" />
               </div>
               <div className="space-y-0.5 text-xs font-sans">
-                <p className="font-bold text-foreground text-xs sm:text-[13px]">
+                <p className="font-semibold text-foreground text-xs sm:text-[13px]">
                   5. {t("treasury.invoices.checkout.samePhoneStep5Title", "Click Check Payment Status")}
                 </p>
                 <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
@@ -141,11 +135,11 @@ export function PaymentInstructionsGuide() {
           <>
             {/* Mode 2: Other Phone - Step 1 */}
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-primary shrink-0 mt-0.5">
-                <ScanLine className="w-4 h-4" />
+              <div className="w-7 h-7 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0 mt-0.5">
+                <ScanLine className="w-3.5 h-3.5" />
               </div>
               <div className="space-y-0.5 text-xs font-sans">
-                <p className="font-bold text-foreground text-xs sm:text-[13px]">
+                <p className="font-semibold text-foreground text-xs sm:text-[13px]">
                   1. {t("treasury.invoices.checkout.otherPhoneStep1Title", "Open QR Payment")}
                 </p>
                 <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
@@ -156,11 +150,11 @@ export function PaymentInstructionsGuide() {
 
             {/* Step 2: Scan */}
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-primary shrink-0 mt-0.5">
-                <Camera className="w-4 h-4" />
+              <div className="w-7 h-7 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0 mt-0.5">
+                <Camera className="w-3.5 h-3.5" />
               </div>
               <div className="space-y-0.5 text-xs font-sans">
-                <p className="font-bold text-foreground text-xs sm:text-[13px]">
+                <p className="font-semibold text-foreground text-xs sm:text-[13px]">
                   2. {t("treasury.invoices.checkout.otherPhoneStep2Title", "Scan QR Code")}
                 </p>
                 <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
@@ -171,11 +165,11 @@ export function PaymentInstructionsGuide() {
 
             {/* Step 3: Check & Pay */}
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-primary shrink-0 mt-0.5">
-                <CreditCard className="w-4 h-4" />
+              <div className="w-7 h-7 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0 mt-0.5">
+                <CreditCard className="w-3.5 h-3.5" />
               </div>
               <div className="space-y-0.5 text-xs font-sans">
-                <p className="font-bold text-foreground text-xs sm:text-[13px]">
+                <p className="font-semibold text-foreground text-xs sm:text-[13px]">
                   3. {t("treasury.invoices.checkout.otherPhoneStep3Title", "Check Details & Pay")}
                 </p>
                 <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
@@ -186,11 +180,11 @@ export function PaymentInstructionsGuide() {
 
             {/* Step 4: Check Status */}
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
-                <CheckCircle2 className="w-4 h-4" />
+              <div className="w-7 h-7 rounded-full bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-emerald-400 shrink-0 mt-0.5">
+                <CheckCircle2 className="w-3.5 h-3.5" />
               </div>
               <div className="space-y-0.5 text-xs font-sans">
-                <p className="font-bold text-foreground text-xs sm:text-[13px]">
+                <p className="font-semibold text-foreground text-xs sm:text-[13px]">
                   4. {t("treasury.invoices.checkout.otherPhoneStep4Title", "Click Check Payment Status")}
                 </p>
                 <p className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed">
@@ -201,6 +195,6 @@ export function PaymentInstructionsGuide() {
           </>
         )}
       </div>
-    </Card>
+    </Panel>
   );
 }

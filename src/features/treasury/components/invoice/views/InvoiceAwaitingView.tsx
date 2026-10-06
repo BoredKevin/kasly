@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Card, Button } from "@boredkevin/ui";
+import { Button } from "@boredkevin/ui";
+import { Panel, StatusPill } from "../../../../../ui";
 import { Clock, ExternalLink, Zap, ArrowLeft } from "lucide-react";
 
 export interface InvoiceAwaitingViewProps {
@@ -29,33 +30,30 @@ export function InvoiceAwaitingView({
 
   return (
     <div className="space-y-4 animate-in fade-in duration-200">
-      <div className="flex items-center justify-between pb-1">
+      <div className="flex items-center justify-between pb-1 max-w-sm sm:max-w-md mx-auto">
         <Button
           type="button"
           variant="ghost"
           size="sm"
           chamfer="none"
           onClick={onBackToCheckout}
-          className="h-8 text-xs font-mono px-2 text-muted-foreground hover:text-foreground cursor-pointer"
+          className="h-8 text-xs font-sans font-medium px-2 text-muted-foreground hover:text-foreground cursor-pointer rounded-[var(--fintech-radius-sm)]"
         >
           <ArrowLeft className="w-3.5 h-3.5 mr-1" />
           <span>{i18n.language === "id" ? "Rincian Tagihan" : "Invoice Details"}</span>
         </Button>
       </div>
 
-      <Card
-        cornerLines={false}
-        className="bg-card/90 backdrop-blur-md border border-amber-500/30 shadow-2xl text-center p-6 sm:p-8 space-y-4 max-w-sm sm:max-w-md mx-auto"
-      >
-        <div className="inline-flex p-3 bg-amber-500/20 text-amber-400 rounded-full border border-amber-500/40">
+      <Panel className="bg-card border border-amber-500/30 shadow-sm text-center p-6 sm:p-8 space-y-4 max-w-sm sm:max-w-md mx-auto rounded-[var(--fintech-radius-md)]">
+        <div className="inline-flex p-3 bg-amber-500/15 text-amber-400 rounded-full border border-amber-500/30">
           <Clock className="w-8 h-8" />
         </div>
 
         <div className="space-y-1.5">
-          <h3 className="text-lg font-bold text-amber-400 font-mono tracking-wider uppercase">
+          <h3 className="text-lg font-bold text-amber-400 font-sans tracking-tight">
             {t("treasury.invoices.checkout.awaitingConfirmationTitle", "AWAITING CONFIRMATION")}
           </h3>
-          <p className="text-xs text-muted-foreground max-w-sm mx-auto font-mono leading-relaxed">
+          <p className="text-xs text-muted-foreground max-w-sm mx-auto font-sans leading-relaxed">
             {t(
               "treasury.invoices.checkout.awaitingConfirmationDesc",
               "Your payment confirmation has been received. The verification process typically takes between 10 minutes to 24 hours."
@@ -63,7 +61,7 @@ export function InvoiceAwaitingView({
           </p>
         </div>
 
-        <div className="p-3.5 bg-background/60 border border-border/60 text-xs font-mono space-y-1.5 rounded-md text-left">
+        <div className="p-3.5 bg-muted/20 border border-border/60 text-xs font-sans space-y-1.5 rounded-[var(--fintech-radius-sm)] text-left">
           <div className="flex justify-between text-muted-foreground">
             <span>{t("treasury.invoices.checkout.totalPay", "Total Payment")}</span>
             <span className="font-bold text-foreground">
@@ -79,22 +77,22 @@ export function InvoiceAwaitingView({
               })}
             </span>
           </div>
-          <div className="flex justify-between text-muted-foreground">
+          <div className="flex justify-between items-center text-muted-foreground">
             <span>Status</span>
-            <span className="text-amber-400 font-semibold">
+            <StatusPill tone="warning">
               {t("treasury.invoices.checkout.awaitingConfirmationStatus", "Waiting Confirmation")}
-            </span>
+            </StatusPill>
           </div>
         </div>
 
-        <div className="space-y-2 pt-1">
+        <div className="space-y-2 pt-1 font-sans">
           {invoice.payUrl && !isTemanQris && (
             <Button
               asChild
               variant="outline"
               size="sm"
               chamfer="none"
-              className="w-full text-xs font-mono text-muted-foreground hover:text-foreground border-border/80"
+              className="w-full text-xs font-sans text-muted-foreground hover:text-foreground border-border/80 rounded-[var(--fintech-radius-sm)]"
             >
               <a href={invoice.payUrl} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
@@ -113,7 +111,7 @@ export function InvoiceAwaitingView({
               chamfer="none"
               disabled={isSimulating}
               onClick={onSimulatePayment}
-              className="w-full text-xs font-mono text-amber-400 border-amber-500/40 hover:bg-amber-500/10 cursor-pointer"
+              className="w-full text-xs font-sans text-amber-500 dark:text-amber-300 border-amber-500/40 hover:bg-amber-500/10 cursor-pointer rounded-[var(--fintech-radius-sm)]"
             >
               <Zap className="w-3.5 h-3.5 mr-1" />
               <span>
@@ -131,7 +129,7 @@ export function InvoiceAwaitingView({
               size="sm"
               chamfer="none"
               onClick={() => setShowQrAgain(!showQrAgain)}
-              className="w-full text-xs font-mono text-muted-foreground hover:text-foreground cursor-pointer"
+              className="w-full text-xs font-sans text-muted-foreground hover:text-foreground cursor-pointer rounded-[var(--fintech-radius-sm)]"
             >
               <span>
                 {showQrAgain
@@ -144,7 +142,7 @@ export function InvoiceAwaitingView({
 
         {showQrAgain && invoice.selectedMethod === "qris" && qrImageUrl && (
           <div className="pt-3 border-t border-border/40 text-center animate-in fade-in duration-200">
-            <div className="inline-block p-3 bg-white rounded-xl border border-border/80 shadow-md">
+            <div className="inline-block p-3 bg-white rounded-xl border border-border/80 shadow-sm">
               <img
                 src={qrImageUrl}
                 alt="QRIS Code"
@@ -153,7 +151,7 @@ export function InvoiceAwaitingView({
             </div>
           </div>
         )}
-      </Card>
+      </Panel>
     </div>
   );
 }

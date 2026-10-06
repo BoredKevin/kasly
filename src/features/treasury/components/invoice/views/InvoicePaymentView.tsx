@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Card, Button, Badge } from "@boredkevin/ui";
+import { Button } from "@boredkevin/ui";
+import { Panel, StatusPill } from "../../../../../ui";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -79,42 +80,36 @@ export function InvoicePaymentView({
   return (
     <div className="space-y-4 animate-in fade-in duration-200">
       {/* Top Bar Navigation */}
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2 max-w-sm sm:max-w-md mx-auto">
         <Button
           type="button"
           variant="ghost"
           size="sm"
           chamfer="none"
           onClick={onBackToCheckout}
-          className="h-8 text-xs font-sans font-medium px-2.5 flex items-center gap-1.5 text-muted-foreground hover:text-foreground cursor-pointer"
+          className="h-8 text-xs font-sans font-medium px-2 flex items-center gap-1.5 text-muted-foreground hover:text-foreground cursor-pointer rounded-[var(--fintech-radius-sm)]"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>{i18n.language === "id" ? "Rincian Tagihan" : "Invoice Details"}</span>
         </Button>
 
-        <Badge
-          variant="warning"
-          className="font-mono text-[11px] px-2.5 py-0.5 font-bold"
-        >
-          {t("treasury.invoices.checkout.pending", "PENDING")}
-        </Badge>
+        <StatusPill tone="warning">
+          {t("treasury.invoices.statusPending", "Menunggu Pembayaran")}
+        </StatusPill>
       </div>
 
       {/* Error Message */}
       {errorMessage && (
-        <div className="p-3 bg-destructive/15 border border-destructive/40 text-destructive-foreground text-xs font-mono flex items-center gap-2 rounded">
+        <div className="p-3 bg-destructive/15 border border-destructive/40 text-destructive-foreground text-xs font-mono flex items-center gap-2 rounded-[var(--fintech-radius-sm)] max-w-sm sm:max-w-md mx-auto">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           <span>{errorMessage}</span>
         </div>
       )}
 
-      {/* 1. Prominent Countdown Timer Header (ESB Inspired) */}
-      <Card
-        cornerLines={false}
-        className="bg-card/90 backdrop-blur-md border border-border/80 shadow-md p-4 sm:p-5"
-      >
+      {/* 1. Prominent Countdown Timer Header */}
+      <Panel className="bg-card border border-border/80 shadow-sm p-4 sm:p-5 rounded-[var(--fintech-radius-md)] max-w-sm sm:max-w-md mx-auto">
         <ExpiryCountdownTimer expiresAt={invoice.expiresAt} />
-      </Card>
+      </Panel>
 
       {/* 2. QRIS Mode: Authentic Template Card & Primary Action Pair */}
       {invoice.selectedMethod === "qris" && (
@@ -136,12 +131,12 @@ export function InvoicePaymentView({
             <div className="max-w-sm sm:max-w-md mx-auto flex items-stretch gap-2">
               <Button
                 type="button"
-                variant="cyber"
+                variant="default"
                 chamfer="none"
                 size="default"
                 disabled={isConfirmingClaim}
                 onClick={onConfirmClaim}
-                className="flex-1 font-sans font-bold text-xs sm:text-sm h-11 flex items-center justify-center gap-2 cursor-pointer shadow-lg"
+                className="flex-1 font-sans font-semibold text-xs sm:text-sm h-11 flex items-center justify-center gap-2 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 rounded-[var(--fintech-radius-sm)] shadow-xs transition-colors"
               >
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                 <span>
@@ -159,7 +154,7 @@ export function InvoicePaymentView({
                 disabled={isDownloading}
                 onClick={() => void handleDownloadQr()}
                 title={t("treasury.invoices.checkout.downloadQr", "Download QR")}
-                className="w-12 h-11 px-0 flex items-center justify-center font-sans border-border/80 hover:border-primary/50 cursor-pointer shrink-0"
+                className="w-11 h-11 px-0 flex items-center justify-center font-sans border-border/80 hover:bg-muted/30 cursor-pointer rounded-[var(--fintech-radius-sm)] shrink-0"
               >
                 <Download className={`w-4 h-4 ${isDownloading ? "animate-bounce" : ""}`} />
               </Button>
@@ -168,21 +163,18 @@ export function InvoicePaymentView({
 
           {/* Gateway external link (if Borderpay hosted redirect available) */}
           {invoice.payUrl && !isTemanQris && (
-            <div className="max-w-sm sm:max-w-md mx-auto">
-              <Button
-                asChild
-                variant="ghost"
-                size="sm"
-                chamfer="none"
-                className="w-full text-xs font-sans text-muted-foreground hover:text-foreground"
+            <div className="max-w-sm sm:max-w-md mx-auto text-center">
+              <a
+                href={invoice.payUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer transition-colors py-1"
               >
-                <a href={invoice.payUrl} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                  <span>
-                    {i18n.language === "id" ? "Buka Halaman Gateway" : "Open Gateway Page"}
-                  </span>
-                </a>
-              </Button>
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>
+                  {i18n.language === "id" ? "Buka Halaman Gateway" : "Open Gateway Page"}
+                </span>
+              </a>
             </div>
           )}
 
@@ -193,37 +185,34 @@ export function InvoicePaymentView({
 
       {/* 3. Virtual Account Mode (Fallback if customer chose VA) */}
       {invoice.selectedMethod === "va" && (
-        <Card
-          cornerLines={false}
-          className="bg-card/90 backdrop-blur-md border border-border/80 shadow-md p-4 sm:p-5 space-y-4 max-w-sm sm:max-w-md mx-auto"
-        >
+        <Panel className="bg-card border border-border/80 shadow-sm p-4 sm:p-5 space-y-4 max-w-sm sm:max-w-md mx-auto font-sans rounded-[var(--fintech-radius-md)]">
           <div className="flex items-center justify-between pb-2 border-b border-border/40">
-            <span className="text-xs font-mono text-muted-foreground flex items-center gap-1.5">
+            <span className="text-xs font-sans font-medium text-muted-foreground flex items-center gap-1.5">
               <Building className="w-3.5 h-3.5 text-primary" />
               <span>Virtual Account Bank</span>
             </span>
-            <Badge variant="outline" className="font-mono text-xs px-2.5 py-0.5 border-primary/40 text-primary bg-primary/10 font-bold">
+            <StatusPill tone="info">
               {invoice.vaBank || "Virtual Account"}
-            </Badge>
+            </StatusPill>
           </div>
 
-          <div className="p-4 bg-background/80 border border-border/80 rounded-md flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="p-4 bg-muted/20 border border-border/60 rounded-[var(--fintech-radius-sm)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <span className="text-[10px] font-mono uppercase text-muted-foreground tracking-wider block">
+              <span className="text-[10px] font-sans uppercase text-muted-foreground tracking-wider block">
                 {t("treasury.invoices.checkout.vaNumber", "VA Number")}
               </span>
-              <span className="font-mono text-xl sm:text-2xl font-extrabold text-foreground tracking-wider block mt-0.5">
+              <span className="font-mono text-xl sm:text-2xl font-bold text-foreground tracking-wider block mt-0.5">
                 {invoice.vaNumber || "---"}
               </span>
             </div>
 
             <Button
               type="button"
-              variant="cyber"
+              variant="outline"
               size="sm"
               chamfer="none"
               onClick={handleCopyVa}
-              className="text-xs flex items-center justify-center gap-1.5 font-mono px-3 h-8 cursor-pointer shrink-0"
+              className="text-xs flex items-center justify-center gap-1.5 font-medium px-3 h-8 cursor-pointer rounded-[var(--fintech-radius-sm)] shrink-0"
             >
               {isCopiedVa ? (
                 <Check className="w-3.5 h-3.5 text-emerald-400" />
@@ -238,7 +227,7 @@ export function InvoicePaymentView({
             </Button>
           </div>
 
-          <p className="text-[11px] text-muted-foreground text-center font-mono leading-relaxed">
+          <p className="text-[11px] text-muted-foreground text-center font-sans leading-relaxed">
             {t(
               "treasury.invoices.checkout.transferVaPrompt",
               "Transfer exact amount to the Virtual Account number above."
@@ -247,12 +236,12 @@ export function InvoicePaymentView({
 
           <Button
             type="button"
-            variant="cyber"
+            variant="default"
             chamfer="none"
             size="default"
             disabled={isConfirmingClaim}
             onClick={onConfirmClaim}
-            className="w-full font-mono font-bold text-xs h-11 flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full font-sans font-semibold text-xs h-11 flex items-center justify-center gap-2 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 rounded-[var(--fintech-radius-sm)] shadow-xs"
           >
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
             <span>
@@ -261,20 +250,17 @@ export function InvoicePaymentView({
                 : t("treasury.invoices.checkout.checkPaymentStatus", "Check Payment Status")}
             </span>
           </Button>
-        </Card>
+        </Panel>
       )}
 
       {/* 4. E-Wallet Mode */}
       {invoice.selectedMethod === "ewallet" && (
-        <Card
-          cornerLines={false}
-          className="bg-card/90 backdrop-blur-md border border-border/80 shadow-md p-5 text-center space-y-4 max-w-sm sm:max-w-md mx-auto"
-        >
+        <Panel className="bg-card border border-border/80 shadow-sm p-5 text-center space-y-4 max-w-sm sm:max-w-md mx-auto font-sans rounded-[var(--fintech-radius-md)]">
           <div className="space-y-1">
-            <span className="text-xs font-bold font-mono text-foreground tracking-wide block">
+            <span className="text-xs font-semibold text-foreground tracking-wide block">
               E-Wallet ({invoice.selectedBankCode || "E-Wallet"})
             </span>
-            <p className="text-xs text-muted-foreground font-mono max-w-xs mx-auto">
+            <p className="text-xs text-muted-foreground max-w-xs mx-auto">
               {t("treasury.invoices.checkout.ewalletPrompt", "Complete payment in your e-wallet app:")}
             </p>
           </div>
@@ -282,10 +268,10 @@ export function InvoicePaymentView({
           {invoice.checkoutUrl ? (
             <Button
               asChild
-              variant="cyber"
+              variant="default"
               size="default"
               chamfer="none"
-              className="w-full text-xs sm:text-sm font-mono font-bold h-11 cursor-pointer"
+              className="w-full text-xs sm:text-sm font-semibold h-11 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 rounded-[var(--fintech-radius-sm)] shadow-xs flex items-center justify-center gap-1.5"
             >
               <a href={invoice.checkoutUrl} target="_blank" rel="noopener noreferrer">
                 <span>
@@ -297,7 +283,7 @@ export function InvoicePaymentView({
               </a>
             </Button>
           ) : (
-            <div className="p-3 bg-muted/20 border border-border/60 text-xs font-mono text-muted-foreground rounded">
+            <div className="p-3 bg-muted/20 border border-border/60 text-xs text-muted-foreground rounded-[var(--fintech-radius-sm)]">
               E-wallet checkout link is being prepared.
             </div>
           )}
@@ -309,28 +295,30 @@ export function InvoicePaymentView({
             size="default"
             disabled={isConfirmingClaim}
             onClick={onConfirmClaim}
-            className="w-full font-mono text-xs h-10 flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full text-xs font-medium h-11 flex items-center justify-center gap-2 cursor-pointer rounded-[var(--fintech-radius-sm)]"
           >
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
             <span>{t("treasury.invoices.checkout.checkPaymentStatus", "Check Payment Status")}</span>
           </Button>
-        </Card>
+        </Panel>
       )}
 
       {/* Sandbox Test Mode Simulation */}
       {invoice.isTestMode && (
-        <div className="max-w-sm sm:max-w-md mx-auto p-3 bg-violet-500/10 border border-violet-500/30 rounded-md flex items-center justify-between gap-2 font-sans">
-          <span className="text-xs text-violet-300 font-medium">Sandbox Mode</span>
+        <div className="max-w-sm sm:max-w-md mx-auto p-3 bg-muted/40 border border-border/80 rounded-[var(--fintech-radius-sm)] flex items-center justify-between gap-2 font-sans">
+          <span className="text-xs text-foreground font-medium flex items-center gap-1.5">
+            <Zap className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
+            <span>Sandbox Mode</span>
+          </span>
           <Button
             type="button"
-            variant="secondary"
+            variant="outline"
             size="sm"
             chamfer="none"
             disabled={isSimulating}
             onClick={onSimulatePayment}
-            className="text-xs font-sans border-violet-500/40 text-violet-200 hover:bg-violet-500/20 cursor-pointer"
+            className="h-7 text-xs font-medium border-border/80 hover:bg-muted/50 rounded-[var(--fintech-radius-sm)] cursor-pointer"
           >
-            <Zap className="w-3.5 h-3.5 mr-1 text-violet-400" />
             <span>
               {isSimulating
                 ? t("treasury.invoices.checkout.simulating", "Simulating...")
@@ -345,7 +333,7 @@ export function InvoicePaymentView({
         <button
           type="button"
           onClick={onBackToCheckout}
-          className="text-xs font-sans text-primary hover:underline cursor-pointer"
+          className="text-xs font-sans text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
         >
           {i18n.language === "id" ? "← Rincian Tagihan" : "← Invoice Breakdown"}
         </button>
@@ -357,7 +345,7 @@ export function InvoicePaymentView({
           chamfer="none"
           disabled={isCancelling}
           onClick={onCancelInvoice}
-          className="h-7 text-xs font-sans text-destructive hover:bg-destructive/10 border-destructive/30 px-2 cursor-pointer"
+          className="h-8 text-xs font-sans text-destructive hover:bg-destructive/10 border-destructive/30 px-3 cursor-pointer rounded-[var(--fintech-radius-sm)] font-medium"
         >
           {isCancelling
             ? t("treasury.invoices.checkout.cancelling", "Cancelling...")

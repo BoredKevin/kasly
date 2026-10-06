@@ -3,9 +3,11 @@ import { createPortal } from "react-dom";
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
 import { Button, Badge } from "@boredkevin/ui";
-import { Panel } from "../../../../../ui";
+import { Panel, StatusPill } from "../../../../../ui";
 import {
   ArrowLeft,
+  ArrowRight,
+  Loader2,
   QrCode,
   Building,
   Wallet,
@@ -15,7 +17,6 @@ import {
   Receipt,
   CalendarDays,
   AlertTriangle,
-  ShieldCheck,
   User,
   Copy,
 } from "lucide-react";
@@ -174,7 +175,7 @@ export function InvoiceCheckoutView({
           variant="ghost"
           size="sm"
           chamfer="none"
-          className="h-8 text-xs font-mono px-2 text-muted-foreground hover:text-foreground cursor-pointer"
+          className="h-8 text-xs font-sans font-medium px-2 text-muted-foreground hover:text-foreground cursor-pointer rounded-[var(--fintech-radius-sm)]"
         >
           <Link href="/treasury/invoices">
             <ArrowLeft className="w-3.5 h-3.5 mr-1" />
@@ -182,15 +183,11 @@ export function InvoiceCheckoutView({
           </Link>
         </Button>
 
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-[10px] font-mono text-emerald-400">
-          <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Checkout Aman SSL 256-Bit</span>
-        </div>
       </div>
 
       {/* Errors */}
       {(errorMessage || validationError) && (
-        <div className="p-3 bg-destructive/15 border border-destructive/40 text-destructive-foreground text-xs font-mono flex items-center gap-2 rounded">
+        <div className="p-3 bg-destructive/15 border border-destructive/40 text-destructive-foreground text-xs flex items-center gap-2 rounded-[var(--fintech-radius-sm)]">
           <AlertTriangle className="w-4 h-4 shrink-0" />
           <span>{errorMessage || validationError}</span>
         </div>
@@ -199,32 +196,34 @@ export function InvoiceCheckoutView({
       {/* Order Origin & Bill Items Card */}
       <Panel className="bg-card/90 backdrop-blur-md border border-border/80 shadow-md p-4 sm:p-5 space-y-4">
         {/* Header Bar */}
-        <div className="flex items-center justify-between pb-2 border-b border-border/40">
-          <span className="text-xs font-mono font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
-            <Receipt className="w-3.5 h-3.5 text-primary" />
-            <span>{t("treasury.invoices.checkout.orderedFrom", "Rincian Tagihan")}</span>
-          </span>
+        <div className="flex items-center justify-between pb-3 border-b border-border/40 gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <Receipt className="w-4 h-4 text-primary shrink-0" />
+            <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider truncate">
+              {t("treasury.invoices.checkout.orderedFrom", "Rincian Tagihan")}
+            </h4>
+          </div>
 
           {/* Interactive Invoice Number Pill */}
           <button
             type="button"
             onClick={handleCopyInvoiceNumber}
-            className="inline-flex items-center gap-1 text-[10px] font-mono text-muted-foreground hover:text-foreground bg-muted/30 hover:bg-muted/60 px-2 py-0.5 rounded border border-border/60 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 text-xs font-mono whitespace-nowrap text-muted-foreground hover:text-foreground bg-muted/30 hover:bg-muted/60 px-2.5 py-1 rounded-[var(--fintech-radius-sm)] border border-border/60 transition-colors cursor-pointer shrink-0 font-medium"
             title="Salin nomor faktur"
           >
             <span>#{invoice.invoiceNumber}</span>
             {isCopiedInvoice ? (
-              <Check className="w-3 h-3 text-emerald-400" />
+              <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
             ) : (
-              <Copy className="w-3 h-3 opacity-60" />
+              <Copy className="w-3.5 h-3.5 opacity-60 shrink-0" />
             )}
           </button>
         </div>
 
         {/* Structured 2-Column Issuer & Billed To Card */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 font-mono">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {/* Box A: Penerbit / Organisasi */}
-          <div className="p-3 bg-background/60 border border-border/60 rounded-md space-y-1.5">
+          <div className="p-3 bg-background/60 border border-border/60 rounded-[var(--fintech-radius-sm)] space-y-1.5">
             <div className="flex items-center justify-between">
               <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1">
                 <Building className="w-3 h-3 text-primary" />
@@ -247,13 +246,13 @@ export function InvoiceCheckoutView({
           </div>
 
           {/* Box B: Ditagihkan Kepada */}
-          <div className="p-3 bg-background/60 border border-border/60 rounded-md space-y-1.5">
+          <div className="p-3 bg-background/60 border border-border/60 rounded-[var(--fintech-radius-sm)] space-y-1.5">
             <div className="flex items-center justify-between">
               <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1">
                 <User className="w-3 h-3 text-primary" />
                 <span>{t("treasury.invoices.checkout.billedTo", "Ditagihkan Kepada")}</span>
               </span>
-              <span className="text-[10px] text-muted-foreground font-sans">
+              <span className="text-[10px] text-muted-foreground">
                 Anggota
               </span>
             </div>
@@ -267,7 +266,7 @@ export function InvoiceCheckoutView({
         </div>
 
         {/* Itemized Line Items */}
-        <div className="space-y-2 pt-2 border-t border-border/40 font-mono text-xs">
+        <div className="space-y-2 pt-3 border-t border-border/40 text-xs">
           <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold block">
             Item Tagihan
           </span>
@@ -310,7 +309,7 @@ export function InvoiceCheckoutView({
 
       {/* Payment Method Selector */}
       <Panel className="bg-card/90 backdrop-blur-md border border-border/80 shadow-md p-4 sm:p-5 space-y-4">
-        <span className="text-xs font-mono font-bold text-foreground uppercase tracking-wider block">
+        <span className="text-xs font-semibold text-foreground uppercase tracking-wider block">
           {t("treasury.invoices.checkout.selectMethod", "Pilih Metode Pembayaran")}
         </span>
 
@@ -336,14 +335,14 @@ export function InvoiceCheckoutView({
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-mono font-bold text-foreground">
+                      <span className="text-xs font-semibold text-foreground">
                         QRIS
                       </span>
-                      <span className="text-[10px] px-1.5 py-0.2 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded font-mono">
+                      <StatusPill tone="warning" className="text-[10px] py-0 px-1.5 rounded">
                         Tunggu Konfirmasi
-                      </span>
+                      </StatusPill>
                     </div>
-                    <p className="text-[11px] text-muted-foreground font-mono mt-0.5">
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
                       Semua Pembayaran
                     </p>
                   </div>
@@ -381,14 +380,14 @@ export function InvoiceCheckoutView({
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono font-bold text-foreground">
-                          Virtual Account Bank
+                        <span className="text-xs font-semibold text-foreground">
+                          Virtual Account
                         </span>
-                        <span className="text-[10px] px-1.5 py-0.2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded font-mono">
+                        <StatusPill tone="success" className="text-[10px] py-0 px-1.5 rounded">
                           Instan
-                        </span>
+                        </StatusPill>
                       </div>
-                      <p className="text-[11px] text-muted-foreground font-mono mt-0.5">
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
                         Transfer via bank
                       </p>
                     </div>
@@ -407,7 +406,7 @@ export function InvoiceCheckoutView({
                 {/* Tactical Bank Tiles Grid if VA selected */}
                 {selectedMethod === "va" && publicMethods?.va?.banks && (
                   <div className="p-3 bg-muted/20 border border-border/60 rounded-md space-y-2.5 animate-in slide-in-from-top-1 duration-150">
-                    <span className="text-[11px] font-mono text-muted-foreground font-semibold block uppercase tracking-wider">
+                    <span className="text-[11px] text-muted-foreground font-semibold block uppercase tracking-wider">
                       {t("treasury.invoices.checkout.selectBank", "Pilih Bank Tujuan")}
                     </span>
 
@@ -436,10 +435,10 @@ export function InvoiceCheckoutView({
                                 {b.code.toUpperCase().slice(0, 4)}
                               </div>
                               <div className="min-w-0">
-                                <span className="font-mono text-xs font-bold text-foreground block truncate">
+                                <span className="text-xs font-semibold text-foreground block truncate">
                                   {b.name}
                                 </span>
-                                <span className="text-[10px] font-sans text-muted-foreground block truncate">
+                                <span className="text-[10px] text-muted-foreground block truncate">
                                   {theme?.fullName || "Virtual Account"}
                                 </span>
                               </div>
@@ -483,14 +482,14 @@ export function InvoiceCheckoutView({
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono font-bold text-foreground">
-                          Dompet Digital (E-Wallet)
+                        <span className="text-xs font-semibold text-foreground">
+                          E-Wallet
                         </span>
-                        <span className="text-[10px] px-1.5 py-0.2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded font-mono">
+                        <StatusPill tone="success" className="text-[10px] py-0 px-1.5 rounded">
                           Instan
-                        </span>
+                        </StatusPill>
                       </div>
-                      <p className="text-[11px] text-muted-foreground font-mono mt-0.5">
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
                         DANA, OVO, ShopeePay
                       </p>
                     </div>
@@ -509,7 +508,7 @@ export function InvoiceCheckoutView({
                 {/* Sub-selector for E-Wallet if selected */}
                 {selectedMethod === "ewallet" && publicMethods?.ewallet?.wallets && (
                   <div className="p-3 bg-muted/20 border border-border/60 rounded-md space-y-2.5 animate-in slide-in-from-top-1 duration-150">
-                    <span className="text-[11px] font-mono text-muted-foreground font-semibold block uppercase tracking-wider">
+                    <span className="text-[11px] text-muted-foreground font-semibold block uppercase tracking-wider">
                       {t("treasury.invoices.checkout.selectWallet", "Pilih Aplikasi E-Wallet")}
                     </span>
 
@@ -538,10 +537,10 @@ export function InvoiceCheckoutView({
                                 {w.code.toUpperCase().slice(0, 4)}
                               </div>
                               <div className="min-w-0">
-                                <span className="font-mono text-xs font-bold text-foreground block truncate">
+                                <span className="text-xs font-semibold text-foreground block truncate">
                                   {w.name}
                                 </span>
-                                <span className="text-[10px] font-sans text-muted-foreground block truncate">
+                                <span className="text-[10px] text-muted-foreground block truncate">
                                   {theme?.fullName || "E-Wallet"}
                                 </span>
                               </div>
@@ -565,7 +564,7 @@ export function InvoiceCheckoutView({
             )}
           </div>
         ) : (
-          <div className="p-4 bg-muted/20 border border-border/60 text-center space-y-1 font-mono text-xs text-muted-foreground rounded">
+          <div className="p-4 bg-muted/20 border border-border/60 text-center space-y-1 text-xs text-muted-foreground rounded-[var(--fintech-radius-sm)]">
             Tidak ada metode pembayaran yang tersedia saat ini.
           </div>
         )}
@@ -575,7 +574,7 @@ export function InvoiceCheckoutView({
       {typeof document !== "undefined" &&
         createPortal(
           <div
-            className="fixed bottom-0 left-0 right-0 z-[100] px-4 pt-3.5 pb-[max(1.25rem,env(safe-area-inset-bottom))] bg-background/95 dark:bg-[#0a0a0d]/95 backdrop-blur-2xl border-t border-border shadow-[0_-10px_35px_rgba(0,0,0,0.85)]"
+            className="fixed bottom-0 left-0 right-0 z-[100] px-4 pt-3.5 pb-[max(1.25rem,env(safe-area-inset-bottom))] bg-background/95 backdrop-blur-2xl border-t border-border shadow-lg"
             style={{
               backdropFilter: "blur(24px)",
               WebkitBackdropFilter: "blur(24px)",
@@ -585,7 +584,7 @@ export function InvoiceCheckoutView({
               {/* Collapsible Fee Breakdown */}
               {isBreakdownOpen && (
                 <div
-                  className="p-3.5 sm:p-4 bg-background/95 border border-border/80 rounded-lg font-mono text-xs space-y-2 shadow-2xl backdrop-blur-xl animate-in slide-in-from-bottom-2 duration-150"
+                  className="p-3.5 sm:p-4 bg-background/95 border border-border/80 rounded-[var(--fintech-radius-sm)] font-sans text-xs space-y-2.5 backdrop-blur-xl animate-in slide-in-from-bottom-2 duration-150 shadow-md"
                   style={{
                     backdropFilter: "blur(20px)",
                     WebkitBackdropFilter: "blur(20px)",
@@ -593,21 +592,21 @@ export function InvoiceCheckoutView({
                 >
                   <div className="flex justify-between text-muted-foreground">
                     <span>{t("treasury.invoices.checkout.subtotal", "Subtotal Tagihan")}</span>
-                    <span className="font-semibold tabular-nums">
+                    <span className="font-medium text-foreground tabular-nums">
                       {invoice.currency} {invoice.subtotal.toLocaleString()}
                     </span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
                     <span>{t("treasury.invoices.checkout.adminFee", "Biaya Transaksi (Gateway)")}</span>
-                    <span className="font-semibold tabular-nums">
+                    <span className="font-medium text-foreground tabular-nums">
                       {previewFee === 0
                         ? `Rp 0 (${t("treasury.invoices.checkout.freeFee", "Gratis")})`
                         : `${invoice.currency} ${previewFee.toLocaleString()}`}
                     </span>
                   </div>
-                  <div className="pt-2 border-t border-border/50 flex justify-between font-bold text-foreground text-sm">
-                    <span>{t("treasury.invoices.checkout.totalPay", "Total Pembayaran")}</span>
-                    <span className="text-primary tabular-nums">
+                  <div className="pt-2 border-t border-border/50 flex justify-between font-semibold text-foreground text-sm">
+                    <span>{t("treasury.invoices.checkout.totalPay", "Total yang Harus Dibayar")}</span>
+                    <span className="text-primary font-bold tabular-nums">
                       {invoice.currency} {previewTotal.toLocaleString()}
                     </span>
                   </div>
@@ -619,19 +618,19 @@ export function InvoiceCheckoutView({
                 <button
                   type="button"
                   onClick={() => setIsBreakdownOpen(!isBreakdownOpen)}
-                  className="text-left cursor-pointer group font-mono py-1 px-1 focus:outline-none min-w-0"
+                  className="text-left cursor-pointer group py-1 px-1 focus:outline-none min-w-0 select-none"
                 >
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground group-hover:text-foreground transition-colors">
-                    <span className="font-sans font-medium">
-                      {t("treasury.invoices.checkout.totalPay", "Total Pembayaran")}
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground group-hover:text-foreground transition-colors font-medium">
+                    <span>
+                      {t("treasury.invoices.checkout.totalPay", "Total yang Harus Dibayar")}
                     </span>
                     {isBreakdownOpen ? (
-                      <ChevronDown className="w-3.5 h-3.5 text-primary" />
+                      <ChevronDown className="w-3.5 h-3.5 text-primary transition-transform duration-200" />
                     ) : (
-                      <ChevronUp className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary" />
+                      <ChevronUp className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-transform duration-200" />
                     )}
                   </div>
-                  <div className="text-base sm:text-xl font-extrabold text-foreground font-mono tracking-tight mt-0.5 truncate">
+                  <div className="text-xl sm:text-2xl font-bold text-foreground font-sans tracking-tight mt-0.5 truncate tabular-nums">
                     {invoice.currency} {previewTotal.toLocaleString()}
                   </div>
                 </button>
@@ -639,18 +638,20 @@ export function InvoiceCheckoutView({
                 <div className="shrink-0">
                   <Button
                     type="button"
-                    variant="cyber"
+                    variant="default"
                     chamfer="none"
                     size="default"
                     disabled={isInitiating || availableMethodsCount === 0}
                     onClick={handlePayClick}
-                    className="font-sans font-bold text-xs sm:text-sm px-6 sm:px-8 h-12 cursor-pointer shadow-xl tracking-wide flex items-center justify-center gap-2"
+                    aria-label={t("treasury.invoices.checkout.continueToPayment", "Lanjut Pembayaran")}
+                    title={t("treasury.invoices.checkout.continueToPayment", "Lanjut Pembayaran")}
+                    className="h-11 w-11 sm:h-12 sm:w-12 p-0 flex items-center justify-center cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 rounded-[var(--fintech-radius-sm)] shadow-md transition-all active:scale-95 shrink-0"
                   >
-                    <span>
-                      {isInitiating
-                        ? t("treasury.invoices.checkout.generating", "Memproses...")
-                        : t("treasury.invoices.checkout.continueToPayment", "Lanjut Pembayaran")}
-                    </span>
+                    {isInitiating ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <ArrowRight className="w-5 h-5" />
+                    )}
                   </Button>
                 </div>
               </div>
