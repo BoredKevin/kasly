@@ -20,7 +20,6 @@ import {
   ShieldCheck,
   FileCode,
   ChevronRight,
-  ExternalLink,
 } from "lucide-react";
 import packageJson from "../../package.json";
 
@@ -37,9 +36,25 @@ export function MoreSheet({ isOpen, onClose }: MoreSheetProps) {
 
   const orgs = useQuery(api.organizations.listMine);
   const activeOrg = orgs?.find((o) => o._id === activeOrgId) ?? orgs?.[0];
+  const viewer = useQuery(api.users.viewer);
 
   const permissions = usePermissions(activeOrg?._id);
   const { canSign, canAdmin, canManageRoles, canViewInvites } = permissions;
+
+  const userDisplayName =
+    viewer?.name ||
+    viewer?.email ||
+    activeOrg?.name ||
+    "Kasly Workspace";
+
+  const avatarInitial = (
+    viewer?.name ||
+    viewer?.email ||
+    activeOrg?.name ||
+    "K"
+  )
+    .charAt(0)
+    .toUpperCase();
 
   if (!isOpen) return null;
 
@@ -62,19 +77,24 @@ export function MoreSheet({ isOpen, onClose }: MoreSheetProps) {
         >
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-border/60 bg-muted/20 shrink-0">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-[var(--fintech-radius-sm)] bg-primary/10 border border-primary/25 flex items-center justify-center text-primary font-bold text-sm">
-                {activeOrg?.name ? activeOrg.name.charAt(0).toUpperCase() : "K"}
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-[var(--fintech-radius-sm)] bg-primary/10 border border-primary/25 flex items-center justify-center text-primary font-bold text-sm shrink-0">
+                {avatarInitial}
               </div>
-              <div>
-                <h3 id="more-sheet-title" className="text-sm font-semibold text-foreground">
-                  {activeOrg?.name ?? "Kasly Workspace"}
+              <div className="min-w-0 flex-1">
+                <h3 id="more-sheet-title" className="text-sm font-semibold text-foreground truncate">
+                  {userDisplayName}
                 </h3>
                 <div className="flex items-center gap-1.5 mt-0.5">
-                  <StatusPill tone={canAdmin ? "info" : canSign ? "success" : "neutral"} className="text-[10px] py-0 px-1.5">
+                  <StatusPill tone={canAdmin ? "info" : canSign ? "success" : "neutral"} className="text-[10px] py-0 px-1.5 shrink-0">
                     {canAdmin ? "Admin" : canSign ? "Signer" : "Member"}
                   </StatusPill>
-                  <span className="text-[11px] text-muted-foreground">v{packageJson.version}</span>
+                  {activeOrg?.name && (
+                    <span className="text-xs text-muted-foreground font-medium flex items-center gap-1 truncate max-w-[170px]">
+                      <Building2 className="w-3 h-3 text-muted-foreground/70 shrink-0" />
+                      <span className="truncate">{activeOrg.name}</span>
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -82,7 +102,7 @@ export function MoreSheet({ isOpen, onClose }: MoreSheetProps) {
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-[var(--fintech-radius-sm)] text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
+              className="p-1.5 rounded-[var(--fintech-radius-sm)] text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer shrink-0 ml-2"
               aria-label="Close menu"
             >
               <X className="w-4 h-4" />
@@ -110,7 +130,7 @@ export function MoreSheet({ isOpen, onClose }: MoreSheetProps) {
                     >
                       <div className="flex items-center gap-2.5">
                         <Users className="w-4 h-4 text-primary" />
-                        <span>{t("treasury.bulkDues.title") || "Bulk Dues Entry"}</span>
+                        <span>{t("treasury.bulkDues.title", "Pencatatan Massal")}</span>
                       </div>
                       <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60" />
                     </Link>
@@ -265,17 +285,24 @@ export function MoreSheet({ isOpen, onClose }: MoreSheetProps) {
                 >
                   <div className="flex items-center gap-2.5">
                     <FileCode className="w-4 h-4 text-muted-foreground" />
-                    <span>Licenses & Legal</span>
+                    <span>{t("nav.licenses", "Licenses & Legal")}</span>
                   </div>
-                  <ExternalLink className="w-3.5 h-3.5 text-muted-foreground/60" />
+                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60" />
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Footer Action */}
-          <div className="p-4 border-t border-border/60 bg-muted/10 shrink-0">
+          {/* Footer Action: Logout button with version & build commit hash */}
+          <div className="p-4 border-t border-border/60 bg-muted/10 shrink-0 flex items-center justify-between gap-3">
             <SignOutButton />
+            <div className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground shrink-0">
+              <span>v{packageJson.version}</span>
+              <span className="text-muted-foreground/40 select-none">•</span>
+              <span className="px-1.5 py-0.5 rounded bg-muted/60 text-muted-foreground font-mono text-[11px] border border-border/40">
+                {typeof __BUILD_HASH__ !== "undefined" ? __BUILD_HASH__ : "dev"}
+              </span>
+            </div>
           </div>
         </div>
       </div>

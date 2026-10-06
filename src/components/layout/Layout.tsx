@@ -19,7 +19,7 @@ function LayoutInner({ children }: LayoutProps) {
     <div className="relative min-h-screen bg-background text-foreground flex flex-col selection:bg-primary/20">
       <TopBar />
 
-      <main className="p-4 sm:p-6 md:p-8 flex flex-col gap-6 relative z-10 w-full max-w-6xl mx-auto flex-1 pb-20 md:pb-8">
+      <main className="p-4 sm:p-6 md:p-8 flex flex-col gap-6 relative z-10 w-full max-w-6xl mx-auto flex-1 pb-32 md:pb-12">
         {children}
       </main>
 

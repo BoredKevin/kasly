@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
-import { Landmark, Receipt, CalendarDays, ScrollText, MoreHorizontal } from "lucide-react";
+import { LayoutDashboard, Receipt, CalendarDays, BookOpen, MoreHorizontal } from "lucide-react";
 
 export interface BottomTabsProps {
   onOpenMore: () => void;
@@ -45,8 +45,8 @@ export function BottomTabs({ onOpenMore, isMoreOpen = false }: BottomTabsProps) 
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          <Landmark className={`w-4 h-4 ${isOverview ? "stroke-[2.2]" : "stroke-[1.8]"}`} />
-          <span className="text-[10px] tracking-tight">{t("nav.overview") || "Home"}</span>
+          <LayoutDashboard className={`w-4 h-4 ${isOverview ? "stroke-[2.2]" : "stroke-[1.8]"}`} />
+          <span className="text-[10px] tracking-tight">{t("nav.overview") || "Ikhtisar"}</span>
         </Link>
 
         {/* Invoices */}
@@ -59,7 +59,7 @@ export function BottomTabs({ onOpenMore, isMoreOpen = false }: BottomTabsProps) 
           }`}
         >
           <Receipt className={`w-4 h-4 ${isInvoices ? "stroke-[2.2]" : "stroke-[1.8]"}`} />
-          <span className="text-[10px] tracking-tight">{t("nav.invoices") || "Invoices"}</span>
+          <span className="text-[10px] tracking-tight">{t("nav.invoices") || "Faktur"}</span>
         </Link>
 
         {/* Dues */}
@@ -72,7 +72,7 @@ export function BottomTabs({ onOpenMore, isMoreOpen = false }: BottomTabsProps) 
           }`}
         >
           <CalendarDays className={`w-4 h-4 ${isDues ? "stroke-[2.2]" : "stroke-[1.8]"}`} />
-          <span className="text-[10px] tracking-tight">{t("nav.duesAndPayments") || "Dues"}</span>
+          <span className="text-[10px] tracking-tight">{t("nav.duesAndPayments") || "Tunggakan"}</span>
         </Link>
 
         {/* Activity / Ledger */}
@@ -84,8 +84,8 @@ export function BottomTabs({ onOpenMore, isMoreOpen = false }: BottomTabsProps) 
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          <ScrollText className={`w-4 h-4 ${isLedger ? "stroke-[2.2]" : "stroke-[1.8]"}`} />
-          <span className="text-[10px] tracking-tight">{t("nav.ledger") || "Activity"}</span>
+          <BookOpen className={`w-4 h-4 ${isLedger ? "stroke-[2.2]" : "stroke-[1.8]"}`} />
+          <span className="text-[10px] tracking-tight">{t("nav.ledger") || "Buku Kas"}</span>
         </Link>
 
         {/* More */}
@@ -100,7 +100,7 @@ export function BottomTabs({ onOpenMore, isMoreOpen = false }: BottomTabsProps) 
           aria-label="More navigation and tools"
         >
           <MoreHorizontal className={`w-4 h-4 ${isMoreActive ? "stroke-[2.2]" : "stroke-[1.8]"}`} />
-          <span className="text-[10px] tracking-tight">More</span>
+          <span className="text-[10px] tracking-tight">{t("nav.more", "Lainnya")}</span>
         </button>
       </div>
     </nav>
