@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Doc } from "../../../../convex/_generated/dataModel";
 import { Button } from "@boredkevin/ui";
 import { ResponsiveDialog, StatusPill, StatusTone } from "../../../ui";
+import { useFormat } from "../../../hooks/useFormat";
 import {
   Copy,
   Check,
@@ -41,6 +42,7 @@ export function InvoiceDetailsModal({
   isVerifying = false,
 }: InvoiceDetailsModalProps) {
   const { t } = useTranslation();
+  const { money: formatMoney, date: formatDate } = useFormat();
   const [copied, setCopied] = useState(false);
 
   if (!isOpen || !invoice) return null;
@@ -57,10 +59,10 @@ export function InvoiceDetailsModal({
   const isDeletable = canManage && (invoice.status === "draft" || invoice.status === "cancelled" || invoice.status === "expired");
 
   const getStatusPill = () => {
-    if (invoice.status === "pending" && invoice.isAwaitingConfirmation) {
+    if (invoice.status === "pending" && (invoice.isAwaitingConfirmation || invoice.gatewayProvider === "temanqris")) {
       return (
         <StatusPill tone="warning" className="text-xs font-medium">
-          {t("treasury.invoices.statusAwaitingVerification", "Awaiting Verification")}
+          {t("treasury.invoices.statusAwaitingConfirmation", "Waiting Confirmation")}
         </StatusPill>
       );
     }
@@ -90,11 +92,19 @@ export function InvoiceDetailsModal({
     return <StatusPill tone={tone} className="text-xs font-medium">{label}</StatusPill>;
   };
 
+  const displayTitle = invoice.title.startsWith("Dues Payment (")
+    ? invoice.title
+        .replace("Dues Payment", t("treasury.invoices.duesPayment", "Pembayaran Tunggakan"))
+        .replace("cycles", t("treasury.overview.cycles", "siklus"))
+        .replace("cycle", t("treasury.overview.cycle_one", "siklus"))
+        .replace("Week", t("treasury.overview.week", "Minggu"))
+    : invoice.title;
+
   return (
     <ResponsiveDialog
       isOpen={isOpen}
       onClose={onClose}
-      title={invoice.title}
+      title={displayTitle}
       description={`#${invoice.invoiceNumber} • ${invoice.type.toUpperCase()}`}
       maxWidth="lg"
     >
@@ -149,7 +159,7 @@ export function InvoiceDetailsModal({
         {invoice.type === "dues" && invoice.periodLabels && invoice.periodLabels.length > 0 && (
           <div className="space-y-1.5">
             <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium block px-1">
-              {t("treasury.invoices.checkout.lineItems", "Items")} ({invoice.periodLabels.length} {invoice.periodLabels.length > 1 ? "cycles" : "cycle"})
+              {t("treasury.invoices.checkout.lineItems", "Items")} ({invoice.periodLabels.length} {invoice.periodLabels.length > 1 ? t("treasury.overview.cycles", "siklus") : t("treasury.overview.cycle_one", "siklus")})
             </span>
             <div className="divide-y divide-border/40 border border-border/70 rounded-[var(--fintech-radius-md)] overflow-hidden max-h-36 overflow-y-auto">
               {invoice.periodLabels.map((label, idx) => (
@@ -159,10 +169,12 @@ export function InvoiceDetailsModal({
                 >
                   <div className="flex items-center gap-2">
                     <CalendarDays className="w-3.5 h-3.5 text-primary" />
-                    <span className="font-medium text-foreground">{label}</span>
+                    <span className="font-medium text-foreground">
+                      {label.replace("Week", t("treasury.overview.week", "Minggu"))}
+                    </span>
                   </div>
-                  <span className="font-mono text-muted-foreground">
-                    {invoice.currency} {(invoice.subtotal / invoice.periodLabels!.length).toLocaleString()}
+                  <span className="font-sans font-medium tabular-nums text-muted-foreground">
+                    {formatMoney(invoice.subtotal / invoice.periodLabels!.length, invoice.currency)}
                   </span>
                 </div>
               ))}
@@ -174,16 +186,16 @@ export function InvoiceDetailsModal({
         <div className="p-3.5 bg-muted/20 border border-border/60 rounded-[var(--fintech-radius-md)] space-y-2 text-xs">
           <div className="flex items-center justify-between text-muted-foreground">
             <span>{t("treasury.invoices.subtotal", "Subtotal")}</span>
-            <span className="font-mono">{invoice.currency} {invoice.subtotal.toLocaleString()}</span>
+            <span className="font-sans font-medium tabular-nums">{formatMoney(invoice.subtotal, invoice.currency)}</span>
           </div>
           <div className="flex items-center justify-between text-muted-foreground">
             <span>{t("treasury.invoices.fee", "Gateway Fee")}</span>
-            <span className="font-mono">+ {invoice.currency} {invoice.gatewayFee.toLocaleString()}</span>
+            <span className="font-sans font-medium tabular-nums">+ {formatMoney(invoice.gatewayFee, invoice.currency)}</span>
           </div>
           <div className="pt-2 border-t border-border/70 flex items-center justify-between text-foreground font-semibold text-sm">
             <span>{t("treasury.invoices.total", "Total")}</span>
-            <span className="font-mono text-primary font-bold text-base">
-              {invoice.currency} {invoice.totalAmount.toLocaleString()}
+            <span className="font-sans font-bold tabular-nums text-primary text-base">
+              {formatMoney(invoice.totalAmount, invoice.currency)}
             </span>
           </div>
         </div>
@@ -194,8 +206,8 @@ export function InvoiceDetailsModal({
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground block font-medium">
               {t("treasury.invoices.checkout.issueDate", "Issued")}
             </span>
-            <span className="text-foreground font-mono text-[11px]">
-              {new Date(invoice.createdAt).toLocaleDateString()}
+            <span className="text-foreground font-sans font-medium text-xs">
+              {formatDate(invoice.createdAt)}
             </span>
           </div>
 
@@ -204,8 +216,8 @@ export function InvoiceDetailsModal({
               <span className="text-[10px] uppercase tracking-wider text-emerald-400 block font-semibold">
                 {t("treasury.invoices.statusPaid", "Paid Date")}
               </span>
-              <span className="text-emerald-300 font-mono text-[11px]">
-                {new Date(invoice.paidAt).toLocaleDateString()}
+              <span className="text-emerald-300 font-sans font-medium text-xs">
+                {formatDate(invoice.paidAt)}
               </span>
             </div>
           )}
@@ -215,8 +227,8 @@ export function InvoiceDetailsModal({
               <span className="text-[10px] uppercase tracking-wider text-muted-foreground block font-medium">
                 {t("treasury.invoices.checkout.expiresIn", "Expires")}
               </span>
-              <span className="text-foreground font-mono text-[11px]">
-                {new Date(invoice.expiresAt).toLocaleDateString()}
+              <span className="text-foreground font-sans font-medium text-xs">
+                {formatDate(invoice.expiresAt)}
               </span>
             </div>
           )}
@@ -226,7 +238,7 @@ export function InvoiceDetailsModal({
               <span className="text-[10px] uppercase tracking-wider text-muted-foreground block font-medium">
                 {t("treasury.invoices.method", "Method")}
               </span>
-              <span className="text-foreground uppercase font-mono text-[11px]">
+              <span className="text-foreground uppercase font-sans font-medium text-xs">
                 {invoice.selectedMethod} {invoice.selectedBankCode ? `(${invoice.selectedBankCode})` : ""}
               </span>
             </div>

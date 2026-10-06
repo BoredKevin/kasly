@@ -134,7 +134,7 @@ export function MemberDuesList({
                 <div className="flex items-center gap-2 shrink-0">
                   {hasUnpaid ? (
                     <StatusPill tone="warning">
-                      {member.unpaidPeriodsCount} unpaid · {formatMoney(unpaidAmount, currency)}
+                      {formatMoney(unpaidAmount, currency)}
                     </StatusPill>
                   ) : (
                     <StatusPill tone="success">

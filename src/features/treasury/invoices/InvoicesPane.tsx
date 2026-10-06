@@ -4,28 +4,14 @@ import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id, Doc } from "../../../../convex/_generated/dataModel";
-import {
-  Button,
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from "@boredkevin/ui";
+import { Button } from "@boredkevin/ui";
 import {
   Receipt,
   Plus,
-  Copy,
   Check,
   CreditCard,
-  User,
-  MoreHorizontal,
   ChevronLeft,
   ChevronRight,
-  ShieldCheck,
-  Loader2,
-  FileEdit,
-  Trash2,
   Ban,
   Clock,
 } from "lucide-react";
@@ -34,6 +20,7 @@ import { CreateCustomInvoiceModal } from "../components/CreateCustomInvoiceModal
 import { CreateInvoiceModal } from "../components/CreateInvoiceModal";
 import { EditInvoiceModal } from "./EditInvoiceModal";
 import { InvoiceDetailsModal } from "./InvoiceDetailsModal";
+import { useFormat } from "../../../hooks/useFormat";
 
 export interface InvoicesPaneProps {
   organizationId: Id<"organizations">;
@@ -48,10 +35,11 @@ interface DateGroup {
 
 function groupInvoicesByDate(invoices: Doc<"invoices">[], locale: string): DateGroup[] {
   const groups: DateGroup[] = [];
+  const intlLocale = locale.startsWith("id") ? "id-ID" : "en-US";
   for (const inv of invoices) {
     const d = new Date(inv.createdAt);
     const dateKey = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
-    const dateLabel = d.toLocaleDateString(locale === "id" ? "id-ID" : "en-US", {
+    const dateLabel = d.toLocaleDateString(intlLocale, {
       month: "short",
       day: "numeric",
       year: "numeric",
@@ -71,7 +59,8 @@ export function InvoicesPane({
   organizationId,
   activeFundId,
 }: InvoicesPaneProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const { money: formatMoney, locale } = useFormat();
   const [, setLocation] = useLocation();
 
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -81,7 +70,6 @@ export function InvoicesPane({
 
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [isDuesModalOpen, setIsDuesModalOpen] = useState(false);
-  const [copiedInvoiceNumber, setCopiedInvoiceNumber] = useState<string | null>(null);
   const [verifyingInvoiceNumber, setVerifyingInvoiceNumber] = useState<string | null>(null);
 
   // Inspection & management state
@@ -111,22 +99,12 @@ export function InvoicesPane({
     api.treasury.borderpay.listInvoices,
     organizationId
       ? {
-          organizationId,
-          fundId: activeFundId ?? undefined,
-        }
+        organizationId,
+        fundId: activeFundId ?? undefined,
+      }
       : "skip"
   );
 
-  const handleCopyLink = async (invoiceNumber: string) => {
-    try {
-      const url = `${window.location.origin}/invoice/${invoiceNumber}`;
-      await navigator.clipboard.writeText(url);
-      setCopiedInvoiceNumber(invoiceNumber);
-      setTimeout(() => setCopiedInvoiceNumber(null), 2000);
-    } catch {
-      // Ignore
-    }
-  };
 
   const handleVerifyPayment = async (invoiceNumber: string) => {
     setVerifyingInvoiceNumber(invoiceNumber);
@@ -208,8 +186,8 @@ export function InvoicesPane({
   }, [filteredInvoices, currentPage]);
 
   const dateGroups = useMemo(() => {
-    return groupInvoicesByDate(paginatedInvoices, i18n.language);
-  }, [paginatedInvoices, i18n.language]);
+    return groupInvoicesByDate(paginatedInvoices, locale);
+  }, [paginatedInvoices, locale]);
 
   const filterTabs = [
     { key: "all", label: t("common.all", "All"), count: statusCounts.all },
@@ -219,51 +197,6 @@ export function InvoicesPane({
     { key: "cancelled", label: t("treasury.invoices.statusCancelled", "Cancelled"), count: statusCounts.cancelled },
   ];
 
-  const renderStatusPill = (inv: Doc<"invoices">) => {
-    if (inv.status === "pending" && (inv.isAwaitingConfirmation || inv.gatewayProvider === "temanqris")) {
-      return (
-        <StatusPill tone="warning" className="text-[10px] py-0 px-1.5 font-medium animate-pulse">
-          <Clock className="w-3 h-3 mr-1" />
-          <span>Awaiting Verification</span>
-        </StatusPill>
-      );
-    }
-
-    switch (inv.status) {
-      case "paid":
-        return (
-          <StatusPill tone="success" className="text-[10px] py-0 px-1.5 font-medium">
-            <Check className="w-3 h-3 mr-1" />
-            <span>{t("treasury.invoices.statusPaid", "Paid")}</span>
-          </StatusPill>
-        );
-      case "pending":
-        return (
-          <StatusPill tone="warning" className="text-[10px] py-0 px-1.5 font-medium">
-            <Clock className="w-3 h-3 mr-1" />
-            <span>{t("treasury.invoices.statusPending", "Pending")}</span>
-          </StatusPill>
-        );
-      case "cancelled":
-        return (
-          <StatusPill tone="danger" className="text-[10px] py-0 px-1.5 font-medium">
-            <span>{t("treasury.invoices.statusCancelled", "Cancelled")}</span>
-          </StatusPill>
-        );
-      case "expired":
-        return (
-          <StatusPill tone="danger" className="text-[10px] py-0 px-1.5 font-medium">
-            <span>{t("treasury.invoices.statusExpired", "Expired")}</span>
-          </StatusPill>
-        );
-      default:
-        return (
-          <StatusPill tone="neutral" className="text-[10px] py-0 px-1.5 font-medium">
-            <span>{t("treasury.invoices.statusDraft", "Draft")}</span>
-          </StatusPill>
-        );
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -284,28 +217,31 @@ export function InvoicesPane({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
             {canManage && activeFundId && (
               <>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
+                  chamfer="none"
                   onClick={() => setIsDuesModalOpen(true)}
-                  className="h-8 text-xs flex items-center gap-1.5 cursor-pointer"
+                  className="h-8 text-xs flex items-center justify-center gap-1.5 cursor-pointer rounded-[var(--fintech-radius-sm)] font-medium"
                 >
                   <CreditCard className="w-3.5 h-3.5 text-primary" />
-                  <span>{t("treasury.invoices.createDuesBtn", "Dues Invoice")}</span>
+                  <span className="truncate">{t("treasury.invoices.createDuesBtn", "Buat Faktur Tunggakan")}</span>
                 </Button>
 
                 <Button
                   type="button"
+                  variant="default"
                   size="sm"
+                  chamfer="none"
                   onClick={() => setIsCustomModalOpen(true)}
-                  className="h-8 text-xs flex items-center gap-1.5 cursor-pointer"
+                  className="h-8 text-xs flex items-center justify-center gap-1.5 cursor-pointer rounded-[var(--fintech-radius-sm)] font-medium bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>{t("treasury.invoices.createCustomBtn", "Custom Invoice")}</span>
+                  <span className="truncate">{t("treasury.invoices.createCustomBtn", "Buat Faktur Kustom")}</span>
                 </Button>
               </>
             )}
@@ -315,11 +251,12 @@ export function InvoicesPane({
                 type="button"
                 variant="outline"
                 size="sm"
+                chamfer="none"
                 onClick={() => setIsDuesModalOpen(true)}
-                className="h-8 text-xs flex items-center gap-1.5 cursor-pointer"
+                className="h-8 text-xs flex items-center justify-center gap-1.5 cursor-pointer rounded-[var(--fintech-radius-sm)] font-medium w-full sm:w-auto"
               >
-                <CreditCard className="w-3.5 h-3.5" />
-                <span>{t("treasury.invoices.payMyDues", "Pay My Dues")}</span>
+                <CreditCard className="w-3.5 h-3.5 text-primary" />
+                <span>{t("treasury.invoices.payMyDues", "Bayar Tunggakan Saya")}</span>
               </Button>
             )}
           </div>
@@ -362,203 +299,145 @@ export function InvoicesPane({
           ) : (
             <div className="space-y-6">
               {dateGroups.map((group) => (
-                <div key={group.dateKey} className="space-y-2.5">
+                <div key={group.dateKey} className="space-y-2">
                   {/* Date Divider */}
-                  <div className="flex items-center gap-2 pt-1 first:pt-0">
-                    <span className="text-[11px] font-mono font-medium uppercase tracking-wider text-muted-foreground/80 shrink-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-muted-foreground shrink-0">
                       {group.dateLabel}
                     </span>
                     <div className="h-px flex-1 bg-border/40" />
                   </div>
 
-                  {/* Modern Cards */}
-                  <div className="space-y-2">
-                    {group.invoices.map((inv) => (
-                      <div
-                        key={inv._id}
-                        className="p-3.5 sm:p-4 bg-muted/10 hover:bg-muted/25 border border-border/60 hover:border-border/90 rounded-[var(--fintech-radius-md)] transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
-                      >
-                        {/* Left Side */}
-                        <div className="min-w-0 flex-1 space-y-1.5">
-                          <div className="flex items-center gap-2 min-w-0">
-                            {renderStatusPill(inv)}
+                  {/* Transaction Rows */}
+                  <div className="divide-y divide-border/25 rounded-[var(--fintech-radius-md)] border border-border/40 bg-card/40 overflow-hidden">
+                    {group.invoices.map((inv) => {
+                      const isPaid = inv.status === "paid";
+                      const isPending = inv.status === "pending";
+                      const isCancelled = inv.status === "cancelled";
+                      const isExpired = inv.status === "expired";
+                      const isAwaitingVerification =
+                        isPending && (inv.isAwaitingConfirmation || inv.gatewayProvider === "temanqris");
 
-                            <button
-                              type="button"
-                              onClick={() => void handleCopyLink(inv.invoiceNumber)}
-                              className="inline-flex items-center gap-1 font-mono text-[11px] text-muted-foreground hover:text-foreground bg-muted/30 px-1.5 py-0.5 rounded-[var(--fintech-radius-xs)] border border-border/60 transition-colors cursor-pointer shrink-0"
-                              title="Copy invoice link"
+                      // Clean localized title
+                      let displayTitle = inv.title;
+                      if (inv.title.startsWith("Dues Payment (")) {
+                        displayTitle = inv.title
+                          .replace("Dues Payment", t("treasury.invoices.duesPayment", "Pembayaran Tunggakan"))
+                          .replace("cycles", t("treasury.overview.cycles", "siklus"))
+                          .replace("cycle", t("treasury.overview.cycle_one", "siklus"))
+                          .replace("Week", t("treasury.overview.week", "Minggu"));
+                      }
+
+                      return (
+                        <div
+                          key={inv._id}
+                          onClick={() => setSelectedInvoiceForDetails(inv)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              setSelectedInvoiceForDetails(inv);
+                            }
+                          }}
+                          className="p-3 sm:p-3.5 hover:bg-muted/30 transition-colors flex items-center justify-between gap-3 group cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+                        >
+                          {/* Left Side: Circular Icon + Title + Status + Subtext */}
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            {/* Circular Status Icon */}
+                            <div
+                              className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${isPaid
+                                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                                : isPending
+                                  ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                                  : isCancelled || isExpired
+                                    ? "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                                    : "bg-muted text-muted-foreground border border-border/60"
+                                }`}
                             >
-                              <span>#{inv.invoiceNumber}</span>
-                              {copiedInvoiceNumber === inv.invoiceNumber ? (
-                                <Check className="w-3 h-3 text-emerald-400" />
+                              {isPaid ? (
+                                <Check className="w-4 h-4" />
+                              ) : isPending ? (
+                                <Clock className="w-4 h-4" />
+                              ) : isCancelled || isExpired ? (
+                                <Ban className="w-4 h-4" />
                               ) : (
-                                <Copy className="w-3 h-3 opacity-60" />
+                                <Receipt className="w-4 h-4" />
                               )}
-                            </button>
-                          </div>
+                            </div>
 
-                          <div className="min-w-0">
-                            <button
-                              type="button"
-                              onClick={() => setSelectedInvoiceForDetails(inv)}
-                              className="text-sm font-semibold text-foreground hover:text-primary transition-colors block truncate text-left w-full cursor-pointer"
-                              title={inv.title}
-                            >
-                              {inv.title}
-                            </button>
-                          </div>
-
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-0 truncate">
-                            <User className="w-3.5 h-3.5 shrink-0 text-muted-foreground/70" />
-                            <span className="font-medium text-foreground/90 truncate max-w-[140px] sm:max-w-[220px]">
-                              {inv.payerName}
-                            </span>
-                            <span className="opacity-40">•</span>
-                            <span className="shrink-0">{new Date(inv.createdAt).toLocaleDateString()}</span>
-                            {inv.paidAt && (
-                              <>
-                                <span className="opacity-40">•</span>
-                                <span className="text-emerald-400 shrink-0 font-medium">
-                                  Paid {new Date(inv.paidAt).toLocaleDateString()}
+                            {/* Title & Metadata */}
+                            <div className="min-w-0 flex-1 space-y-1">
+                              {/* Expanded Title */}
+                              <div className="min-w-0">
+                                <span className="text-xs sm:text-sm font-semibold text-foreground group-hover:text-primary transition-colors block truncate">
+                                  {displayTitle}
                                 </span>
-                              </>
-                            )}
+                              </div>
+
+                              {/* Status Badge on sub-line where date was, author removed */}
+                              <div className="flex items-center gap-1.5 pt-0.5">
+                                {isAwaitingVerification ? (
+                                  <StatusPill tone="warning" className="text-[10px] py-0 px-1.5 shrink-0">
+                                    <span>{t("treasury.invoices.statusAwaitingConfirmation", "Menunggu Konfirmasi")}</span>
+                                  </StatusPill>
+                                ) : isPaid ? (
+                                  <StatusPill tone="success" className="text-[10px] py-0 px-1.5 shrink-0">
+                                    {t("treasury.invoices.statusPaid", "Lunas")}
+                                  </StatusPill>
+                                ) : isPending ? (
+                                  <StatusPill tone="warning" className="text-[10px] py-0 px-1.5 shrink-0">
+                                    {t("treasury.invoices.statusPending", "Menunggu")}
+                                  </StatusPill>
+                                ) : isCancelled ? (
+                                  <StatusPill tone="danger" className="text-[10px] py-0 px-1.5 shrink-0">
+                                    {t("treasury.invoices.statusCancelled", "Dibatalkan")}
+                                  </StatusPill>
+                                ) : isExpired ? (
+                                  <StatusPill tone="danger" className="text-[10px] py-0 px-1.5 shrink-0">
+                                    {t("treasury.invoices.statusExpired", "Kedaluwarsa")}
+                                  </StatusPill>
+                                ) : (
+                                  <StatusPill tone="neutral" className="text-[10px] py-0 px-1.5 shrink-0">
+                                    {t("treasury.invoices.statusDraft", "Draf")}
+                                  </StatusPill>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        </div>
 
-                        {/* Right Side */}
-                        <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2.5 sm:pt-0 border-t sm:border-t-0 border-border/40 sm:flex-col sm:items-end sm:gap-2">
-                          <div className="font-mono text-base font-bold text-foreground tabular-nums text-right">
-                            {inv.currency} {inv.totalAmount.toLocaleString()}
-                          </div>
+                          {/* Right Side: Formatted Amount & Quick Pay */}
+                          <div className="flex items-center gap-2.5 shrink-0 pl-2">
+                            <div className="text-right">
+                              <div
+                                className={`text-sm sm:text-base font-sans font-bold tabular-nums tracking-tight ${isPaid ? "text-emerald-400" : isPending ? "text-amber-300" : "text-foreground"
+                                  }`}
+                              >
+                                {formatMoney(inv.totalAmount, inv.currency)}
+                              </div>
+                            </div>
 
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            {/* Verify Action */}
-                            {canManage &&
-                              inv.status === "pending" &&
-                              (inv.isAwaitingConfirmation || inv.gatewayProvider === "temanqris") && (
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  disabled={verifyingInvoiceNumber === inv.invoiceNumber}
-                                  onClick={() => void handleVerifyPayment(inv.invoiceNumber)}
-                                  className="h-7 px-2 text-xs text-amber-400 border-amber-500/40 hover:bg-amber-500/10 cursor-pointer flex items-center gap-1"
-                                >
-                                  {verifyingInvoiceNumber === inv.invoiceNumber ? (
-                                    <Loader2 className="w-3 h-3 animate-spin" />
-                                  ) : (
-                                    <ShieldCheck className="w-3 h-3" />
-                                  )}
-                                  <span>Verify</span>
-                                </Button>
-                              )}
-
-                            {/* Primary Action */}
-                            {inv.status === "pending" ? (
+                            {/* Quick Pay CTA for pending invoices (hidden if awaiting verification/confirmation) */}
+                            {isPending && !isAwaitingVerification && (
                               <Button
                                 type="button"
                                 size="sm"
-                                onClick={() => setLocation(`/invoice/${inv.invoiceNumber}`)}
-                                className="h-7 px-2.5 text-xs cursor-pointer flex items-center gap-1"
+                                chamfer="none"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setLocation(`/invoice/${inv.invoiceNumber}`);
+                                }}
+                                className="h-7 px-2.5 text-xs cursor-pointer flex items-center gap-1 font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-[var(--fintech-radius-sm)] shrink-0 shadow-sm"
+                                title={t("treasury.invoices.payBtn", "Bayar")}
                               >
                                 <CreditCard className="w-3 h-3" />
-                                <span>{t("treasury.invoices.payBtn", "Pay")}</span>
-                              </Button>
-                            ) : inv.status === "paid" ? (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setSelectedInvoiceForDetails(inv)}
-                                className="h-7 px-2.5 text-xs text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 cursor-pointer flex items-center gap-1"
-                              >
-                                <Receipt className="w-3 h-3 text-emerald-400" />
-                                <span>Receipt</span>
-                              </Button>
-                            ) : (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setSelectedInvoiceForDetails(inv)}
-                                className="h-7 px-2 text-xs cursor-pointer"
-                              >
-                                Details
+                                <span className="hidden sm:inline">{t("treasury.invoices.payBtn", "Bayar")}</span>
                               </Button>
                             )}
-
-                            {/* Dropdown Menu */}
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-7 w-7 p-0 cursor-pointer text-muted-foreground hover:text-foreground"
-                                  aria-label="Actions"
-                                >
-                                  <MoreHorizontal className="w-4 h-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-44">
-                                <DropdownMenuItem
-                                  onClick={() => setSelectedInvoiceForDetails(inv)}
-                                  className="text-xs cursor-pointer"
-                                >
-                                  <Receipt className="w-3.5 h-3.5 mr-2" />
-                                  <span>View Details</span>
-                                </DropdownMenuItem>
-
-                                <DropdownMenuItem
-                                  onClick={() => void handleCopyLink(inv.invoiceNumber)}
-                                  className="text-xs cursor-pointer"
-                                >
-                                  <Copy className="w-3.5 h-3.5 mr-2" />
-                                  <span>Copy Link</span>
-                                </DropdownMenuItem>
-
-                                {canManage && (inv.status === "draft" || inv.status === "pending") && (
-                                  <>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      onClick={() => setSelectedInvoiceForEdit(inv)}
-                                      className="text-xs cursor-pointer"
-                                    >
-                                      <FileEdit className="w-3.5 h-3.5 mr-2" />
-                                      <span>Edit</span>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      onClick={() => setInvoiceToCancel(inv)}
-                                      className="text-xs text-amber-400 cursor-pointer"
-                                    >
-                                      <Ban className="w-3.5 h-3.5 mr-2" />
-                                      <span>Cancel</span>
-                                    </DropdownMenuItem>
-                                  </>
-                                )}
-
-                                {canManage &&
-                                  (inv.status === "draft" ||
-                                    inv.status === "cancelled" ||
-                                    inv.status === "expired") && (
-                                    <>
-                                      <DropdownMenuSeparator />
-                                      <DropdownMenuItem
-                                        onClick={() => setInvoiceToDelete(inv)}
-                                        className="text-xs text-rose-400 cursor-pointer"
-                                      >
-                                        <Trash2 className="w-3.5 h-3.5 mr-2" />
-                                        <span>Delete</span>
-                                      </DropdownMenuItem>
-                                    </>
-                                  )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ))}
@@ -596,11 +475,12 @@ export function InvoicesPane({
             </div>
           )}
         </div>
-      </Panel>
+      </Panel >
 
       {/* Reusable ConfirmDialog for Cancel Invoice */}
-      <ConfirmDialog
-        isOpen={invoiceToCancel !== null}
+      < ConfirmDialog
+        isOpen={invoiceToCancel !== null
+        }
         onClose={() => setInvoiceToCancel(null)}
         onConfirm={handleConfirmCancel}
         title="Cancel Invoice"
@@ -616,7 +496,7 @@ export function InvoicesPane({
       />
 
       {/* Reusable ConfirmDialog for Delete Invoice */}
-      <ConfirmDialog
+      < ConfirmDialog
         isOpen={invoiceToDelete !== null}
         onClose={() => setInvoiceToDelete(null)}
         onConfirm={handleConfirmDelete}
@@ -633,7 +513,7 @@ export function InvoicesPane({
       />
 
       {/* Inspection Modal */}
-      <InvoiceDetailsModal
+      < InvoiceDetailsModal
         isOpen={selectedInvoiceForDetails !== null}
         onClose={() => setSelectedInvoiceForDetails(null)}
         invoice={selectedInvoiceForDetails}
@@ -662,24 +542,28 @@ export function InvoicesPane({
       />
 
       {/* Custom Invoice Creation Modal */}
-      {isCustomModalOpen && activeFundId && (
-        <CreateCustomInvoiceModal
-          isOpen={isCustomModalOpen}
-          onClose={() => setIsCustomModalOpen(false)}
-          organizationId={organizationId}
-          fundId={activeFundId}
-        />
-      )}
+      {
+        isCustomModalOpen && activeFundId && (
+          <CreateCustomInvoiceModal
+            isOpen={isCustomModalOpen}
+            onClose={() => setIsCustomModalOpen(false)}
+            organizationId={organizationId}
+            fundId={activeFundId}
+          />
+        )
+      }
 
       {/* Dues Invoice Creation Modal */}
-      {isDuesModalOpen && activeFundId && (
-        <CreateInvoiceModal
-          isOpen={isDuesModalOpen}
-          onClose={() => setIsDuesModalOpen(false)}
-          organizationId={organizationId}
-          fundId={activeFundId}
-        />
-      )}
-    </div>
+      {
+        isDuesModalOpen && activeFundId && (
+          <CreateInvoiceModal
+            isOpen={isDuesModalOpen}
+            onClose={() => setIsDuesModalOpen(false)}
+            organizationId={organizationId}
+            fundId={activeFundId}
+          />
+        )
+      }
+    </div >
   );
 }

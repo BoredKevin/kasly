@@ -82,7 +82,7 @@ export function InvoiceAwaitingView({
           <div className="flex justify-between text-muted-foreground">
             <span>Status</span>
             <span className="text-amber-400 font-semibold">
-              {t("treasury.invoices.checkout.awaitingConfirmationStatus", "Awaiting Verification")}
+              {t("treasury.invoices.checkout.awaitingConfirmationStatus", "Waiting Confirmation")}
             </span>
           </div>
         </div>
