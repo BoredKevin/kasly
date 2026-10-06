@@ -1,8 +1,14 @@
-import { Authenticated, Unauthenticated } from "convex/react";
-import { Route, Switch, Redirect } from "wouter";
+import { useEffect } from "react";
+import { useConvexAuth } from "convex/react";
+import { Route, Switch, Redirect, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { Layout } from "./components/layout";
-import { SignInForm, ClaimRegistrationView, ResetPasswordPage } from "./features/auth";
+import {
+  SignInForm,
+  ClaimRegistrationView,
+  ResetPasswordPage,
+  getSafeRedirectUrl,
+} from "./features/auth";
 import { UserProfileView, OrganizationView } from "./features/profile";
 import {
   TreasuryView,
@@ -28,6 +34,16 @@ const RESERVED_ROOT_PATHS = new Set([
   "invoice",
 ]);
 
+function FullScreenLoading() {
+  return (
+    <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4">
+      <div className="w-10 h-10 rounded-[var(--fintech-radius-sm)] bg-primary/10 border border-primary/30 flex items-center justify-center text-primary font-bold font-mono text-base animate-pulse">
+        K
+      </div>
+    </div>
+  );
+}
+
 function UnauthenticatedEntryView({ identifier }: { identifier: string }) {
   return (
     <div className="relative min-h-screen bg-background text-foreground flex items-center justify-center p-4 selection:bg-primary/20">
@@ -40,6 +56,174 @@ function UnauthenticatedEntryView({ identifier }: { identifier: string }) {
         <SharedEntryPage identifier={identifier} isAuthenticated={false} />
       </div>
     </div>
+  );
+}
+
+function ProtectedLayout({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading } = useConvexAuth();
+  const [location] = useLocation();
+
+  if (isLoading) {
+    return <FullScreenLoading />;
+  }
+
+  if (!isAuthenticated) {
+    const search = typeof window !== "undefined" ? window.location.search : "";
+    const currentPath = `${location}${search}`;
+    const target = `/login?redirectTo=${encodeURIComponent(currentPath)}`;
+    return <Redirect to={target} replace />;
+  }
+
+  return <Layout>{children}</Layout>;
+}
+
+function LoginPage() {
+  const { t } = useTranslation();
+  const { isAuthenticated, isLoading } = useConvexAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      const target = getSafeRedirectUrl(
+        typeof window !== "undefined" ? window.location.search : ""
+      );
+      setLocation(target, { replace: true });
+    }
+  }, [isLoading, isAuthenticated, setLocation]);
+
+  if (isLoading) {
+    return <FullScreenLoading />;
+  }
+
+  if (isAuthenticated) {
+    const target = getSafeRedirectUrl(
+      typeof window !== "undefined" ? window.location.search : ""
+    );
+    return <Redirect to={target} replace />;
+  }
+
+  const handleSuccess = () => {
+    const target = getSafeRedirectUrl(
+      typeof window !== "undefined" ? window.location.search : ""
+    );
+    setLocation(target, { replace: true });
+  };
+
+  return (
+    <Layout>
+      <div className="space-y-8 max-w-sm mx-auto w-full">
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            {t("auth.welcomeTitle")}
+          </h1>
+          <p className="text-xs text-muted-foreground">
+            {t("auth.welcomeSubtitle")}
+          </p>
+        </div>
+        <SignInForm onSuccess={handleSuccess} />
+      </div>
+    </Layout>
+  );
+}
+
+function RootRoute() {
+  const { isAuthenticated, isLoading } = useConvexAuth();
+
+  if (isLoading) {
+    return <FullScreenLoading />;
+  }
+
+  if (isAuthenticated) {
+    return <Redirect to="/treasury" replace />;
+  }
+
+  return <Redirect to="/login" replace />;
+}
+
+function TransactionRoute({ hash }: { hash: string }) {
+  const { isAuthenticated, isLoading } = useConvexAuth();
+
+  if (isLoading) {
+    return <FullScreenLoading />;
+  }
+
+  if (isAuthenticated) {
+    return (
+      <Layout>
+        <TreasuryErrorBoundary>
+          <TreasuryView activeTab="entry" entryIdentifier={hash} />
+        </TreasuryErrorBoundary>
+      </Layout>
+    );
+  }
+
+  return <UnauthenticatedEntryView identifier={hash} />;
+}
+
+function IdentifierRoute({ identifier }: { identifier: string }) {
+  const lower = identifier.toLowerCase();
+  const { isAuthenticated, isLoading } = useConvexAuth();
+
+  if (isLoading) {
+    return <FullScreenLoading />;
+  }
+
+  if (lower === "login") {
+    return <Redirect to="/login" replace />;
+  }
+
+  if (lower === "claim" || lower === "register") {
+    return <Redirect to={`/${lower}`} replace />;
+  }
+
+  if (lower === "reset-password") {
+    return <Redirect to="/reset-password" replace />;
+  }
+
+  if (RESERVED_ROOT_PATHS.has(lower)) {
+    if (isAuthenticated) {
+      return <Redirect to={`/${lower}`} replace />;
+    }
+    return (
+      <Redirect
+        to={`/login?redirectTo=${encodeURIComponent(`/${lower}`)}`}
+        replace
+      />
+    );
+  }
+
+  if (isAuthenticated) {
+    return (
+      <Layout>
+        <TreasuryErrorBoundary>
+          <TreasuryView activeTab="entry" entryIdentifier={identifier} />
+        </TreasuryErrorBoundary>
+      </Layout>
+    );
+  }
+
+  return <UnauthenticatedEntryView identifier={identifier} />;
+}
+
+function FallbackRoute() {
+  const { isAuthenticated, isLoading } = useConvexAuth();
+  const [location] = useLocation();
+
+  if (isLoading) {
+    return <FullScreenLoading />;
+  }
+
+  if (isAuthenticated) {
+    return <Redirect to="/treasury" replace />;
+  }
+
+  const search = typeof window !== "undefined" ? window.location.search : "";
+  const currentPath = `${location}${search}`;
+  return (
+    <Redirect
+      to={`/login?redirectTo=${encodeURIComponent(currentPath)}`}
+      replace
+    />
   );
 }
 
@@ -61,215 +245,143 @@ export default function App() {
         {(params) => <InvoicePaymentPage invoiceNumber={params.invoiceNumber} />}
       </Route>
 
-      {/* Main Application Routes */}
+      {/* Root Route: Redirects to /treasury if logged in, /login if not logged in */}
+      <Route path="/">
+        <RootRoute />
+      </Route>
+
+      {/* Public Authentication & Registration Routes */}
+      <Route path="/login">
+        <LoginPage />
+      </Route>
+
+      <Route path="/claim">
+        <Layout>
+          <ClaimRegistrationView />
+        </Layout>
+      </Route>
+
+      <Route path="/register">
+        <Layout>
+          <ClaimRegistrationView />
+        </Layout>
+      </Route>
+
+      <Route path="/reset-password">
+        <Layout>
+          <div className="space-y-8 max-w-sm mx-auto w-full">
+            <div className="text-center space-y-2">
+              <h1 className="text-3xl font-bold tracking-tight text-foreground">
+                {t("auth.welcomeTitle")}
+              </h1>
+              <p className="text-xs text-muted-foreground">
+                {t("auth.welcomeSubtitle")}
+              </p>
+            </div>
+            <ResetPasswordPage />
+          </div>
+        </Layout>
+      </Route>
+
+      {/* Canonical Transaction URL (Auth-aware: in workspace if logged in, standalone card if not) */}
+      <Route path="/tx/:hash">
+        {(params) => <TransactionRoute hash={params.hash} />}
+      </Route>
+
+      {/* Protected Profile & Organization Workspace Routes */}
+      <Route path="/profile">
+        <ProtectedLayout>
+          <UserProfileView />
+        </ProtectedLayout>
+      </Route>
+      <Route path="/organization">
+        <ProtectedLayout>
+          <OrganizationView />
+        </ProtectedLayout>
+      </Route>
+      <Route path="/organization/roles">
+        <ProtectedLayout>
+          <OrganizationView />
+        </ProtectedLayout>
+      </Route>
+      <Route path="/organization/invites">
+        <ProtectedLayout>
+          <OrganizationView />
+        </ProtectedLayout>
+      </Route>
+      <Route path="/organization/members">
+        <ProtectedLayout>
+          <OrganizationView />
+        </ProtectedLayout>
+      </Route>
+
+      {/* Protected Treasury Workspace Routes */}
+      <Route path="/treasury">
+        <ProtectedLayout>
+          <TreasuryErrorBoundary>
+            <TreasuryView />
+          </TreasuryErrorBoundary>
+        </ProtectedLayout>
+      </Route>
+      <Route path="/treasury/ledger">
+        <ProtectedLayout>
+          <TreasuryErrorBoundary>
+            <TreasuryView />
+          </TreasuryErrorBoundary>
+        </ProtectedLayout>
+      </Route>
+      <Route path="/treasury/dues">
+        <ProtectedLayout>
+          <TreasuryErrorBoundary>
+            <TreasuryView />
+          </TreasuryErrorBoundary>
+        </ProtectedLayout>
+      </Route>
+      <Route path="/treasury/bulk-dues">
+        <ProtectedLayout>
+          <TreasuryErrorBoundary>
+            <TreasuryView />
+          </TreasuryErrorBoundary>
+        </ProtectedLayout>
+      </Route>
+      <Route path="/treasury/dues/bulk">
+        <ProtectedLayout>
+          <TreasuryErrorBoundary>
+            <TreasuryView />
+          </TreasuryErrorBoundary>
+        </ProtectedLayout>
+      </Route>
+      <Route path="/treasury/keys">
+        <ProtectedLayout>
+          <TreasuryErrorBoundary>
+            <TreasuryView />
+          </TreasuryErrorBoundary>
+        </ProtectedLayout>
+      </Route>
+      <Route path="/treasury/admin">
+        <ProtectedLayout>
+          <TreasuryErrorBoundary>
+            <TreasuryView />
+          </TreasuryErrorBoundary>
+        </ProtectedLayout>
+      </Route>
+      <Route path="/treasury/invoices">
+        <ProtectedLayout>
+          <TreasuryErrorBoundary>
+            <TreasuryView />
+          </TreasuryErrorBoundary>
+        </ProtectedLayout>
+      </Route>
+
+      {/* Root Short URL / Identifier */}
+      <Route path="/:identifier">
+        {(params) => <IdentifierRoute identifier={params.identifier} />}
+      </Route>
+
+      {/* Fallback Unmatched Route */}
       <Route>
-        {/* Authenticated Workspace Flow (With Navbar & Treasury Sidebar) */}
-        <Authenticated>
-          <Layout>
-            <Switch>
-              <Route path="/">
-                <Redirect to="/treasury" />
-              </Route>
-              <Route path="/claim">
-                <ClaimRegistrationView />
-              </Route>
-              <Route path="/register">
-                <ClaimRegistrationView />
-              </Route>
-              <Route path="/profile">
-                <UserProfileView />
-              </Route>
-              <Route path="/organization">
-                <OrganizationView />
-              </Route>
-              <Route path="/organization/roles">
-                <OrganizationView />
-              </Route>
-              <Route path="/organization/invites">
-                <OrganizationView />
-              </Route>
-              <Route path="/organization/members">
-                <OrganizationView />
-              </Route>
-              <Route path="/treasury">
-                <TreasuryErrorBoundary>
-                  <TreasuryView />
-                </TreasuryErrorBoundary>
-              </Route>
-              <Route path="/treasury/ledger">
-                <TreasuryErrorBoundary>
-                  <TreasuryView />
-                </TreasuryErrorBoundary>
-              </Route>
-              <Route path="/treasury/dues">
-                <TreasuryErrorBoundary>
-                  <TreasuryView />
-                </TreasuryErrorBoundary>
-              </Route>
-              <Route path="/treasury/bulk-dues">
-                <TreasuryErrorBoundary>
-                  <TreasuryView />
-                </TreasuryErrorBoundary>
-              </Route>
-              <Route path="/treasury/dues/bulk">
-                <TreasuryErrorBoundary>
-                  <TreasuryView />
-                </TreasuryErrorBoundary>
-              </Route>
-              <Route path="/treasury/keys">
-                <TreasuryErrorBoundary>
-                  <TreasuryView />
-                </TreasuryErrorBoundary>
-              </Route>
-              <Route path="/treasury/admin">
-                <TreasuryErrorBoundary>
-                  <TreasuryView />
-                </TreasuryErrorBoundary>
-              </Route>
-              <Route path="/treasury/invoices">
-                <TreasuryErrorBoundary>
-                  <TreasuryView />
-                </TreasuryErrorBoundary>
-              </Route>
-              {/* Canonical Transaction URL inside Workspace */}
-              <Route path="/tx/:hash">
-                {(params) => (
-                  <TreasuryErrorBoundary>
-                    <TreasuryView activeTab="entry" entryIdentifier={params.hash} />
-                  </TreasuryErrorBoundary>
-                )}
-              </Route>
-              {/* Root Short URL inside Workspace */}
-              <Route path="/:identifier">
-                {(params) => {
-                  if (RESERVED_ROOT_PATHS.has(params.identifier.toLowerCase())) {
-                    return <Redirect to="/treasury" />;
-                  }
-                  return (
-                    <TreasuryErrorBoundary>
-                      <TreasuryView
-                        activeTab="entry"
-                        entryIdentifier={params.identifier}
-                      />
-                    </TreasuryErrorBoundary>
-                  );
-                }}
-              </Route>
-              <Route>
-                <Redirect to="/treasury" />
-              </Route>
-            </Switch>
-          </Layout>
-        </Authenticated>
-
-        {/* Unauthenticated Flow (Centered Entry Card, No Navbar / Sidebar) */}
-        <Unauthenticated>
-          <Switch>
-
-          {/* Canonical Transaction URL (Centered, No Navbar/Sidebar) */}
-          <Route path="/tx/:hash">
-            {(params) => <UnauthenticatedEntryView identifier={params.hash} />}
-          </Route>
-
-          <Route path="/claim">
-            <Layout>
-              <ClaimRegistrationView />
-            </Layout>
-          </Route>
-
-          <Route path="/register">
-            <Layout>
-              <ClaimRegistrationView />
-            </Layout>
-          </Route>
-
-          <Route path="/reset-password">
-            <Layout>
-              <div className="space-y-8 max-w-sm mx-auto w-full">
-                <div className="text-center space-y-2">
-                  <h1 className="text-3xl font-bold tracking-tight text-foreground">
-                    {t("auth.welcomeTitle")}
-                  </h1>
-                  <p className="text-xs text-muted-foreground">
-                    {t("auth.welcomeSubtitle")}
-                  </p>
-                </div>
-                <ResetPasswordPage />
-              </div>
-            </Layout>
-          </Route>
-
-          {/* Root Short URL or Fallback (Centered, No Navbar/Sidebar) */}
-          <Route path="/:identifier">
-            {(params) => {
-              if (
-                params.identifier === "claim" ||
-                params.identifier === "register"
-              ) {
-                return (
-                  <Layout>
-                    <ClaimRegistrationView />
-                  </Layout>
-                );
-              }
-              if (params.identifier === "reset-password") {
-                return (
-                  <Layout>
-                    <div className="space-y-8 max-w-sm mx-auto w-full">
-                      <div className="text-center space-y-2">
-                        <h1 className="text-3xl font-bold tracking-tight text-foreground">
-                          {t("auth.welcomeTitle")}
-                        </h1>
-                        <p className="text-xs text-muted-foreground">
-                          {t("auth.welcomeSubtitle")}
-                        </p>
-                      </div>
-                      <ResetPasswordPage />
-                    </div>
-                  </Layout>
-                );
-              }
-              if (RESERVED_ROOT_PATHS.has(params.identifier.toLowerCase())) {
-                return (
-                  <Layout>
-                    <div className="space-y-8 max-w-sm mx-auto w-full">
-                      <div className="text-center space-y-2">
-                        <h1 className="text-3xl font-bold tracking-tight text-foreground">
-                          {t("auth.welcomeTitle")}
-                        </h1>
-                        <p className="text-xs text-muted-foreground">
-                          {t("auth.welcomeSubtitle")}
-                        </p>
-                      </div>
-                      <SignInForm />
-                    </div>
-                  </Layout>
-                );
-              }
-              return (
-                <UnauthenticatedEntryView identifier={params.identifier} />
-              );
-            }}
-          </Route>
-
-          <Route>
-            <Layout>
-              <div className="space-y-8 max-w-sm mx-auto w-full">
-                <div className="text-center space-y-2">
-                  <h1 className="text-3xl font-bold tracking-tight text-foreground">
-                    {t("auth.welcomeTitle")}
-                  </h1>
-                  <p className="text-xs text-muted-foreground">
-                    {t("auth.welcomeSubtitle")}
-                  </p>
-                </div>
-                <SignInForm />
-              </div>
-            </Layout>
-          </Route>
-        </Switch>
-      </Unauthenticated>
-    </Route>
-  </Switch>
-);
+        <FallbackRoute />
+      </Route>
+    </Switch>
+  );
 }

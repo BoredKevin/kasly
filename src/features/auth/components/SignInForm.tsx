@@ -16,7 +16,11 @@ import {
 
 type AuthFlow = "signIn" | "signUp" | "forgotPassword" | "linkSent";
 
-export function SignInForm() {
+export interface SignInFormProps {
+  onSuccess?: () => void;
+}
+
+export function SignInForm({ onSuccess }: SignInFormProps = {}) {
   const { t } = useTranslation();
   const { signIn } = useAuthActions();
   const [flow, setFlow] = useState<AuthFlow>("signIn");
@@ -88,9 +92,13 @@ export function SignInForm() {
       formData.set("claimToken", claimToken);
     }
 
-    void signIn("password", formData).catch((err: unknown) => {
-      setError(formatAuthError(err));
-    });
+    void signIn("password", formData)
+      .then(() => {
+        onSuccess?.();
+      })
+      .catch((err: unknown) => {
+        setError(formatAuthError(err));
+      });
   };
 
   const handleSignInSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -101,9 +109,13 @@ export function SignInForm() {
     formData.set("email", email.trim().toLowerCase());
     formData.set("password", password);
 
-    void signIn("password", formData).catch((err: unknown) => {
-      setError(formatAuthError(err));
-    });
+    void signIn("password", formData)
+      .then(() => {
+        onSuccess?.();
+      })
+      .catch((err: unknown) => {
+        setError(formatAuthError(err));
+      });
   };
 
   const handleRequestResetSubmit = (e: React.FormEvent<HTMLFormElement>) => {
