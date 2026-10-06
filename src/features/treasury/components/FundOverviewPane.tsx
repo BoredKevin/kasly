@@ -142,11 +142,11 @@ export function FundOverviewPane({
             onClick={onNavigateToLedger}
             className="h-7 text-xs text-primary hover:underline flex items-center gap-1 cursor-pointer font-medium px-2"
           >
-            <span>{t("treasury.overview.viewFullLedger", "View All")}</span>
+            <span>{t("treasury.overview.viewFullLedger", "Buku Kas Lengkap")}</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </Button>
         </div>
-        <div className="p-3">
+        <div className="p-2 sm:p-3">
           <LedgerTimeline
             fundId={fundId}
             organizationId={organizationId}

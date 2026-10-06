@@ -4,7 +4,6 @@ import { Panel } from "../../../ui/Panel";
 import { StatusPill } from "../../../ui/StatusPill";
 import { Button } from "@boredkevin/ui";
 import {
-  Landmark,
   CheckCircle2,
   Receipt,
   CreditCard,
@@ -63,43 +62,33 @@ export function UnifiedMobileFinancialHero({
 
   return (
     <Panel className="p-4 sm:p-5 space-y-4">
-      {/* Top Row: Clean Status Icon & Saldo Kas with Quick Record */}
+      {/* Top Row: Saldo Kas on Left, Quick Record Action on Right */}
       <div className="flex items-center justify-between gap-3 pb-3 border-b border-border/60">
-        {/* Left: Treasury Ledger Anchor */}
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="p-1.5 bg-primary/10 border border-primary/20 text-primary rounded-[var(--fintech-radius-sm)] shrink-0">
-            <Landmark className="w-4 h-4" />
-          </div>
-        </div>
-
-        {/* Right: Quick Record Action & Saldo Kas */}
-        <div className="flex items-center gap-3 shrink-0 ml-auto">
-          {canSign && !fund?.isArchived && onOpenRecordPayment && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              chamfer="none"
-              onClick={onOpenRecordPayment}
-              className="h-7 text-xs px-2.5 flex items-center gap-1.5 cursor-pointer"
-            >
-              <PenLine className="w-3 h-3 text-primary" />
-              <span>{t("nav.recordPayment", "Record")}</span>
-            </Button>
-          )}
-
-          <div className="text-right">
-            <span className="text-[10px] uppercase text-muted-foreground tracking-wider block font-medium">
-              {t("treasury.overview.treasuryBalance", "Treasury Balance")}
+        <div className="min-w-0">
+          <span className="text-xs font-medium text-muted-foreground block">
+            {t("treasury.overview.treasuryBalance", "Saldo Kas")}
+          </span>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            {isFrozen && <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0" />}
+            <span className="text-xl sm:text-2xl font-bold font-sans tabular-nums text-foreground tracking-tight">
+              {formatMoney(fund?.balance ?? 0, currency)}
             </span>
-            <div className="flex items-center justify-end gap-1.5">
-              {isFrozen && <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />}
-              <span className="text-xs sm:text-sm font-bold font-mono text-foreground">
-                {formatMoney(fund?.balance ?? 0, currency)}
-              </span>
-            </div>
           </div>
         </div>
+
+        {canSign && !fund?.isArchived && onOpenRecordPayment && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            chamfer="none"
+            onClick={onOpenRecordPayment}
+            className="h-8 text-xs px-3 flex items-center gap-1.5 cursor-pointer rounded-[var(--fintech-radius-sm)] font-medium shrink-0"
+          >
+            <PenLine className="w-3.5 h-3.5 text-primary" />
+            <span>{t("nav.recordPayment", "Catat Pembayaran")}</span>
+          </Button>
+        )}
       </div>
 
       {/* Main Hero Section: Outstanding Dues Display */}
@@ -110,32 +99,32 @@ export function UnifiedMobileFinancialHero({
           <div className="h-10 w-full bg-muted/60 rounded mt-2" />
         </div>
       ) : unpaidCount > 0 ? (
-        <div className="space-y-3">
+        <div className="space-y-3 pt-1">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+            <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
               <Receipt className="w-4 h-4 text-amber-400" />
-              <span>{t("treasury.overview.outstandingDuesTitle", "Outstanding Dues")}</span>
+              <span>{t("treasury.overview.outstandingDuesTitle", "Tunggakan Anda")}</span>
             </span>
             <StatusPill tone="warning">
-              {unpaidCount} {unpaidCount > 1 ? "Cycles" : "Cycle"}
+              {t(unpaidCount > 1 ? "treasury.overview.cycles" : "treasury.overview.cycle_one", { count: unpaidCount })}
             </StatusPill>
           </div>
 
           <div className="space-y-1">
-            <div className="text-3xl sm:text-4xl font-bold font-mono tracking-tight text-amber-300">
+            <div className="text-3xl sm:text-4xl font-bold font-sans tabular-nums tracking-tight text-amber-300">
               {formatMoney(totalUnpaid, currency)}
             </div>
 
             {oldestPeriod && (
               <p className="text-xs text-muted-foreground truncate">
-                {oldestPeriod.periodLabel}
+                {oldestPeriod.periodLabel.replace("Week", t("treasury.overview.week", "Minggu"))}
                 {" • "}
                 {isOverdue ? (
                   <span className="text-rose-400 font-medium">
-                    Overdue ({formatDate(oldestPeriod.dueDate)})
+                    {t("treasury.overview.overdue", "Terlambat")} {formatDate(oldestPeriod.dueDate)}
                   </span>
                 ) : (
-                  <span>Due {formatDate(oldestPeriod.dueDate)}</span>
+                  <span>{t("treasury.overview.due", "Jatuh Tempo")} ({formatDate(oldestPeriod.dueDate)})</span>
                 )}
               </p>
             )}
@@ -143,15 +132,15 @@ export function UnifiedMobileFinancialHero({
 
           <Button
             type="button"
-            variant="cyber"
+            variant="default"
             chamfer="none"
             size="default"
             onClick={onOpenPayDues}
-            className="w-full h-11 text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer shadow-md mt-2"
+            className="w-full h-11 text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 transition-all rounded-[var(--fintech-radius-sm)] shadow-md mt-2"
           >
             <CreditCard className="w-4 h-4" />
             <span>
-              {t("treasury.overview.payDuesNow", "Pay Dues Now")} ({formatMoney(totalUnpaid, currency)})
+              {t("treasury.overview.payDuesNow", "Bayar")} ({formatMoney(totalUnpaid, currency)})
             </span>
           </Button>
         </div>

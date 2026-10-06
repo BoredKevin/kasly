@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery } from "convex/react";
-import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
@@ -9,18 +8,15 @@ import { StatusPill, EmptyState } from "../../../ui";
 import {
   ArrowDownLeft,
   ArrowUpRight,
-  RotateCcw,
-  Copy,
-  Check,
   ChevronLeft,
   ChevronRight,
   ScrollText,
 } from "lucide-react";
 import { RevertEntryModal, TargetLedgerEntry } from "../components/RevertEntryModal";
 import { LedgerEntryItem } from "../types/ledger";
-import { parseRevertMemo, findTargetEntry, findReversalForEntry } from "../lib/revertUtils";
+import { parseRevertMemo, findReversalForEntry } from "../lib/revertUtils";
 import { EntryDetailsModal } from "./EntryDetailsModal";
-import { ProofSheet } from "./ProofSheet";
+import { useFormat } from "../../../hooks/useFormat";
 
 export interface LedgerTimelineProps {
   fundId: Id<"funds"> | null;
@@ -42,10 +38,11 @@ interface DateGroup {
 
 function groupEntriesByDate(entries: LedgerEntryItem[], locale: string): DateGroup[] {
   const groups: DateGroup[] = [];
+  const intlLocale = locale.startsWith("id") ? "id-ID" : "en-US";
   for (const entry of entries) {
     const d = new Date(entry.timestamp);
     const dateKey = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
-    const dateLabel = d.toLocaleDateString(locale === "id" ? "id-ID" : "en-US", {
+    const dateLabel = d.toLocaleDateString(intlLocale, {
       month: "short",
       day: "numeric",
       year: "numeric",
@@ -71,13 +68,11 @@ export function LedgerTimeline({
   emptyMessage = "No ledger entries recorded for this fund yet.",
   variant = "standard",
 }: LedgerTimelineProps) {
-  const { i18n } = useTranslation();
-  const [, setLocation] = useLocation();
+  const { t } = useTranslation();
+  const { money: formatMoney, time: formatTime, locale } = useFormat();
   const [currentPage, setCurrentPage] = useState(1);
-  const [copiedHash, setCopiedHash] = useState<string | null>(null);
 
   const [selectedEntryForDetails, setSelectedEntryForDetails] = useState<LedgerEntryItem | null>(null);
-  const [selectedEntryForProof, setSelectedEntryForProof] = useState<LedgerEntryItem | null>(null);
   const [selectedEntryForRevert, setSelectedEntryForRevert] = useState<TargetLedgerEntry | null>(null);
 
   const rawEntries = useQuery(
@@ -111,17 +106,7 @@ export function LedgerTimeline({
     ? entriesList.slice((currentPage - 1) * pageSize, currentPage * pageSize)
     : entriesList;
 
-  const dateGroups = groupEntriesByDate(paginatedEntries, i18n.language);
-
-  const handleCopyHash = async (hash: string) => {
-    try {
-      await navigator.clipboard.writeText(hash);
-      setCopiedHash(hash);
-      setTimeout(() => setCopiedHash(null), 2000);
-    } catch {
-      // Ignore
-    }
-  };
+  const dateGroups = groupEntriesByDate(paginatedEntries, locale);
 
   if (rawEntries === undefined) {
     return (
@@ -144,157 +129,104 @@ export function LedgerTimeline({
   return (
     <div className="space-y-6">
       {/* Date Groups Feed */}
-      <div className="space-y-6">
+      <div className="space-y-5">
         {dateGroups.map((group) => (
-          <div key={group.dateKey} className="space-y-2.5">
+          <div key={group.dateKey} className="space-y-2">
             {/* Date Group Heading */}
             <div className="flex items-center gap-2">
-              <span className="text-[11px] font-mono font-medium uppercase tracking-wider text-muted-foreground/80 shrink-0">
+              <span className="text-xs font-semibold text-muted-foreground shrink-0">
                 {group.dateLabel}
               </span>
               <div className="h-px flex-1 bg-border/40" />
             </div>
 
             {/* Transaction Rows */}
-            <div className="space-y-2">
+            <div
+              className={`divide-y divide-border/25 overflow-hidden ${
+                isCompact
+                  ? ""
+                  : "rounded-[var(--fintech-radius-md)] border border-border/40 bg-card/40"
+              }`}
+            >
               {group.entries.map((entry) => {
                 const isCredit = entry.direction === "credit";
                 const revertInfo = parseRevertMemo(entry.memo);
-                const targetRevertedEntry =
-                  revertInfo.isRevert && revertInfo.targetSequenceNumber
-                    ? findTargetEntry(revertInfo.targetSequenceNumber, entriesList)
-                    : null;
                 const reversalForThisEntry = findReversalForEntry(entry.sequenceNumber, entriesList);
+
+                // Formulate clear, non-cryptic title
+                let displayTitle = entry.memo;
+                if (revertInfo.isRevert && revertInfo.targetSequenceNumber) {
+                  displayTitle = revertInfo.reason
+                    ? `${t("treasury.ledger.reversal", "Pembatalan")} #${revertInfo.targetSequenceNumber}: ${revertInfo.reason}`
+                    : `${t("treasury.ledger.reversal", "Pembatalan")} #${revertInfo.targetSequenceNumber}`;
+                }
 
                 return (
                   <div
                     key={entry._id}
-                    className="p-3.5 sm:p-4 bg-muted/10 hover:bg-muted/25 border border-border/60 hover:border-border/90 rounded-[var(--fintech-radius-md)] transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
+                    onClick={() => setSelectedEntryForDetails(entry)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setSelectedEntryForDetails(entry);
+                      }
+                    }}
+                    className="p-3 sm:p-3.5 hover:bg-muted/30 transition-colors flex items-center justify-between gap-3 group cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
                   >
-                    {/* Left Side: Direction, Sequence, Memo, Signer */}
-                    <div className="min-w-0 flex-1 space-y-1.5">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <StatusPill
-                          tone={isCredit ? "success" : "danger"}
-                          className="text-[10px] py-0 px-1.5 font-medium"
-                        >
-                          {isCredit ? (
-                            <ArrowDownLeft className="w-3 h-3 mr-1" />
-                          ) : (
-                            <ArrowUpRight className="w-3 h-3 mr-1" />
-                          )}
-                          <span>{isCredit ? "Credit" : "Debit"}</span>
-                        </StatusPill>
-
-                        <span className="font-mono text-xs font-semibold text-primary">
-                          #{entry.sequenceNumber}
-                        </span>
-
-                        {revertInfo.isRevert && revertInfo.targetSequenceNumber && (
-                          <StatusPill
-                            tone="info"
-                            className={`text-[10px] py-0 px-1.5 ${targetRevertedEntry ? "cursor-pointer hover:opacity-80" : ""}`}
-                            onClick={(e) => {
-                              if (targetRevertedEntry) {
-                                e.stopPropagation();
-                                setLocation(`/tx/${targetRevertedEntry.entryHash}`);
-                              }
-                            }}
-                          >
-                            <RotateCcw className="w-2.5 h-2.5 mr-1" />
-                            <span>Reverts #{revertInfo.targetSequenceNumber}</span>
-                          </StatusPill>
+                    {/* Left: Direction Icon + Title + Subtext */}
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div
+                        className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
+                          isCredit
+                            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                            : "bg-muted text-muted-foreground border border-border/60"
+                        }`}
+                      >
+                        {isCredit ? (
+                          <ArrowDownLeft className="w-4 h-4" />
+                        ) : (
+                          <ArrowUpRight className="w-4 h-4" />
                         )}
-
-                        {reversalForThisEntry && (
-                          <StatusPill tone="warning" className="text-[10px] py-0 px-1.5">
-                            <RotateCcw className="w-2.5 h-2.5 mr-1" />
-                            <span>Reverted by #{reversalForThisEntry.sequenceNumber}</span>
-                          </StatusPill>
-                        )}
-
-                        {/* Truncated Hash with copy */}
-                        <button
-                          type="button"
-                          onClick={() => void handleCopyHash(entry.entryHash)}
-                          className="inline-flex items-center gap-1 font-mono text-[10px] text-muted-foreground hover:text-foreground bg-muted/30 px-1.5 py-0.5 rounded-[var(--fintech-radius-xs)] border border-border/60 transition-colors cursor-pointer shrink-0"
-                          title="Copy transaction hash"
-                        >
-                          <span>{entry.entryHash.slice(0, 7)}</span>
-                          {copiedHash === entry.entryHash ? (
-                            <Check className="w-2.5 h-2.5 text-emerald-400" />
-                          ) : (
-                            <Copy className="w-2.5 h-2.5 opacity-60" />
-                          )}
-                        </button>
                       </div>
 
-                      {/* Memo Title */}
-                      <div className="min-w-0">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedEntryForDetails(entry)}
-                          className="text-xs sm:text-sm font-semibold text-foreground hover:text-primary transition-colors block truncate text-left w-full cursor-pointer"
-                          title={entry.memo}
-                        >
-                          {entry.memo}
-                        </button>
-                      </div>
+                      <div className="min-w-0 flex-1 space-y-0.5">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-xs sm:text-sm font-semibold text-foreground group-hover:text-primary transition-colors truncate">
+                            {displayTitle}
+                          </span>
 
-                      {/* Signer Info */}
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <span className="text-foreground/90 font-medium">
-                          {entry.signerName || "Treasurer"}
-                        </span>
-                        <span className="opacity-40">•</span>
-                        <span>{new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          {/* At most ONE status tag if applicable */}
+                          {reversalForThisEntry ? (
+                            <StatusPill tone="warning" className="text-[10px] py-0 px-1.5 shrink-0">
+                              {t("treasury.ledger.reverted", "Dibatalkan")}
+                            </StatusPill>
+                          ) : revertInfo.isRevert ? (
+                            <StatusPill tone="info" className="text-[10px] py-0 px-1.5 shrink-0">
+                              {t("treasury.ledger.reversal", "Pembatalan")}
+                            </StatusPill>
+                          ) : null}
+                        </div>
+
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <span className="text-foreground/80 font-medium">
+                            {entry.signerName || t("treasury.ledger.treasurer", "Bendahara")}
+                          </span>
+                          <span className="opacity-40">•</span>
+                          <span>{formatTime(entry.timestamp)}</span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Right Side: Amount & Proof Drawer Action */}
-                    <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2.5 sm:pt-0 border-t sm:border-t-0 border-border/40 sm:flex-col sm:items-end sm:gap-2">
+                    {/* Right: Clean Formatted Amount */}
+                    <div className="shrink-0 text-right pl-2">
                       <div
-                        className={`font-mono text-base font-bold tabular-nums text-right ${isCredit ? "text-emerald-400" : "text-foreground"
-                          }`}
+                        className={`text-sm sm:text-base font-sans font-bold tabular-nums tracking-tight ${
+                          isCredit ? "text-emerald-400" : "text-foreground"
+                        }`}
                       >
-                        {isCredit ? "+" : "-"}{fund?.currency} {entry.amount.toLocaleString()}
-                      </div>
-
-                      <div className="flex items-center gap-1.5">
-
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedEntryForDetails(entry)}
-                          className="h-7 px-2.5 text-xs cursor-pointer"
-                        >
-                          Details
-                        </Button>
-
-                        {canSign && !fund?.isArchived && !reversalForThisEntry && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              setSelectedEntryForRevert({
-                                _id: entry._id,
-                                fundId: entry.fundId,
-                                sequenceNumber: entry.sequenceNumber,
-                                direction: entry.direction,
-                                amount: entry.amount,
-                                memo: entry.memo,
-                                keyId: entry.keyId,
-                                duesEventId: entry.duesEventId,
-                              })
-                            }
-                            className="h-7 px-2 text-xs text-muted-foreground hover:text-amber-400 cursor-pointer"
-                            title="Issue compensating reversal"
-                          >
-                            <RotateCcw className="w-3.5 h-3.5" />
-                          </Button>
-                        )}
+                        {isCredit ? "+" : "−"}{formatMoney(entry.amount, fund?.currency ?? "IDR")}
                       </div>
                     </div>
                   </div>
@@ -344,14 +276,19 @@ export function LedgerTimeline({
         currency={fund?.currency}
         fundName={fund?.name}
         entriesList={entriesList}
-      />
-
-      {/* Cryptographic Proof Slide-over */}
-      <ProofSheet
-        isOpen={selectedEntryForProof !== null}
-        onClose={() => setSelectedEntryForProof(null)}
-        entry={selectedEntryForProof}
-        currency={fund?.currency}
+        canRevert={canSign && !fund?.isArchived}
+        onRevert={(entryToRevert) => {
+          setSelectedEntryForRevert({
+            _id: entryToRevert._id,
+            fundId: entryToRevert.fundId,
+            sequenceNumber: entryToRevert.sequenceNumber,
+            direction: entryToRevert.direction,
+            amount: entryToRevert.amount,
+            memo: entryToRevert.memo,
+            keyId: entryToRevert.keyId,
+            duesEventId: entryToRevert.duesEventId,
+          });
+        }}
       />
 
       {/* Compensating Reversal Modal */}

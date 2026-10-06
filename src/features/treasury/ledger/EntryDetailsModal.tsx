@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useLocation, Link } from "wouter";
+import { useTranslation } from "react-i18next";
 import { LedgerEntryItem } from "../types/ledger";
 import { parseRevertMemo, findTargetEntry, findReversalForEntry } from "../lib/revertUtils";
 import { Button } from "@boredkevin/ui";
 import { ResponsiveDialog } from "../../../ui";
+import { useFormat } from "../../../hooks/useFormat";
 import { ProofSheet } from "./ProofSheet";
 import {
   ShieldCheck,
@@ -21,6 +23,8 @@ export interface EntryDetailsModalProps {
   currency?: string;
   fundName?: string;
   entriesList?: LedgerEntryItem[];
+  canRevert?: boolean;
+  onRevert?: (entry: LedgerEntryItem) => void;
 }
 
 export function EntryDetailsModal({
@@ -30,7 +34,11 @@ export function EntryDetailsModal({
   currency = "IDR",
   fundName = "Fund",
   entriesList = [],
+  canRevert = false,
+  onRevert,
 }: EntryDetailsModalProps) {
+  const { t } = useTranslation();
+  const { money: formatMoney } = useFormat();
   const [, setLocation] = useLocation();
   const [isProofOpen, setIsProofOpen] = useState(false);
 
@@ -54,22 +62,22 @@ export function EntryDetailsModal({
       <ResponsiveDialog
         isOpen={isOpen}
         onClose={onClose}
-        title={`Entry #${entry.sequenceNumber}`}
-        description={`${fundName} • ${isCredit ? "Credit (Income)" : "Debit (Expense)"}`}
+        title={t("treasury.ledger.entryNumber", "Entri #{{seq}}", { seq: entry.sequenceNumber })}
+        description={`${fundName} • ${isCredit ? t("treasury.ledger.credit", "Kredit") : t("treasury.ledger.debit", "Debit")}`}
         maxWidth="md"
       >
         <div className="space-y-4 pt-1">
           {/* Financial Amount Banner */}
           <div className="p-4 bg-muted/20 border border-border/60 rounded-[var(--fintech-radius-md)] space-y-1 text-center">
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium block">
-              Amount
+              {t("treasury.ledger.amount", "Jumlah")}
             </span>
             <div
-              className={`text-2xl font-bold font-mono ${
+              className={`text-2xl sm:text-3xl font-bold font-sans tabular-nums tracking-tight ${
                 isCredit ? "text-emerald-400" : "text-foreground"
               }`}
             >
-              {isCredit ? "+" : "-"}{currency} {entry.amount.toLocaleString()}
+              {isCredit ? "+" : "−"}{formatMoney(entry.amount, currency)}
             </div>
           </div>
 
@@ -179,28 +187,47 @@ export function EntryDetailsModal({
           </div>
 
           {/* Footer */}
-          <div className="pt-3 border-t border-border/60 flex items-center justify-between">
-            <Button
-              asChild
-              variant="outline"
-              size="sm"
-              chamfer="none"
-              className="h-8 text-xs cursor-pointer"
-            >
-              <Link href={`/tx/${entry.entryHash}`}>
-                <span>Direct URL</span>
-              </Link>
-            </Button>
+          <div className="pt-3 border-t border-border/60 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                chamfer="none"
+                className="h-8 text-xs cursor-pointer"
+              >
+                <Link href={`/tx/${entry.entryHash}`}>
+                  <span>Direct URL</span>
+                </Link>
+              </Button>
+
+              {canRevert && onRevert && !compensatingEntry && !currentRevertInfo.isRevert && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  chamfer="none"
+                  onClick={() => {
+                    onClose();
+                    onRevert(entry);
+                  }}
+                  className="h-8 text-xs text-amber-400 hover:text-amber-300 border-amber-500/40 hover:bg-amber-500/10 cursor-pointer flex items-center gap-1.5"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>{t("treasury.ledger.reversal", "Batalkan")}</span>
+                </Button>
+              )}
+            </div>
 
             <Button
               type="button"
-              variant="cyber"
+              variant="default"
               size="sm"
               chamfer="none"
               onClick={onClose}
-              className="h-8 text-xs cursor-pointer"
+              className="h-8 text-xs cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90"
             >
-              Done
+              {t("common.done", "Selesai")}
             </Button>
           </div>
         </div>
