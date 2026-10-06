@@ -42,9 +42,20 @@ export function ConfirmDialog({
   return (
     <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm transition-opacity duration-200 animate-in fade-in-0" />
-        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 pointer-events-none">
-          <DialogPrimitive.Content className="pointer-events-auto relative w-full sm:max-w-md bg-card border-t sm:border border-border/80 rounded-t-[var(--fintech-radius-lg)] sm:rounded-[var(--fintech-radius-lg)] shadow-2xl p-5 flex flex-col focus:outline-none transition-all duration-200 animate-in slide-in-from-bottom-4 sm:zoom-in-95">
+        <DialogPrimitive.Overlay className="fixed inset-0 z-[60] bg-black/75 modal-backdrop-animate" />
+        <DialogPrimitive.Content
+          onClick={(e) => {
+            if (e.target === e.currentTarget) onClose();
+          }}
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 pointer-events-none focus:outline-none modal-backdrop-container"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="pointer-events-auto relative w-full sm:max-w-md bg-card border-t sm:border border-border/80 rounded-t-[var(--fintech-radius-lg)] sm:rounded-[var(--fintech-radius-lg)] shadow-2xl p-5 flex flex-col focus:outline-none modal-sheet-content"
+          >
+            {/* Mobile Sheet Pull Handle */}
+            <div className="w-10 h-1 rounded-full bg-muted-foreground/30 mx-auto mb-2 shrink-0 sm:hidden" />
+
             <DialogPrimitive.Close
               className="absolute right-4 top-4 p-1.5 rounded-[var(--fintech-radius-xs)] text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
               aria-label="Close dialog"
@@ -106,8 +117,8 @@ export function ConfirmDialog({
                 {isLoading ? "Processing..." : confirmText}
               </Button>
             </div>
-          </DialogPrimitive.Content>
-        </div>
+          </div>
+        </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
   );

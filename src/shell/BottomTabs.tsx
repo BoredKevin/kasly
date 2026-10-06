@@ -28,10 +28,9 @@ export function BottomTabs({ onOpenMore, isMoreOpen = false }: BottomTabsProps) 
     <nav
       className="md:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-border/80 pb-[env(safe-area-inset-bottom,0px)]"
       style={{
-        backgroundColor: "rgba(10, 10, 12, 0.88)",
+        backgroundColor: "hsl(var(--background) / 0.85)",
         backdropFilter: "blur(20px) saturate(180%)",
         WebkitBackdropFilter: "blur(20px) saturate(180%)",
-        boxShadow: "0 -4px 20px rgba(0, 0, 0, 0.5)",
       }}
       aria-label="Mobile Navigation"
     >

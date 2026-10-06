@@ -34,18 +34,20 @@ export function ProofSheet({
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/75 backdrop-blur-sm transition-opacity animate-in fade-in duration-200"
+        className="fixed inset-0 bg-black/75 modal-backdrop-animate"
         onClick={onClose}
         aria-hidden="true"
       />
 
       {/* Sheet Content */}
       <div
-        className="relative z-10 w-full max-w-lg bg-card border-t sm:border border-border/80 rounded-t-[var(--fintech-radius-lg)] sm:rounded-[var(--fintech-radius-lg)] shadow-2xl overflow-hidden max-h-[88vh] flex flex-col animate-in slide-in-from-bottom-6 duration-200"
+        className="relative z-10 w-full max-w-lg bg-card border-t sm:border border-border/80 rounded-t-[var(--fintech-radius-lg)] sm:rounded-[var(--fintech-radius-lg)] shadow-2xl overflow-hidden max-h-[88vh] flex flex-col modal-sheet-content"
         role="dialog"
         aria-modal="true"
         aria-labelledby="proof-sheet-title"
       >
+        {/* Mobile Sheet Pull Handle */}
+        <div className="w-10 h-1 rounded-full bg-muted-foreground/30 mx-auto mt-2.5 -mb-1 shrink-0 sm:hidden" />
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border/60 bg-muted/20 shrink-0">
           <div className="flex items-center gap-2.5">
