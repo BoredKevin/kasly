@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import {
-  Card,
   CardHeader,
   CardTitle,
   CardDescription,
@@ -12,6 +11,7 @@ import {
   Button,
   Badge,
 } from "@boredkevin/ui";
+import { Panel } from "../../../ui";
 import {
   KeyRound,
   Plus,
@@ -70,7 +70,7 @@ export function MyKeysPane({ organizationId, onOpenKeyGen }: MyKeysPaneProps) {
 
   return (
     <div className="space-y-6">
-      <Card telemetry="TREASURY.MY_KEYS" cornerLines className="bg-card border-border shadow-lg">
+      <Panel className="shadow-lg">
         <CardHeader className="pb-4 border-b border-border/80">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-2.5">
@@ -91,7 +91,7 @@ export function MyKeysPane({ organizationId, onOpenKeyGen }: MyKeysPaneProps) {
               type="button"
               variant="cyber"
               size="sm"
-              chamfer="dual"
+              chamfer="none"
               onClick={onOpenKeyGen}
               className="text-xs flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
             >
@@ -133,7 +133,7 @@ export function MyKeysPane({ organizationId, onOpenKeyGen }: MyKeysPaneProps) {
                 type="button"
                 variant="cyber"
                 size="sm"
-                chamfer="dual"
+                chamfer="none"
                 onClick={onOpenKeyGen}
                 className="text-xs inline-flex items-center gap-1.5 cursor-pointer mt-2"
               >
@@ -217,7 +217,7 @@ export function MyKeysPane({ organizationId, onOpenKeyGen }: MyKeysPaneProps) {
                           type="button"
                           variant="outline"
                           size="sm"
-                          chamfer="dual"
+                          chamfer="none"
                           disabled={isDeleting === k.keyId}
                           onClick={() => {
                             void handleDeleteLocalKey(k.keyId);
@@ -245,7 +245,7 @@ export function MyKeysPane({ organizationId, onOpenKeyGen }: MyKeysPaneProps) {
             </div>
           )}
         </CardContent>
-      </Card>
+      </Panel>
     </div>
   );
 }

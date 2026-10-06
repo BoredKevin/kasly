@@ -1,18 +1,11 @@
-import { useState, useMemo, useEffect } from "react";
-import { createPortal } from "react-dom";
+import { useState, useMemo } from "react";
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
   Button,
   Input,
   Badge,
 } from "@boredkevin/ui";
+import { ResponsiveDialog } from "../../ui";
 import {
-  Scale,
-  X,
   Search,
   ExternalLink,
   Copy,
@@ -150,16 +143,6 @@ function LicenseCard({ entry }: { entry: LicenseEntry }) {
 function LicensesModalInner({ onClose }: { onClose: () => void }) {
   const [searchQuery, setSearchQuery] = useState("");
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
-
   const filteredLicenses = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return ALL_LICENSES;
@@ -173,63 +156,33 @@ function LicensesModalInner({ onClose }: { onClose: () => void }) {
   }, [searchQuery]);
 
   return (
-    <Card telemetry="SYS.LEGAL.LICENSES" cornerLines className="bg-card border-border shadow-2xl max-h-[88vh] flex flex-col">
-      <CardHeader className="pb-3 border-b border-border shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="p-1.5 bg-primary/10 border border-primary/20 text-primary">
-              <Scale className="w-5 h-5" />
-            </div>
-            <div>
-              <CardTitle className="text-base font-semibold">
-                Open Source Licenses & Notices
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Third-party software and open source libraries powering Kasly
-              </CardDescription>
-            </div>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            chamfer="dual"
-            onClick={onClose}
-            className="h-7 w-7 p-0 cursor-pointer"
-            aria-label="Close licenses modal"
-          >
-            <X className="w-4 h-4" />
-          </Button>
-        </div>
+    <div className="space-y-4 pt-1">
+      {/* Search Bar */}
+      <div className="relative">
+        <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+        <Input
+          type="text"
+          placeholder="Search licenses by package, author, or license type..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          chamfer="dual"
+          className="pl-9 text-xs h-8"
+        />
+      </div>
 
-        {/* Search Bar */}
-        <div className="relative mt-3">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-          <Input
-            type="text"
-            placeholder="Search licenses by package, author, or license type..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            chamfer="dual"
-            className="pl-9 text-xs h-8"
-          />
-        </div>
-      </CardHeader>
-
-      <CardContent className="pt-4 overflow-y-auto space-y-3 flex-1 min-h-0">
+      <div className="max-h-[60vh] overflow-y-auto space-y-2.5 pr-1">
         {filteredLicenses.length === 0 ? (
           <div className="py-12 text-center text-xs text-muted-foreground font-mono">
             No licenses match "{searchQuery}".
           </div>
         ) : (
-          <div className="space-y-2.5">
-            {filteredLicenses.map((entry) => (
-              <LicenseCard key={entry.name} entry={entry} />
-            ))}
-          </div>
+          filteredLicenses.map((entry) => (
+            <LicenseCard key={entry.name} entry={entry} />
+          ))
         )}
-      </CardContent>
+      </div>
 
-      <div className="p-3 border-t border-border bg-muted/20 shrink-0 flex items-center justify-between text-[11px] font-mono text-muted-foreground">
+      <div className="pt-3 border-t border-border flex items-center justify-between text-[11px] font-mono text-muted-foreground">
         <span>{filteredLicenses.length} packages listed</span>
         <Button
           type="button"
@@ -242,26 +195,22 @@ function LicensesModalInner({ onClose }: { onClose: () => void }) {
           Close
         </Button>
       </div>
-    </Card>
+    </div>
   );
 }
 
 export function LicensesModal(props: LicensesModalProps) {
-  if (!props.isOpen || typeof document === "undefined") return null;
+  if (!props.isOpen) return null;
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-200"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          props.onClose();
-        }
-      }}
+  return (
+    <ResponsiveDialog
+      isOpen={props.isOpen}
+      onClose={props.onClose}
+      title="Open Source Licenses & Notices"
+      description="Third-party software and open source libraries powering Kasly"
+      maxWidth="xl"
     >
-      <div className="w-full max-w-2xl">
-        <LicensesModalInner onClose={props.onClose} />
-      </div>
-    </div>,
-    document.body
+      <LicensesModalInner onClose={props.onClose} />
+    </ResponsiveDialog>
   );
 }

@@ -52,7 +52,7 @@ export class TreasuryErrorBoundary extends Component<Props, State> {
       const isTampered = checkIntegrityError(this.state.error);
 
       return (
-        <Card telemetry="TREASURY.INTEGRITY_ALERT" cornerLines className="bg-destructive/10 border-destructive/50 shadow-2xl animate-in fade-in duration-200">
+        <Card cornerLines={false} className="bg-destructive/10 border-destructive/50 shadow-2xl rounded-[var(--fintech-radius-md)] animate-in fade-in duration-200">
           <CardHeader className="pb-4 border-b border-destructive/30">
             <div className="flex items-center gap-2.5 text-destructive-foreground">
               <div className="p-2 bg-destructive/20 border border-destructive/40 text-destructive-foreground">
@@ -99,7 +99,7 @@ export class TreasuryErrorBoundary extends Component<Props, State> {
                 type="button"
                 variant="outline"
                 size="sm"
-                chamfer="dual"
+                chamfer="none"
                 onClick={this.handleRetry}
                 className="text-xs flex items-center gap-1.5 cursor-pointer border-destructive/40 text-red-300 hover:bg-destructive/20"
               >

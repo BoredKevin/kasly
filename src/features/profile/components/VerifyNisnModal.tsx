@@ -1,20 +1,13 @@
-import { useState, useEffect } from "react";
-import { createPortal } from "react-dom";
+import { useState } from "react";
 import { useMutation } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
   Button,
   Input,
 } from "@boredkevin/ui";
+import { ResponsiveDialog } from "../../../ui";
 import {
-  Fingerprint,
-  X,
   ShieldCheck,
   Lock,
   Eye,
@@ -46,21 +39,7 @@ export function VerifyNisnModal({
 
   const verifyNisn = useMutation(api.nisn.verify);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setNisnInput("");
-        setResult(null);
-        setShowNisn(false);
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
-
-  if (!isOpen || typeof document === "undefined") return null;
+  if (!isOpen) return null;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, "").slice(0, 10);
@@ -101,49 +80,15 @@ export function VerifyNisnModal({
     onClose();
   };
 
-  const modalContent = (
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-200"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          handleClose();
-        }
-      }}
+  return (
+    <ResponsiveDialog
+      isOpen={isOpen}
+      onClose={handleClose}
+      title={t("profile.nisn.verifyTitle")}
+      description={t("profile.nisn.verifyDescription")}
+      maxWidth="md"
     >
-      <div className="w-full max-w-md my-auto">
-        <Card
-          telemetry="USER.NISN.VERIFY"
-          cornerLines
-          className="bg-card border-border shadow-2xl"
-        >
-          <CardHeader className="pb-3 border-b border-border">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="p-1.5 bg-primary/10 border border-primary/20 text-primary">
-                  <Fingerprint className="w-5 h-5" />
-                </div>
-                <div>
-                  <CardTitle className="text-base font-semibold">
-                    {t("profile.nisn.verifyTitle")}
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    {t("profile.nisn.verifyDescription")}
-                  </CardDescription>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                chamfer="dual"
-                onClick={handleClose}
-                className="h-7 w-7 p-0 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          </CardHeader>
-
-          <CardContent className="pt-4 space-y-4">
+      <div className="space-y-4 pt-1">
             {/* Status & Security info */}
             <div className="p-3 bg-muted/20 border border-border/60 text-xs flex items-start gap-2.5">
               <Lock className="w-4 h-4 text-primary shrink-0 mt-0.5" />
@@ -280,11 +225,7 @@ export function VerifyNisnModal({
                 </Button>
               </div>
             )}
-          </CardContent>
-        </Card>
       </div>
-    </div>
+    </ResponsiveDialog>
   );
-
-  return createPortal(modalContent, document.body);
 }

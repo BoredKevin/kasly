@@ -1,20 +1,15 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
-import { Id } from "../../../../convex/_generated/dataModel";
+import { Id, Doc } from "../../../../convex/_generated/dataModel";
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
   Button,
   Input,
   Badge,
 } from "@boredkevin/ui";
+import { ResponsiveDialog } from "../../../ui/ResponsiveDialog";
 import {
-  X,
   Users,
   UserPlus,
   Upload,
@@ -61,7 +56,7 @@ export function PreRegistrationAdminModal({
   const orgName = org?.name || "Cravion Class";
 
   const funds = useQuery(api.treasury.funds.list, isOpen ? { organizationId } : "skip");
-  const activeFunds = funds?.filter((f) => !f.isArchived) ?? [];
+  const activeFunds = useMemo<Doc<"funds">[]>(() => funds?.filter((f: Doc<"funds">) => !f.isArchived) ?? [], [funds]);
   const [selectedFundId, setSelectedFundId] = useState<Id<"funds"> | null>(null);
 
   useEffect(() => {
@@ -76,13 +71,6 @@ export function PreRegistrationAdminModal({
       ? { organizationId, fundId: selectedFundId }
       : "skip",
   );
-
-  useEffect(() => {
-    if (duesEvents && duesEvents.length > 0) {
-      setSingleDuesCount((prev) => (prev === 0 ? duesEvents.length : prev));
-      setBatchDuesCount((prev) => (prev === 0 ? duesEvents.length : prev));
-    }
-  }, [duesEvents]);
 
   // Single form state
   const [singleName, setSingleName] = useState("");
@@ -99,6 +87,13 @@ export function PreRegistrationAdminModal({
 
   // CSV import state
   const [batchDuesCount, setBatchDuesCount] = useState<number>(0);
+
+  useEffect(() => {
+    if (duesEvents && duesEvents.length > 0) {
+      setSingleDuesCount((prev) => (prev === 0 ? duesEvents.length : prev));
+      setBatchDuesCount((prev) => (prev === 0 ? duesEvents.length : prev));
+    }
+  }, [duesEvents]);
   const [parsedStudents, setParsedStudents] = useState<
     Array<{
       name: string;
@@ -532,38 +527,19 @@ export function PreRegistrationAdminModal({
     }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <Card
-        telemetry="TREASURY.PRE_REG_MODAL"
-        cornerLines
-        className="w-full max-w-3xl bg-card border-border shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
-      >
-        <CardHeader className="pb-4 border-b border-border/80 flex flex-row items-center justify-between shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-primary/10 border border-primary/20 text-primary">
-              <Users className="w-5 h-5" />
-            </div>
-            <div>
-              <CardTitle className="text-base font-semibold">
-                {t("treasury.preReg.title")}
-              </CardTitle>
-              <CardDescription className="text-xs">
-                {t("treasury.preReg.description")}
-              </CardDescription>
-            </div>
-          </div>
-
-          <button
-            onClick={onClose}
-            className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </CardHeader>
-
+    <ResponsiveDialog
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t("treasury.preReg.title", "Student Pre-Registration")}
+      description={t("treasury.preReg.description", "Manage pre-registered roster, import data, and share registration links.")}
+      maxWidth="2xl"
+    >
+      <div className="space-y-4 pt-1">
         {/* Global Controls & Toggles Header Banner */}
-        <div className="bg-muted/30 border-b border-border/60 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+        <div className="bg-muted/30 border border-border/60 p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0 rounded-[var(--fintech-radius-sm)]">
           <div className="space-y-1 max-w-sm">
             <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
               {t("treasury.preReg.enableRegLinks")}
@@ -590,7 +566,7 @@ export function PreRegistrationAdminModal({
               type="button"
               variant={isRegLinksEnabled ? "cyber" : "outline"}
               size="sm"
-              chamfer="dual"
+              chamfer="none"
               onClick={handleToggleRegistrationLinksSetting}
               className="text-xs cursor-pointer gap-1.5 h-7"
             >
@@ -611,7 +587,7 @@ export function PreRegistrationAdminModal({
               type="button"
               variant={isPreRegRequired ? "cyber" : "outline"}
               size="sm"
-              chamfer="dual"
+              chamfer="none"
               onClick={handleToggleGlobalSetting}
               className="text-xs cursor-pointer gap-1.5 h-7"
             >
@@ -687,8 +663,8 @@ export function PreRegistrationAdminModal({
           </button>
         </div>
 
-        {/* Modal Scrollable Body */}
-        <CardContent className="p-6 overflow-y-auto space-y-4 flex-1">
+        {/* Modal Body */}
+        <div className="space-y-4 pt-2">
           {statusMessage && (
             <div className="p-3 bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs font-mono flex items-center gap-2">
               <CheckCircle className="w-4 h-4 shrink-0" />
@@ -728,7 +704,7 @@ export function PreRegistrationAdminModal({
                       type="button"
                       variant="cyber"
                       size="sm"
-                      chamfer="dual"
+                      chamfer="none"
                       onClick={() => handleCopyRegistrationLink(lastAddedStudent.token, "single_post")}
                       className="text-xs h-7 cursor-pointer flex items-center gap-1"
                     >
@@ -749,7 +725,7 @@ export function PreRegistrationAdminModal({
                       type="button"
                       variant="outline"
                       size="sm"
-                      chamfer="dual"
+                      chamfer="none"
                       onClick={() =>
                         handleCopyWhatsAppMessage(
                           lastAddedStudent.name,
@@ -776,7 +752,7 @@ export function PreRegistrationAdminModal({
                       type="button"
                       variant="outline"
                       size="sm"
-                      chamfer="dual"
+                      chamfer="none"
                       onClick={() =>
                         handleOpenWhatsAppShare(
                           lastAddedStudent.name,
@@ -803,7 +779,7 @@ export function PreRegistrationAdminModal({
                     value={singleName}
                     onChange={(e) => setSingleName(e.target.value)}
                     placeholder="e.g. Kevin Sanjaya"
-                    chamfer="dual"
+                    chamfer="none"
                     required
                   />
                 </div>
@@ -819,7 +795,7 @@ export function PreRegistrationAdminModal({
                       onChange={(e) => setSingleNisn(e.target.value)}
                       placeholder="10 numeric digits"
                       maxLength={10}
-                      chamfer="dual"
+                      chamfer="none"
                       required
                     />
                   </div>
@@ -834,7 +810,7 @@ export function PreRegistrationAdminModal({
                       onChange={(e) => setSingleBirthYear(e.target.value)}
                       placeholder="e.g. 2008"
                       maxLength={4}
-                      chamfer="dual"
+                      chamfer="none"
                       required
                     />
                   </div>
@@ -849,7 +825,7 @@ export function PreRegistrationAdminModal({
                     value={singlePhone}
                     onChange={(e) => setSinglePhone(e.target.value)}
                     placeholder="e.g. 08123456789"
-                    chamfer="dual"
+                    chamfer="none"
                     required
                   />
                 </div>
@@ -934,7 +910,7 @@ export function PreRegistrationAdminModal({
                 <Button
                   type="submit"
                   variant="cyber"
-                  chamfer="dual"
+                  chamfer="none"
                   disabled={isSubmittingSingle}
                   className="w-full mt-3 cursor-pointer"
                 >
@@ -969,7 +945,7 @@ export function PreRegistrationAdminModal({
                       type="button"
                       variant="cyber"
                       size="sm"
-                      chamfer="dual"
+                      chamfer="none"
                       onClick={handleDownloadImportedBatchCsv}
                       className="text-xs cursor-pointer flex items-center gap-1.5 shrink-0"
                     >
@@ -996,7 +972,7 @@ export function PreRegistrationAdminModal({
                             type="button"
                             variant="outline"
                             size="sm"
-                            chamfer="dual"
+                            chamfer="none"
                             onClick={() => handleCopyRegistrationLink(s.token, `batch_${idx}`)}
                             className="h-6 text-[10px] px-2 cursor-pointer flex items-center gap-1"
                           >
@@ -1012,7 +988,7 @@ export function PreRegistrationAdminModal({
                             type="button"
                             variant="outline"
                             size="sm"
-                            chamfer="dual"
+                            chamfer="none"
                             onClick={() => handleOpenWhatsAppShare(s.name, s.token, s.phone)}
                             className="h-6 text-[10px] px-2 text-emerald-400 hover:bg-emerald-500/10 cursor-pointer flex items-center gap-1"
                           >
@@ -1104,7 +1080,7 @@ export function PreRegistrationAdminModal({
                   type="button"
                   variant="outline"
                   size="sm"
-                  chamfer="dual"
+                  chamfer="none"
                   onClick={() => fileInputRef.current?.click()}
                   className="text-xs cursor-pointer"
                 >
@@ -1127,7 +1103,7 @@ export function PreRegistrationAdminModal({
                       type="button"
                       variant="cyber"
                       size="sm"
-                      chamfer="dual"
+                      chamfer="none"
                       disabled={isImportingCsv || parsedStudents.filter((s) => s.isValid).length === 0}
                       onClick={handleImportParsedCsv}
                       className="text-xs cursor-pointer"
@@ -1203,7 +1179,7 @@ export function PreRegistrationAdminModal({
                     type="button"
                     variant="outline"
                     size="sm"
-                    chamfer="dual"
+                    chamfer="none"
                     onClick={handleExportUnclaimedRosterCsv}
                     className="text-xs cursor-pointer flex items-center gap-1.5 h-7"
                   >
@@ -1254,7 +1230,7 @@ export function PreRegistrationAdminModal({
                                   type="button"
                                   variant="outline"
                                   size="sm"
-                                  chamfer="dual"
+                                  chamfer="none"
                                   onClick={() =>
                                     handleCopyRegistrationLink(
                                       member.registrationToken!,
@@ -1280,7 +1256,7 @@ export function PreRegistrationAdminModal({
                                   type="button"
                                   variant="outline"
                                   size="sm"
-                                  chamfer="dual"
+                                  chamfer="none"
                                   onClick={() =>
                                     handleCopyWhatsAppMessage(
                                       member.name,
@@ -1302,7 +1278,7 @@ export function PreRegistrationAdminModal({
                                   type="button"
                                   variant="outline"
                                   size="sm"
-                                  chamfer="dual"
+                                  chamfer="none"
                                   onClick={() =>
                                     handleOpenWhatsAppShare(
                                       member.name,
@@ -1351,7 +1327,7 @@ export function PreRegistrationAdminModal({
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                chamfer="dual"
+                                chamfer="none"
                                 onClick={() =>
                                   setAdjustingUser({
                                     userId: member.userId,
@@ -1395,7 +1371,7 @@ export function PreRegistrationAdminModal({
                     type="button"
                     variant={activeTemplatePreset === "standard" ? "cyber" : "outline"}
                     size="sm"
-                    chamfer="dual"
+                    chamfer="none"
                     onClick={() => setActiveTemplatePreset("standard")}
                     className="text-xs h-7 cursor-pointer"
                   >
@@ -1405,7 +1381,7 @@ export function PreRegistrationAdminModal({
                     type="button"
                     variant={activeTemplatePreset === "short" ? "cyber" : "outline"}
                     size="sm"
-                    chamfer="dual"
+                    chamfer="none"
                     onClick={() => setActiveTemplatePreset("short")}
                     className="text-xs h-7 cursor-pointer"
                   >
@@ -1415,7 +1391,7 @@ export function PreRegistrationAdminModal({
                     type="button"
                     variant={activeTemplatePreset === "english" ? "cyber" : "outline"}
                     size="sm"
-                    chamfer="dual"
+                    chamfer="none"
                     onClick={() => setActiveTemplatePreset("english")}
                     className="text-xs h-7 cursor-pointer"
                   >
@@ -1425,7 +1401,7 @@ export function PreRegistrationAdminModal({
                     type="button"
                     variant={activeTemplatePreset === "custom" ? "cyber" : "outline"}
                     size="sm"
-                    chamfer="dual"
+                    chamfer="none"
                     onClick={() => setActiveTemplatePreset("custom")}
                     className="text-xs h-7 cursor-pointer"
                   >
@@ -1470,21 +1446,21 @@ export function PreRegistrationAdminModal({
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* ADJUST DUES SUB-MODAL */}
-      {adjustingUser && (
-        <AdjustDuesSubModal
-          organizationId={organizationId}
-          userId={adjustingUser.userId}
-          studentName={adjustingUser.name}
-          onClose={() => setAdjustingUser(null)}
-        />
-      )}
-    </div>
-  );
-}
+        {adjustingUser && (
+          <AdjustDuesSubModal
+            organizationId={organizationId}
+            userId={adjustingUser.userId}
+            studentName={adjustingUser.name}
+            onClose={() => setAdjustingUser(null)}
+          />
+        )}
+      </ResponsiveDialog>
+    );
+  }
 
 interface AdjustDuesSubModalProps {
   organizationId: Id<"organizations">;
@@ -1546,37 +1522,14 @@ function AdjustDuesSubModal({
   };
 
   return (
-    <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-150">
-      <Card
-        telemetry="TREASURY.ADJUST_DUES_MODAL"
-        cornerLines
-        className="w-full max-w-xl bg-card border-border shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
-      >
-        <CardHeader className="pb-3 border-b border-border/80 flex flex-row items-center justify-between shrink-0">
-          <div className="flex items-center gap-2">
-            <Coins className="w-5 h-5 text-primary" />
-            <div>
-              <CardTitle className="text-sm font-semibold">
-                {t("treasury.preReg.adjustDuesTitle", { name: studentName })}
-              </CardTitle>
-              <CardDescription className="text-xs font-mono">
-                {t("treasury.preReg.totalOwed")}:{" "}
-                <strong className="text-amber-400 font-bold">
-                  Rp {duesData?.totalUnpaidAmount.toLocaleString() ?? 0}
-                </strong>
-              </CardDescription>
-            </div>
-          </div>
-
-          <button
-            onClick={onClose}
-            className="p-1 text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </CardHeader>
-
-        <CardContent className="p-5 overflow-y-auto space-y-4 flex-1">
+    <ResponsiveDialog
+      isOpen={true}
+      onClose={onClose}
+      title={t("treasury.preReg.adjustDuesTitle", { name: studentName })}
+      description={`${t("treasury.preReg.totalOwed")}: Rp ${duesData?.totalUnpaidAmount.toLocaleString() ?? 0}`}
+      maxWidth="lg"
+    >
+      <div className="space-y-4 pt-1">
           {success && (
             <div className="p-2.5 bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-xs font-mono flex items-center gap-1.5">
               <CheckCircle className="w-3.5 h-3.5 shrink-0" />
@@ -1632,7 +1585,7 @@ function AdjustDuesSubModal({
                         type="button"
                         variant={cycle.hasPaid ? "cyber" : "outline"}
                         size="sm"
-                        chamfer="dual"
+                        chamfer="none"
                         onClick={() => handleTogglePaid(cycle.membershipId)}
                         className="h-6 text-[10px] px-2 cursor-pointer flex items-center gap-1"
                       >
@@ -1696,7 +1649,7 @@ function AdjustDuesSubModal({
                       type="button"
                       variant="cyber"
                       size="sm"
-                      chamfer="dual"
+                      chamfer="none"
                       onClick={() => handleAssign(ev.duesEventId)}
                       className="h-6 text-[10px] px-2 cursor-pointer flex items-center gap-1"
                     >
@@ -1708,8 +1661,7 @@ function AdjustDuesSubModal({
               </div>
             )}
           </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+        </div>
+      </ResponsiveDialog>
+    );
+  }

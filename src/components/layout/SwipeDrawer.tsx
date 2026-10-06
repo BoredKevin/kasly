@@ -229,7 +229,7 @@ export function SwipeDrawer({
         onTransitionEnd={handleTransitionEnd}
         style={{
           transform,
-          backgroundColor: "rgba(10, 10, 10, 0.75)",
+          backgroundColor: "hsl(var(--card) / 0.92)",
           backdropFilter: "blur(24px)",
           WebkitBackdropFilter: "blur(24px)",
           transition: isActivelyDragging
@@ -240,7 +240,7 @@ export function SwipeDrawer({
           side === "left" ? "left-0" : "right-0"
         } ${widthClass} z-[70] flex flex-col ${
           side === "left" ? "border-r" : "border-l"
-        } border-border/80 shadow-2xl shadow-black select-none touch-pan-y will-change-transform`}
+        } border-border/80 shadow-2xl select-none touch-pan-y will-change-transform`}
       >
         {/* Drawer Top Drag Handle Bar */}
         <div className="py-2.5 flex items-center justify-center shrink-0">

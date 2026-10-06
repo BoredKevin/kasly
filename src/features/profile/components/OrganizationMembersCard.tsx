@@ -305,7 +305,7 @@ export function OrganizationMembersCard({
                               className="px-2 py-0.5 text-[10px] font-medium border font-mono rounded-none"
                               style={{
                                 borderColor: role.color ? `${role.color}50` : "var(--border)",
-                                backgroundColor: role.color ? `${role.color}15` : "rgba(255,255,255,0.05)",
+                                backgroundColor: role.color ? `${role.color}15` : "hsl(var(--muted) / 0.5)",
                                 color: role.color || "inherit",
                               }}
                             >

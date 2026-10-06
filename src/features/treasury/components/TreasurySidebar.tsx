@@ -15,7 +15,8 @@ import {
   Receipt,
   Users,
 } from "lucide-react";
-import { Button, Badge } from "@boredkevin/ui";
+import { Button } from "@boredkevin/ui";
+import { StatusPill } from "../../../ui";
 
 export type TreasuryTab = "overview" | "ledger" | "dues" | "invoices" | "keys" | "admin" | "bulk-dues";
 
@@ -98,181 +99,140 @@ export function TreasurySidebar({
     onAfterSelect?.();
   };
 
+  const navItems = [
+    {
+      tab: "overview" as const,
+      label: t("nav.overview"),
+      href: "/treasury",
+      icon: Landmark,
+    },
+    {
+      tab: "ledger" as const,
+      label: t("nav.ledger"),
+      href: "/treasury/ledger",
+      icon: ScrollText,
+    },
+    {
+      tab: "dues" as const,
+      label: t("nav.duesAndPayments"),
+      href: "/treasury/dues",
+      icon: CalendarDays,
+      badge:
+        duesSummary && duesSummary.totalUnpaidMemberships > 0
+          ? `${duesSummary.totalUnpaidMemberships} due`
+          : undefined,
+      badgeTone: "warning" as const,
+    },
+    {
+      tab: "invoices" as const,
+      label: t("nav.invoices"),
+      href: "/treasury/invoices",
+      icon: Receipt,
+    },
+  ];
+
   return (
     <div className={`space-y-6 ${className}`}>
-      {/* Treasury Category */}
-      <div className="space-y-2">
-        <div className="text-[11px] font-mono tracking-wider text-muted-foreground uppercase px-1">
-          {t("treasury.sidebar.treasuryCategory")}
+      {/* Primary Treasury Links */}
+      <div className="space-y-1.5">
+        <div className="text-[11px] font-mono tracking-wider text-muted-foreground uppercase px-2 font-medium">
+          {t("treasury.sidebar.treasuryCategory") || "Treasury"}
         </div>
 
-        <div className="space-y-2">
-          {/* Overview Link */}
-          <Link
-            href="/treasury"
-            onClick={() => handleTabClick("overview")}
-            style={{
-              backgroundColor:
-                currentActiveTab === "overview"
-                  ? "rgba(255, 255, 255, 0.08)"
-                  : "rgba(255, 255, 255, 0.03)",
-            }}
-            className={`w-full p-3 flex items-center justify-between border transition-all text-left cursor-pointer ${currentActiveTab === "overview"
-              ? "border-primary/60 text-foreground font-semibold shadow-md"
-              : "border-border/70 text-muted-foreground hover:text-foreground hover:border-border hover:bg-white/5"
-              }`}
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className={`p-2 border ${currentActiveTab === "overview"
-                  ? "bg-primary/20 border-primary/40 text-primary"
-                  : "bg-muted/40 border-border/60 text-muted-foreground"
-                  }`}
+        <div className="space-y-1">
+          {navItems.map(({ tab, label, href, icon: Icon, badge, badgeTone }) => {
+            const isActive = currentActiveTab === tab;
+            return (
+              <Link
+                key={tab}
+                href={href}
+                onClick={() => handleTabClick(tab)}
+                className={`w-full p-2.5 flex items-center justify-between rounded-[var(--fintech-radius-md)] border transition-all text-left cursor-pointer ${
+                  isActive
+                    ? "bg-primary/10 border-primary/40 text-primary font-semibold shadow-xs"
+                    : "bg-muted/15 border-border/50 text-muted-foreground hover:text-foreground hover:border-border hover:bg-muted/30"
+                }`}
               >
-                <Landmark className="w-4 h-4" />
-              </div>
-              <span className="text-xs font-medium">{t("nav.overview")}</span>
-            </div>
-          </Link>
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className={`p-1.5 rounded-[var(--fintech-radius-sm)] border ${
+                      isActive
+                        ? "bg-primary/20 border-primary/40 text-primary"
+                        : "bg-muted/40 border-border/60 text-muted-foreground"
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs">{label}</span>
+                </div>
 
-          {/* Ledger Link */}
-          <Link
-            href="/treasury/ledger"
-            onClick={() => handleTabClick("ledger")}
-            style={{
-              backgroundColor:
-                currentActiveTab === "ledger"
-                  ? "rgba(255, 255, 255, 0.08)"
-                  : "rgba(255, 255, 255, 0.03)",
-            }}
-            className={`w-full p-3 flex items-center justify-between border transition-all text-left cursor-pointer ${currentActiveTab === "ledger"
-              ? "border-primary/60 text-foreground font-semibold shadow-md"
-              : "border-border/70 text-muted-foreground hover:text-foreground hover:border-border hover:bg-white/5"
-              }`}
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className={`p-2 border ${currentActiveTab === "ledger"
-                  ? "bg-primary/20 border-primary/40 text-primary"
-                  : "bg-muted/40 border-border/60 text-muted-foreground"
-                  }`}
-              >
-                <ScrollText className="w-4 h-4" />
-              </div>
-              <span className="text-xs font-medium">{t("nav.ledger")}</span>
-            </div>
-          </Link>
-
-          {/* Dues & Payments Link */}
-          <Link
-            href="/treasury/dues"
-            onClick={() => handleTabClick("dues")}
-            style={{
-              backgroundColor:
-                currentActiveTab === "dues"
-                  ? "rgba(255, 255, 255, 0.08)"
-                  : "rgba(255, 255, 255, 0.03)",
-            }}
-            className={`w-full p-3 flex items-center justify-between border transition-all text-left cursor-pointer ${currentActiveTab === "dues"
-              ? "border-primary/60 text-foreground font-semibold shadow-md"
-              : "border-border/70 text-muted-foreground hover:text-foreground hover:border-border hover:bg-white/5"
-              }`}
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className={`p-2 border ${currentActiveTab === "dues"
-                  ? "bg-primary/20 border-primary/40 text-primary"
-                  : "bg-muted/40 border-border/60 text-muted-foreground"
-                  }`}
-              >
-                <CalendarDays className="w-4 h-4" />
-              </div>
-              <span className="text-xs font-medium">{t("nav.duesAndPayments")}</span>
-            </div>
-
-            {duesSummary && duesSummary.totalUnpaidMemberships > 0 && (
-              <span className="font-mono text-[10px] text-amber-400 px-1.5 py-0.5 bg-amber-500/15 border border-amber-500/30 font-bold animate-pulse">
-                {duesSummary.totalUnpaidMemberships} {t("treasury.sidebar.dueBadge")}
-              </span>
-            )}
-          </Link>
-
-          {/* Invoices & Receipts Link */}
-          <Link
-            href="/treasury/invoices"
-            onClick={() => handleTabClick("invoices")}
-            style={{
-              backgroundColor:
-                currentActiveTab === "invoices"
-                  ? "rgba(255, 255, 255, 0.08)"
-                  : "rgba(255, 255, 255, 0.03)",
-            }}
-            className={`w-full p-3 flex items-center justify-between border transition-all text-left cursor-pointer ${currentActiveTab === "invoices"
-              ? "border-primary/60 text-foreground font-semibold shadow-md"
-              : "border-border/70 text-muted-foreground hover:text-foreground hover:border-border hover:bg-white/5"
-              }`}
-          >
-            <div className="flex items-center gap-3">
-              <div
-                className={`p-2 border ${currentActiveTab === "invoices"
-                  ? "bg-primary/20 border-primary/40 text-primary"
-                  : "bg-muted/40 border-border/60 text-muted-foreground"
-                  }`}
-              >
-                <Receipt className="w-4 h-4" />
-              </div>
-              <span className="text-xs font-medium">{t("nav.invoices")}</span>
-            </div>
-          </Link>
+                {badge && (
+                  <StatusPill tone={badgeTone ?? "warning"} className="text-[10px] py-0 px-1.5">
+                    {badge}
+                  </StatusPill>
+                )}
+              </Link>
+            );
+          })}
         </div>
       </div>
 
-
-      {/* Treasurer Category */}
+      {/* Treasurer Management Section */}
       {canSign && (
-        <div className="pt-4 border-t border-border/60 space-y-2">
-          <div className="text-[11px] font-mono tracking-wider text-muted-foreground uppercase px-1">
-            {t("treasury.sidebar.treasurerCategory")}
+        <div className="pt-4 border-t border-border/60 space-y-1.5">
+          <div className="text-[11px] font-mono tracking-wider text-muted-foreground uppercase px-2 font-medium">
+            {t("treasury.sidebar.treasurerCategory") || "Management"}
           </div>
 
-          <div className="space-y-2">
-            {/* Record Payment Action Button */}
+          <div className="space-y-1">
+            {/* Record Payment Action */}
             <button
               type="button"
               onClick={() => {
                 onOpenRecordPayment();
                 onAfterSelect?.();
               }}
-              style={{ backgroundColor: "rgba(255, 255, 255, 0.03)" }}
-              className="w-full p-3 flex items-center justify-between border border-border/70 text-muted-foreground hover:text-foreground hover:border-primary/60 hover:bg-white/5 transition-all text-left cursor-pointer group"
+              className="w-full p-2.5 flex items-center justify-between rounded-[var(--fintech-radius-md)] border border-border/50 bg-muted/15 text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-muted/30 transition-all text-left cursor-pointer group"
             >
-              <div className="flex items-center gap-3">
-                <div className="p-2 border bg-muted/40 border-border/60 text-muted-foreground group-hover:text-primary group-hover:bg-primary/20 group-hover:border-primary/40 transition-colors">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-[var(--fintech-radius-sm)] border bg-muted/40 border-border/60 text-muted-foreground group-hover:text-primary group-hover:bg-primary/20 group-hover:border-primary/40 transition-colors">
                   <PenLine className="w-4 h-4" />
                 </div>
                 <span className="text-xs font-medium">{t("nav.recordPayment")}</span>
               </div>
             </button>
 
-            {/* Bulk Dues Entry Link */}
+            {canAdmin && onOpenDueEvent && (
+              <button
+                type="button"
+                onClick={() => {
+                  onOpenDueEvent();
+                  onAfterSelect?.();
+                }}
+                className="w-full p-2.5 flex items-center justify-between rounded-[var(--fintech-radius-md)] border border-border/50 bg-muted/15 text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-muted/30 transition-all text-left cursor-pointer group"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="p-1.5 rounded-[var(--fintech-radius-sm)] border bg-muted/40 border-border/60 text-muted-foreground group-hover:text-primary group-hover:bg-primary/20 group-hover:border-primary/40 transition-colors">
+                    <CalendarDays className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs font-medium">Create Due Period</span>
+                </div>
+              </button>
+            )}
+
+            {/* Bulk Dues */}
             <Link
               href="/treasury/bulk-dues"
               onClick={() => handleTabClick("bulk-dues")}
-              style={{
-                backgroundColor:
-                  currentActiveTab === "bulk-dues"
-                    ? "rgba(255, 255, 255, 0.08)"
-                    : "rgba(255, 255, 255, 0.03)",
-              }}
-              className={`w-full p-3 flex items-center justify-between border transition-all text-left cursor-pointer ${
+              className={`w-full p-2.5 flex items-center justify-between rounded-[var(--fintech-radius-md)] border transition-all text-left cursor-pointer ${
                 currentActiveTab === "bulk-dues"
-                  ? "border-primary/60 text-foreground font-semibold shadow-md"
-                  : "border-border/70 text-muted-foreground hover:text-foreground hover:border-border hover:bg-white/5"
+                  ? "bg-primary/10 border-primary/40 text-primary font-semibold shadow-xs"
+                  : "bg-muted/15 border-border/50 text-muted-foreground hover:text-foreground hover:border-border hover:bg-muted/30"
               }`}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5">
                 <div
-                  className={`p-2 border ${
+                  className={`p-1.5 rounded-[var(--fintech-radius-sm)] border ${
                     currentActiveTab === "bulk-dues"
                       ? "bg-primary/20 border-primary/40 text-primary"
                       : "bg-muted/40 border-border/60 text-muted-foreground"
@@ -280,124 +240,84 @@ export function TreasurySidebar({
                 >
                   <Users className="w-4 h-4" />
                 </div>
-                <span className="text-xs font-medium">Bulk Dues Entry</span>
+                <span className="text-xs">Bulk Dues</span>
               </div>
             </Link>
 
-            {/* My Keys Link */}
+            {/* My Keys */}
             <Link
               href="/treasury/keys"
               onClick={() => handleTabClick("keys")}
-              style={{
-                backgroundColor:
-                  currentActiveTab === "keys"
-                    ? "rgba(255, 255, 255, 0.08)"
-                    : "rgba(255, 255, 255, 0.03)",
-              }}
-              className={`w-full p-3 flex items-center justify-between border transition-all text-left cursor-pointer ${currentActiveTab === "keys"
-                ? "border-primary/60 text-foreground font-semibold shadow-md"
-                : "border-border/70 text-muted-foreground hover:text-foreground hover:border-border hover:bg-white/5"
-                }`}
+              className={`w-full p-2.5 flex items-center justify-between rounded-[var(--fintech-radius-md)] border transition-all text-left cursor-pointer ${
+                currentActiveTab === "keys"
+                  ? "bg-primary/10 border-primary/40 text-primary font-semibold shadow-xs"
+                  : "bg-muted/15 border-border/50 text-muted-foreground hover:text-foreground hover:border-border hover:bg-muted/30"
+              }`}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5">
                 <div
-                  className={`p-2 border ${currentActiveTab === "keys"
-                    ? "bg-primary/20 border-primary/40 text-primary"
-                    : "bg-muted/40 border-border/60 text-muted-foreground"
-                    }`}
+                  className={`p-1.5 rounded-[var(--fintech-radius-sm)] border ${
+                    currentActiveTab === "keys"
+                      ? "bg-primary/20 border-primary/40 text-primary"
+                      : "bg-muted/40 border-border/60 text-muted-foreground"
+                  }`}
                 >
                   <KeyRound className="w-4 h-4" />
                 </div>
-                <span className="text-xs font-medium">{t("nav.myKeys")}</span>
+                <span className="text-xs">{t("nav.myKeys")}</span>
               </div>
             </Link>
 
-            {/* Weekly Due Stub Action */}
-            <button
-              type="button"
-              onClick={() => {
-                onOpenDueEvent();
-                onAfterSelect?.();
-              }}
-              style={{ backgroundColor: "rgba(255, 255, 255, 0.03)" }}
-              className="w-full p-3 flex items-center justify-between border border-border/70 text-muted-foreground hover:text-foreground hover:border-primary/60 hover:bg-white/5 transition-all text-left cursor-pointer group"
-            >
-              <div className="flex items-center gap-3">
-                <div className="p-2 border bg-muted/40 border-border/60 text-muted-foreground group-hover:text-primary group-hover:bg-primary/20 group-hover:border-primary/40 transition-colors">
-                  <CalendarDays className="w-4 h-4" />
-                </div>
-                <span className="text-xs font-medium">{t("nav.dueAdjustment")}</span>
-              </div>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Admin Category */}
-      {canAdmin && (
-        <div className="pt-4 border-t border-border/60 space-y-2">
-          <div className="text-[11px] font-mono tracking-wider text-muted-foreground uppercase px-1">
-            {t("treasury.sidebar.adminCategory")}
-          </div>
-
-          <div className="space-y-2">
-            {/* Admin Panel Link */}
-            <Link
-              href="/treasury/admin"
-              onClick={() => handleTabClick("admin")}
-              style={{
-                backgroundColor:
+            {/* Admin Panel */}
+            {canAdmin && (
+              <Link
+                href="/treasury/admin"
+                onClick={() => handleTabClick("admin")}
+                className={`w-full p-2.5 flex items-center justify-between rounded-[var(--fintech-radius-md)] border transition-all text-left cursor-pointer ${
                   currentActiveTab === "admin"
-                    ? "rgba(255, 255, 255, 0.08)"
-                    : "rgba(255, 255, 255, 0.03)",
-              }}
-              className={`w-full p-3 flex items-center justify-between border transition-all text-left cursor-pointer ${currentActiveTab === "admin"
-                ? "border-primary/60 text-foreground font-semibold shadow-md"
-                : "border-border/70 text-muted-foreground hover:text-foreground hover:border-border hover:bg-white/5"
+                    ? "bg-primary/10 border-primary/40 text-primary font-semibold shadow-xs"
+                    : "bg-muted/15 border-border/50 text-muted-foreground hover:text-foreground hover:border-border hover:bg-muted/30"
                 }`}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className={`p-2 border ${currentActiveTab === "admin"
-                    ? "bg-primary/20 border-primary/40 text-primary"
-                    : "bg-muted/40 border-border/60 text-muted-foreground"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div
+                    className={`p-1.5 rounded-[var(--fintech-radius-sm)] border ${
+                      currentActiveTab === "admin"
+                        ? "bg-primary/20 border-primary/40 text-primary"
+                        : "bg-muted/40 border-border/60 text-muted-foreground"
                     }`}
-                >
-                  <ShieldCheck className="w-4 h-4" />
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs">{t("nav.adminPanel")}</span>
                 </div>
-                <span className="text-xs font-medium">{t("nav.adminPanel")}</span>
-              </div>
-              {pendingKeys && pendingKeys.length > 0 && (
-                <span className="font-mono text-[10px] text-amber-400 px-1.5 py-0.5 bg-amber-500/15 border border-amber-500/30 font-bold animate-pulse">
-                  {pendingKeys.length}
-                </span>
-              )}
-            </Link>
+
+                {pendingKeys && pendingKeys.length > 0 && (
+                  <StatusPill tone="warning" className="text-[10px] py-0 px-1.5">
+                    {pendingKeys.length} pending
+                  </StatusPill>
+                )}
+              </Link>
+            )}
           </div>
         </div>
       )}
 
-      {/* Fund Switcher Section at bottom */}
+      {/* Fund Switcher Section */}
       <div className="pt-4 border-t border-border/60 space-y-2">
-        <div className="flex items-center justify-between text-[11px] font-mono tracking-wider text-muted-foreground uppercase px-1">
-          <span>{t("treasury.sidebar.activeFund")}</span>
+        <div className="flex items-center justify-between text-[11px] font-mono tracking-wider text-muted-foreground uppercase px-2 font-medium">
+          <span>{t("treasury.sidebar.activeFund") || "Active Fund"}</span>
           {activeFund && (
-            <Badge
-              variant="secondary"
-              className={`text-[9px] px-1 py-0 font-mono ${activeFund.isFrozen
-                ? "bg-destructive/20 text-red-300 border-destructive/40 font-bold animate-pulse"
-                : "bg-primary/15 text-primary border-primary/30"
-                }`}
+            <StatusPill
+              tone={activeFund.isFrozen ? "danger" : "info"}
+              className="text-[10px] py-0 px-1.5"
             >
-              {activeFund.isFrozen ? t("treasury.sidebar.frozenBadge") : activeFund.currency}
-            </Badge>
+              {activeFund.isFrozen ? "FROZEN" : activeFund.currency}
+            </StatusPill>
           )}
         </div>
 
-        <div
-          style={{ backgroundColor: "rgba(255, 255, 255, 0.03)" }}
-          className="p-3 border border-border/70 space-y-3"
-        >
+        <div className="p-3 rounded-[var(--fintech-radius-md)] bg-muted/20 border border-border/60 space-y-2.5">
           {funds && funds.length > 0 ? (
             <div className="relative">
               <select
@@ -406,7 +326,7 @@ export function TreasurySidebar({
                   onSelectFund(e.target.value as Id<"funds">);
                   onAfterSelect?.();
                 }}
-                className="w-full h-8 px-2.5 pr-8 bg-background border border-border text-xs text-foreground font-semibold font-mono focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer truncate"
+                className="w-full h-8 px-2.5 pr-8 bg-background border border-border/80 rounded-[var(--fintech-radius-sm)] text-xs text-foreground font-medium focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer truncate"
               >
                 {funds.map((fund) => (
                   <option key={fund._id} value={fund._id}>
@@ -418,24 +338,23 @@ export function TreasurySidebar({
             </div>
           ) : (
             <div className="text-xs text-muted-foreground italic py-1">
-              {t("treasury.sidebar.noFundsFound")}
+              {t("treasury.sidebar.noFundsFound") || "No funds found"}
             </div>
           )}
 
           {canAdmin && (
             <Button
               type="button"
-              variant="cyber"
+              variant="outline"
               size="sm"
-              chamfer="dual"
               onClick={() => {
                 onOpenCreateFund();
                 onAfterSelect?.();
               }}
-              className="w-full h-7 text-[11px] px-2 flex items-center justify-center gap-1 cursor-pointer"
+              className="w-full h-7 text-xs px-2 flex items-center justify-center gap-1 cursor-pointer"
             >
               <Plus className="w-3 h-3" />
-              <span>{t("nav.newFund")}</span>
+              <span>{t("nav.newFund") || "New Fund"}</span>
             </Button>
           )}
         </div>

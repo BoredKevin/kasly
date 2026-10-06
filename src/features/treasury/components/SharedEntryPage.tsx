@@ -4,7 +4,6 @@ import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import {
-  Card,
   CardHeader,
   CardTitle,
   CardDescription,
@@ -12,6 +11,7 @@ import {
   Button,
   Badge,
 } from "@boredkevin/ui";
+import { Panel } from "../../../ui";
 import {
   GitCommit,
   ArrowDownLeft,
@@ -104,7 +104,7 @@ export function SharedEntryPage({
   if (entryResult.status === "not_found") {
     return (
       <div className="w-full max-w-xl mx-auto py-8">
-        <Card telemetry="TREASURY.ENTRY_NOT_FOUND" cornerLines className="bg-card border-border shadow-2xl">
+        <Panel className="shadow-xl">
           <CardHeader className="pb-3 border-b border-border/80 text-center">
             <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 w-fit mx-auto mb-2">
               <FileQuestion className="w-6 h-6" />
@@ -120,7 +120,7 @@ export function SharedEntryPage({
             <Button
               variant="outline"
               size="sm"
-              chamfer="dual"
+              chamfer="none"
               onClick={() => setLocation(isAuthenticated ? "/treasury/ledger" : "/")}
               className="cursor-pointer flex items-center gap-2"
             >
@@ -128,7 +128,7 @@ export function SharedEntryPage({
               <span>{isAuthenticated ? t("treasury.ledger.backToLedger") : t("treasury.ledger.backToWorkspace")}</span>
             </Button>
           </CardContent>
-        </Card>
+        </Panel>
       </div>
     );
   }
@@ -137,7 +137,7 @@ export function SharedEntryPage({
   if (entryResult.status === "unauthenticated") {
     return (
       <div className="w-full max-w-xl mx-auto py-8">
-        <Card telemetry="TREASURY.ENTRY_RESTRICTED" cornerLines className="bg-card border-border shadow-2xl">
+        <Panel className="shadow-xl">
           <CardHeader className="pb-3 border-b border-border/80">
             <div className="flex items-center gap-2.5">
               <div className="p-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-400">
@@ -166,7 +166,7 @@ export function SharedEntryPage({
               <Button
                 variant="default"
                 size="sm"
-                chamfer="dual"
+                chamfer="none"
                 onClick={() => setLocation(`/profile`)}
                 className="w-full sm:w-auto cursor-pointer flex items-center justify-center gap-2"
               >
@@ -176,7 +176,7 @@ export function SharedEntryPage({
               <Button
                 variant="outline"
                 size="sm"
-                chamfer="dual"
+                chamfer="none"
                 onClick={() => setLocation("/")}
                 className="w-full sm:w-auto cursor-pointer"
               >
@@ -184,7 +184,7 @@ export function SharedEntryPage({
               </Button>
             </div>
           </CardContent>
-        </Card>
+        </Panel>
       </div>
     );
   }
@@ -193,7 +193,7 @@ export function SharedEntryPage({
   if (entryResult.status === "forbidden") {
     return (
       <div className="w-full max-w-xl mx-auto py-8">
-        <Card telemetry="TREASURY.ENTRY_FORBIDDEN" cornerLines className="bg-card border-border shadow-2xl">
+        <Panel className="shadow-xl">
           <CardHeader className="pb-3 border-b border-border/80 text-center">
             <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 w-fit mx-auto mb-2">
               <AlertTriangle className="w-6 h-6" />
@@ -209,7 +209,7 @@ export function SharedEntryPage({
             <Button
               variant="outline"
               size="sm"
-              chamfer="dual"
+              chamfer="none"
               onClick={() => setLocation(isAuthenticated ? "/treasury" : "/")}
               className="cursor-pointer flex items-center gap-2"
             >
@@ -217,7 +217,7 @@ export function SharedEntryPage({
               <span>{t("treasury.ledger.backToWorkspace")}</span>
             </Button>
           </CardContent>
-        </Card>
+        </Panel>
       </div>
     );
   }
@@ -244,7 +244,7 @@ export function SharedEntryPage({
             type="button"
             variant="ghost"
             size="sm"
-            chamfer="dual"
+            chamfer="none"
             onClick={() => setLocation("/treasury/ledger")}
             className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1.5 cursor-pointer font-mono"
           >
@@ -259,11 +259,7 @@ export function SharedEntryPage({
       )}
 
       {/* Main Cryptographic Ledger Entry Card */}
-      <Card
-        telemetry="TREASURY.ENTRY_DETAILS"
-        cornerLines
-        className="bg-card border-border shadow-2xl"
-      >
+      <Panel className="shadow-xl">
         {/* Header with Title, Credit/Debit Badge, and Share Entry Button */}
         <CardHeader className="pb-3 border-b border-border/80">
           <div className="flex items-center justify-between gap-3">
@@ -302,7 +298,7 @@ export function SharedEntryPage({
                   type="button"
                   variant="outline"
                   size="sm"
-                  chamfer="dual"
+                  chamfer="none"
                   onClick={() =>
                     setSelectedEntryForRevert({
                       _id: entry._id,
@@ -327,7 +323,7 @@ export function SharedEntryPage({
                 type="button"
                 variant="outline"
                 size="sm"
-                chamfer="dual"
+                chamfer="none"
                 onClick={() => setIsShareModalOpen(true)}
                 className="h-8 px-2.5 text-xs font-mono flex items-center gap-1.5 cursor-pointer bg-primary/10 border-primary/30 text-primary hover:bg-primary/20 hover:text-primary transition-colors"
                 title={t("treasury.ledger.shareEntry")}
@@ -369,7 +365,7 @@ export function SharedEntryPage({
                     type="button"
                     variant="outline"
                     size="sm"
-                    chamfer="dual"
+                    chamfer="none"
                     onClick={() => setLocation(`/tx/${targetEntry.entryHash}`)}
                     className="h-7 px-3 text-xs font-mono flex items-center justify-center gap-1.5 cursor-pointer bg-purple-500/15 border-purple-500/40 text-purple-200 hover:bg-purple-500/25 hover:text-purple-100 shrink-0 self-start sm:self-auto"
                   >
@@ -381,7 +377,7 @@ export function SharedEntryPage({
                     type="button"
                     variant="outline"
                     size="sm"
-                    chamfer="dual"
+                    chamfer="none"
                     disabled
                     className="h-7 px-3 text-xs font-mono flex items-center justify-center gap-1.5 cursor-not-allowed bg-purple-500/10 border-purple-500/20 text-purple-300/50 shrink-0 self-start sm:self-auto"
                   >
@@ -447,7 +443,7 @@ export function SharedEntryPage({
                   type="button"
                   variant="outline"
                   size="sm"
-                  chamfer="dual"
+                  chamfer="none"
                   onClick={() => setLocation(`/tx/${compensatingEntry.entryHash}`)}
                   className="h-7 px-3 text-xs font-mono flex items-center justify-center gap-1.5 cursor-pointer bg-amber-500/15 border-amber-500/40 text-amber-300 hover:bg-amber-500/25 hover:text-amber-200 shrink-0 self-start sm:self-auto"
                 >
@@ -512,7 +508,7 @@ export function SharedEntryPage({
                   type="button"
                   variant="outline"
                   size="sm"
-                  chamfer="dual"
+                  chamfer="none"
                   onClick={() => handleCopy(entry.entryHash, "entryHash")}
                   className="h-6 px-2 text-[10px] flex items-center gap-1 cursor-pointer"
                 >
@@ -544,7 +540,7 @@ export function SharedEntryPage({
                   type="button"
                   variant="outline"
                   size="sm"
-                  chamfer="dual"
+                  chamfer="none"
                   onClick={() => handleCopy(entry.previousHash, "prevHash")}
                   className="h-6 px-2 text-[10px] flex items-center gap-1 cursor-pointer"
                 >
@@ -621,7 +617,7 @@ export function SharedEntryPage({
                   type="button"
                   variant="outline"
                   size="sm"
-                  chamfer="dual"
+                  chamfer="none"
                   onClick={() => handleCopy(entry.signature, "sig")}
                   className="h-6 px-2 text-[10px] flex items-center gap-1 cursor-pointer"
                 >
@@ -644,7 +640,7 @@ export function SharedEntryPage({
             </div>
           </div>
         </CardContent>
-      </Card>
+      </Panel>
 
       {/* Share Modal */}
       <ShareEntryModal

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "convex/react";
-import { useLocation, Link } from "wouter";
+import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
@@ -19,19 +19,7 @@ import { CreateManualDuesModal } from "./CreateManualDuesModal";
 import { GenerateKeyModal } from "./GenerateKeyModal";
 import { CreateFundModal } from "./CreateFundModal";
 import { SharedEntryPage } from "./SharedEntryPage";
-import {
-  Landmark,
-  ChevronDown,
-  Plus,
-  PenLine,
-  ScrollText,
-  CalendarDays,
-  Receipt,
-  KeyRound,
-  ShieldCheck,
-  Users,
-} from "lucide-react";
-import { Button, Badge } from "@boredkevin/ui";
+import { Landmark } from "lucide-react";
 
 import { TreasuryErrorBoundary } from "./TreasuryErrorBoundary";
 
@@ -49,7 +37,7 @@ export function TreasuryView({
   const { t } = useTranslation();
   const [location, setLocation] = useLocation();
   const orgs = useQuery(api.organizations.listMine);
-  const { activeOrgId, setActiveOrgId } = useActiveWorkspace();
+  const { activeOrgId, setActiveOrgId, activeFundId: workspaceFundId, setActiveFundId } = useActiveWorkspace();
 
   // If user has orgs but activeOrgId is not set, select the first one
   if (orgs && orgs.length > 0 && !activeOrgId) {
@@ -67,13 +55,16 @@ export function TreasuryView({
     api.members.getMyMembership,
     effectiveOrgId ? { organizationId: effectiveOrgId } : "skip"
   );
-  const [selectedFundId, setSelectedFundId] = useState<Id<"funds"> | null>(null);
 
-  // Derive active fund: prioritize user selection if still present in funds list, otherwise pick first active
+  // Derive active fund: prioritize workspace selection if present in funds list, otherwise pick first active
   const activeFundId =
-    selectedFundId && funds?.some((f) => f._id === selectedFundId)
-      ? selectedFundId
+    workspaceFundId && funds?.some((f) => f._id === workspaceFundId)
+      ? workspaceFundId
       : (funds?.find((f) => !f.isArchived)?._id ?? funds?.[0]?._id ?? null);
+
+  if (activeFundId && activeFundId !== workspaceFundId) {
+    setActiveFundId(activeFundId);
+  }
 
   const activeFund = funds?.find((f) => f._id === activeFundId);
 
@@ -190,193 +181,22 @@ export function TreasuryView({
 
   return (
     <div className="w-full space-y-6">
-      {/* Treasury Header & Mobile Fund Switcher */}
-      <div className="flex flex-col gap-3">
+      {/* Treasury Header (Desktop) */}
+      <div className="hidden md:flex items-center justify-between">
         <div className="space-y-0.5">
-          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-            Treasury & Ledger
+          <h2 className="text-xl font-bold tracking-tight text-foreground">
+            {t("nav.treasury") || "Treasury & Ledger"}
           </h2>
-          <p className="hidden md:block text-xs text-muted-foreground">
-            Secure chained ledger, automated member dues, and treasury information
+          <p className="text-xs text-muted-foreground">
+            {activeFund ? `${activeFund.name} (${activeFund.currency})` : "Community treasury workspace"}
           </p>
-        </div>
-
-        {/* Mobile Fund Switcher Bar (Only on non-overview tabs where CompactBalanceBanner is not shown) */}
-        {safeCurrentTab !== "overview" && (
-          <div className="md:hidden p-2.5 bg-card/80 backdrop-blur-md border border-border/60 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="p-1 bg-primary/20 border border-primary/40 text-primary">
-                  <Landmark className="w-3.5 h-3.5" />
-                </div>
-                <span className="text-[10px] font-mono tracking-wider text-muted-foreground uppercase">
-                  Active Fund
-                </span>
-              </div>
-              {activeFund && (
-                <Badge
-                  variant="secondary"
-                  className="text-[9px] font-mono px-1.5 py-0.5 bg-primary/15 text-primary border-primary/30"
-                >
-                  {activeFund.currency}
-                </Badge>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              {funds && funds.length > 0 ? (
-                <div className="relative flex-1 min-w-0">
-                  <select
-                    value={activeFundId ?? ""}
-                    onChange={(e) => {
-                      setSelectedFundId(e.target.value as Id<"funds">);
-                    }}
-                    className="w-full h-8 px-2 pr-7 bg-background border border-border text-xs text-foreground font-semibold font-mono focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer truncate"
-                  >
-                    {funds.map((fund) => (
-                      <option key={fund._id} value={fund._id}>
-                        {fund.name} ({fund.currency})
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-2.5 pointer-events-none text-muted-foreground" />
-                </div>
-              ) : (
-                <div className="text-xs text-muted-foreground italic py-1 font-mono flex-1">
-                  No funds
-                </div>
-              )}
-
-              {canSign && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  chamfer="dual"
-                  onClick={() => handleOpenRecordPayment()}
-                  className="h-8 text-xs px-2.5 flex items-center gap-1 cursor-pointer shrink-0"
-                >
-                  <PenLine className="w-3.5 h-3.5" />
-                  <span>Record</span>
-                </Button>
-              )}
-
-              {canAdmin && (
-                <Button
-                  type="button"
-                  variant="cyber"
-                  size="sm"
-                  chamfer="dual"
-                  onClick={() => setIsCreateFundOpen(true)}
-                  className="h-8 text-xs px-2.5 flex items-center gap-1 cursor-pointer shrink-0"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>New</span>
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Mobile Treasury Tab Navigation Bar (Sleek Segmented Style) */}
-        <div className="md:hidden flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none font-mono text-[11px]">
-          <Link
-            href="/treasury"
-            onClick={() => handleSelectTab("overview")}
-            className={`px-2.5 py-1 whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
-              safeCurrentTab === "overview"
-                ? "bg-primary/20 border border-primary/60 text-primary font-bold shadow-sm"
-                : "text-muted-foreground hover:text-foreground hover:bg-white/5 border border-transparent"
-            }`}
-          >
-            <Landmark className="w-3 h-3" />
-            <span>{t("nav.overview")}</span>
-          </Link>
-          <Link
-            href="/treasury/ledger"
-            onClick={() => handleSelectTab("ledger")}
-            className={`px-2.5 py-1 whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
-              safeCurrentTab === "ledger"
-                ? "bg-primary/20 border border-primary/60 text-primary font-bold shadow-sm"
-                : "text-muted-foreground hover:text-foreground hover:bg-white/5 border border-transparent"
-            }`}
-          >
-            <ScrollText className="w-3 h-3" />
-            <span>{t("nav.ledger")}</span>
-          </Link>
-          <Link
-            href="/treasury/dues"
-            onClick={() => handleSelectTab("dues")}
-            className={`px-2.5 py-1 whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
-              safeCurrentTab === "dues"
-                ? "bg-primary/20 border border-primary/60 text-primary font-bold shadow-sm"
-                : "text-muted-foreground hover:text-foreground hover:bg-white/5 border border-transparent"
-            }`}
-          >
-            <CalendarDays className="w-3 h-3" />
-            <span>{t("nav.duesAndPayments")}</span>
-          </Link>
-          {canSign && (
-            <Link
-              href="/treasury/bulk-dues"
-              onClick={() => handleSelectTab("bulk-dues")}
-              className={`px-2.5 py-1 whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
-                safeCurrentTab === "bulk-dues"
-                  ? "bg-primary/20 border border-primary/60 text-primary font-bold shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-white/5 border border-transparent"
-              }`}
-            >
-              <Users className="w-3 h-3" />
-              <span>Bulk Dues</span>
-            </Link>
-          )}
-          <Link
-            href="/treasury/invoices"
-            onClick={() => handleSelectTab("invoices")}
-            className={`px-2.5 py-1 whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
-              safeCurrentTab === "invoices"
-                ? "bg-primary/20 border border-primary/60 text-primary font-bold shadow-sm"
-                : "text-muted-foreground hover:text-foreground hover:bg-white/5 border border-transparent"
-            }`}
-          >
-            <Receipt className="w-3 h-3" />
-            <span>{t("nav.invoices")}</span>
-          </Link>
-          {canSign && (
-            <Link
-              href="/treasury/keys"
-              onClick={() => handleSelectTab("keys")}
-              className={`px-2.5 py-1 whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
-                safeCurrentTab === "keys"
-                  ? "bg-primary/20 border border-primary/60 text-primary font-bold shadow-sm"
-                  : "text-muted-foreground hover:text-foreground hover:bg-white/5 border border-transparent"
-              }`}
-            >
-              <KeyRound className="w-3 h-3" />
-              <span>{t("nav.myKeys")}</span>
-            </Link>
-          )}
-          {canAdmin && (
-            <Link
-              href="/treasury/admin"
-              onClick={() => handleSelectTab("admin")}
-              className={`px-2.5 py-1 whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
-                safeCurrentTab === "admin"
-                  ? "bg-primary/20 border border-primary/60 text-primary font-bold shadow-sm"
-                : "text-muted-foreground hover:text-foreground hover:bg-white/5 border border-transparent"
-              }`}
-            >
-              <ShieldCheck className="w-3 h-3" />
-              <span>{t("nav.adminPanel")}</span>
-            </Link>
-          )}
         </div>
       </div>
 
       {/* Main Treasury Layout: Left Sidebar + Right Content Area */}
       <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6 items-start">
         {/* Left Sticky Sidebar (Desktop Only) */}
-        <div className="hidden md:block sticky top-24 space-y-4">
+        <div className="hidden md:block sticky top-20 space-y-4">
           <TreasurySidebar
             activeOrgId={effectiveOrgId}
             activeTab={safeCurrentTab === "entry" ? "ledger" : safeCurrentTab}
@@ -391,7 +211,7 @@ export function TreasuryView({
               if (tab === "admin") setLocation("/treasury/admin");
             }}
             activeFundId={activeFundId}
-            onSelectFund={setSelectedFundId}
+            onSelectFund={setActiveFundId}
             onOpenRecordPayment={handleOpenRecordPayment}
             onOpenDueEvent={() => setIsDueEventOpen(true)}
             onOpenCreateFund={() => setIsCreateFundOpen(true)}
@@ -416,7 +236,7 @@ export function TreasuryView({
                   fundId={activeFundId}
                   organizationId={effectiveOrgId}
                   funds={funds}
-                  onSelectFund={setSelectedFundId}
+                  onSelectFund={setActiveFundId}
                   onNavigateToLedger={() => setLocation("/treasury/ledger")}
                   onOpenRecordPayment={() => handleOpenRecordPayment()}
                   onOpenKeyGen={() => setIsKeyGenOpen(true)}
@@ -550,7 +370,7 @@ export function TreasuryView({
             onClose={() => setIsCreateFundOpen(false)}
             organizationId={effectiveOrgId}
             onSuccess={(newFundId) => {
-              setSelectedFundId(newFundId);
+              setActiveFundId(newFundId);
             }}
           />
 

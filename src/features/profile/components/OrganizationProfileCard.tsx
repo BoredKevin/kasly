@@ -209,7 +209,7 @@ export function OrganizationProfileCard({
                           className="px-2 py-0.5 text-[11px] font-medium border font-mono rounded-none"
                           style={{
                             borderColor: r.color ? `${r.color}60` : "var(--border)",
-                            backgroundColor: r.color ? `${r.color}15` : "rgba(255,255,255,0.05)",
+                            backgroundColor: r.color ? `${r.color}15` : "hsl(var(--muted) / 0.5)",
                             color: r.color || "inherit",
                           }}
                         >

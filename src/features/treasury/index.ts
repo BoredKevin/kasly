@@ -21,11 +21,15 @@ export * from "./components/InvoicePaymentPage";
 export * from "./components/PaymentGatewayCard";
 export * from "./components/CreateInvoiceModal";
 export * from "./components/CreateCustomInvoiceModal";
+export * from "./components/EditInvoiceModal";
+export * from "./components/InvoiceDetailsModal";
 export * from "./components/MemberDuesBanner";
 export * from "./components/CompactBalanceBanner";
 export * from "./components/UnifiedMobileFinancialHero";
 export * from "./components/BulkDuesEntryPane";
-export * from "./utils/revertUtils";
+export * from "./lib/revertUtils";
+export * from "./types";
+export * from "./dues";
 
 if (typeof window !== "undefined" && window.__updateAppProgress) {
   window.__updateAppProgress(65, "Loading treasury & ledger...");

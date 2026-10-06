@@ -1,4 +1,4 @@
-import { Card, CornerEdges } from "@boredkevin/ui";
+import { Panel } from "../../../../../ui";
 
 export interface QrisTemplateCardProps {
   qrImageUrl: string;
@@ -13,13 +13,9 @@ export function QrisTemplateCard({
   merchantName,
 }: QrisTemplateCardProps) {
   return (
-    <Card
-      cornerLines={false}
-      className="relative p-2.5 sm:p-4 bg-card/95 backdrop-blur-md border border-border/80 shadow-2xl overflow-hidden max-w-sm sm:max-w-md mx-auto"
-    >
-      <CornerEdges size={12} thickness={1.5} />
+    <Panel className="relative p-2.5 sm:p-4 bg-card border border-border/80 rounded-[var(--fintech-radius-md)] shadow-sm overflow-hidden max-w-sm sm:max-w-md mx-auto">
       {/* Standard White QRIS Card with Template Background */}
-      <div className="relative w-full aspect-[1000/1388] rounded-xl overflow-hidden bg-white shadow-lg border border-neutral-200 select-none">
+      <div className="relative w-full aspect-[1000/1388] rounded-[var(--fintech-radius-sm)] overflow-hidden bg-white shadow-sm border border-neutral-200 select-none">
         {/* The Official Indonesian QRIS Frame Asset */}
         <img
           src="/qris_template.0376c2d6e287551a.png"
@@ -28,7 +24,7 @@ export function QrisTemplateCard({
           loading="eager"
         />
 
-        {/* Dynamic Content Overlay - Aligned exactly like ESB Order */}
+        {/* Dynamic Content Overlay */}
         <div className="absolute inset-0 flex flex-col items-center justify-start pt-[33%] pointer-events-none">
           {/* 1. Bold QRIS Merchant Display Name */}
           <div className="w-[100%] text-center mb-3 sm:mb-4 px-3">
@@ -40,7 +36,7 @@ export function QrisTemplateCard({
             </h3>
           </div>
 
-          {/* 2. QR Code Overlay - Exactly aligned like ESB Order (80% width, centered, no black border) */}
+          {/* 2. QR Code Overlay */}
           <div className="w-[80%] aspect-square flex items-center justify-center p-1 sm:p-1.5 bg-white">
             <img
               src={qrImageUrl}
@@ -50,6 +46,6 @@ export function QrisTemplateCard({
           </div>
         </div>
       </div>
-    </Card>
+    </Panel>
   );
 }

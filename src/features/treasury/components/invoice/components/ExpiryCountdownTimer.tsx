@@ -51,13 +51,13 @@ export function ExpiryCountdownTimer({ expiresAt, className = "" }: ExpiryCountd
   }, [expiresAt, i18n.language]);
 
   return (
-    <div className={`text-center space-y-1 font-sans ${className}`}>
-      <span className="text-[11px] font-sans font-medium uppercase tracking-wider text-muted-foreground flex items-center justify-center gap-1.5">
+    <div className={`text-center space-y-1.5 font-sans ${className}`}>
+      <span className="text-xs font-sans font-medium text-muted-foreground flex items-center justify-center gap-1.5">
         <Clock className={`w-3.5 h-3.5 ${isUrgent ? "text-amber-400 animate-pulse" : "text-primary"}`} />
         <span>{t("treasury.invoices.checkout.completePaymentIn", "Complete payment in")}</span>
       </span>
       <div
-        className={`font-sans text-2xl sm:text-3xl font-extrabold tracking-tight tabular-nums ${
+        className={`font-sans text-3xl sm:text-4xl font-extrabold tracking-tight tabular-nums ${
           isExpired
             ? "text-destructive"
             : isUrgent

@@ -1,17 +1,12 @@
 import { useState } from "react";
-import { createPortal } from "react-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
   Button,
   Badge,
 } from "@boredkevin/ui";
-import { X, ShieldAlert, Check, Calendar, AlertCircle } from "lucide-react";
+import { ResponsiveDialog } from "../../../ui";
+import { Check, Calendar, AlertCircle } from "lucide-react";
 import { Id } from "../../../../convex/_generated/dataModel";
 
 interface BannedMembersModalProps {
@@ -34,7 +29,7 @@ export function BannedMembersModal({
   const [unbanningUserId, setUnbanningUserId] = useState<Id<"users"> | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  if (!isOpen || typeof document === "undefined") return null;
+  if (!isOpen) return null;
 
   const handleUnban = async (userId: Id<"users">) => {
     setUnbanningUserId(userId);
@@ -51,38 +46,15 @@ export function BannedMembersModal({
     }
   };
 
-  const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-lg">
-        <Card telemetry="ORG.BANS" cornerLines className="bg-card border-border shadow-2xl">
-          <CardHeader className="pb-3 border-b border-border">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="p-1.5 bg-destructive/15 border border-destructive/30 text-destructive">
-                  <ShieldAlert className="w-5 h-5" />
-                </div>
-                <div>
-                  <CardTitle className="text-base font-semibold">
-                    Banned Users Directory
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    Users restricted from entering this organization
-                  </CardDescription>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                chamfer="dual"
-                onClick={onClose}
-                className="h-7 w-7 p-0"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          </CardHeader>
-
-          <CardContent className="pt-4 space-y-4 max-h-[70vh] overflow-y-auto">
+  return (
+    <ResponsiveDialog
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Banned Users Directory"
+      description="Users restricted from entering this organization"
+      maxWidth="lg"
+    >
+      <div className="space-y-4 pt-1">
             {error && (
               <div className="p-2.5 bg-destructive/15 border border-destructive/40 text-destructive text-xs font-mono flex items-center gap-1.5">
                 <AlertCircle className="w-4 h-4 shrink-0" />
@@ -175,16 +147,12 @@ export function BannedMembersModal({
                 chamfer="dual"
                 size="sm"
                 onClick={onClose}
-                className="text-xs"
+                className="text-xs cursor-pointer"
               >
                 Close
               </Button>
             </div>
-          </CardContent>
-        </Card>
       </div>
-    </div>
+    </ResponsiveDialog>
   );
-
-  return createPortal(modalContent, document.body);
 }

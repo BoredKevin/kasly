@@ -1,21 +1,15 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { createPortal } from "react-dom";
 import { useMutation, useQuery, useConvex } from "convex/react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
+import { ResponsiveDialog } from "../../../ui";
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
   Button,
   Input,
 } from "@boredkevin/ui";
 import {
   PenLine,
-  X,
   ArrowUpRight,
   ArrowDownLeft,
   KeyRound,
@@ -27,6 +21,7 @@ import {
   Minus,
   Plus,
   Sparkles,
+  ChevronDown,
 } from "lucide-react";
 import { loadKeypair, listStoredKeys, signLedgerPayload, SigningPayload } from "../../../lib/treasury-crypto";
 import { MemberSearchSelect } from "./MemberSearchSelect";
@@ -81,6 +76,7 @@ export function RecordPaymentModal({
   // Local keys present in IndexedDB on this browser/device
   const [localKeyIds, setLocalKeyIds] = useState<string[]>([]);
   const [isLoadingLocalKeys, setIsLoadingLocalKeys] = useState(true);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -134,6 +130,7 @@ export function RecordPaymentModal({
   const duesUserId = prefillUserId ?? manualDuesUserId;
 
   const [duesPeriodCount, setDuesPeriodCount] = useState<number>(prefillPeriodCount);
+  const [showDuesBreakdown, setShowDuesBreakdown] = useState<boolean>(false);
   const [customDuesMemo, setCustomDuesMemo] = useState<string>("");
 
   const [selectedKeyIdState, setSelectedKeyIdState] = useState<string>("");
@@ -345,54 +342,27 @@ export function RecordPaymentModal({
     holdTimerRef.current = requestAnimationFrame(update);
   };
 
-  if (!isOpen || typeof document === "undefined") return null;
-
   const currentFund = funds?.find((f) => f._id === selectedFundId);
 
-  const modalContent = (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-lg">
-        <Card telemetry="TREASURY.RECORD" cornerLines className="bg-card border-border shadow-2xl">
-          <CardHeader className="pb-4 border-b border-border">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="p-1.5 bg-primary/10 border border-primary/20 text-primary">
-                  {paymentMode === "dues" ? (
-                    <CalendarDays className="w-5 h-5" />
-                  ) : (
-                    <PenLine className="w-5 h-5" />
-                  )}
-                </div>
-                <div>
-                  <CardTitle className="text-base font-semibold">
-                    {paymentMode === "dues" ? t("treasury.dues.recordPayment") : t("treasury.ledger.recordEntry")}
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    {paymentMode === "dues"
-                      ? "Cryptographically sign and credit member dues payment into the treasury"
-                      : "Digitally sign and commit an immutable treasury transaction"}
-                  </CardDescription>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                chamfer="dual"
-                onClick={onClose}
-                className="h-7 w-7 p-0 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          </CardHeader>
-
-          <CardContent className="pt-5">
-            {/* Mode Switcher Tabs */}
-            <div className="grid grid-cols-2 gap-2 mb-4 p-1 bg-muted/40 border border-border/80">
+  return (
+    <ResponsiveDialog
+      isOpen={isOpen}
+      onClose={onClose}
+      title={paymentMode === "dues" ? t("treasury.dues.recordPayment", "Record Dues Payment") : t("treasury.ledger.recordEntry", "Record Ledger Entry")}
+      description={
+        paymentMode === "dues"
+          ? "Cryptographically sign and credit member dues payment into the treasury."
+          : "Digitally sign and commit an immutable treasury transaction."
+      }
+      maxWidth="lg"
+    >
+      <div className="pt-2 space-y-4">
+        {/* Mode Switcher Tabs */}
+        <div className="grid grid-cols-2 gap-2 p-1 bg-muted/40 border border-border/70 rounded-[var(--fintech-radius-sm)]">
               <Button
                 type="button"
                 variant={paymentMode === "manual" ? "cyber" : "ghost"}
-                chamfer="dual"
+                chamfer="none"
                 size="sm"
                 onClick={() => {
                   setPaymentMode("manual");
@@ -410,7 +380,7 @@ export function RecordPaymentModal({
               <Button
                 type="button"
                 variant={paymentMode === "dues" ? "cyber" : "ghost"}
-                chamfer="dual"
+                chamfer="none"
                 size="sm"
                 onClick={() => {
                   setPaymentMode("dues");
@@ -444,7 +414,7 @@ export function RecordPaymentModal({
                   <Button
                     type="button"
                     variant="outline"
-                    chamfer="dual"
+                    chamfer="none"
                     onClick={onClose}
                     size="sm"
                     className="text-xs cursor-pointer"
@@ -455,7 +425,7 @@ export function RecordPaymentModal({
                     <Button
                       type="button"
                       variant="cyber"
-                      chamfer="dual"
+                      chamfer="none"
                       size="sm"
                       onClick={() => {
                         onClose();
@@ -487,7 +457,7 @@ export function RecordPaymentModal({
                   <Button
                     type="button"
                     variant="outline"
-                    chamfer="dual"
+                    chamfer="none"
                     onClick={onClose}
                     size="sm"
                     className="text-xs cursor-pointer"
@@ -498,7 +468,7 @@ export function RecordPaymentModal({
                     <Button
                       type="button"
                       variant="cyber"
-                      chamfer="dual"
+                      chamfer="none"
                       size="sm"
                       onClick={() => {
                         onClose();
@@ -530,7 +500,7 @@ export function RecordPaymentModal({
                         <Button
                           type="button"
                           variant={direction === "credit" ? "cyber" : "ghost"}
-                          chamfer="dual"
+                          chamfer="none"
                           size="sm"
                           onClick={() => setDirection("credit")}
                           className={`h-8 text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer transition-all ${direction === "credit"
@@ -544,7 +514,7 @@ export function RecordPaymentModal({
                         <Button
                           type="button"
                           variant={direction === "debit" ? "cyber" : "ghost"}
-                          chamfer="dual"
+                          chamfer="none"
                           size="sm"
                           onClick={() => setDirection("debit")}
                           className={`h-8 text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer transition-all ${direction === "debit"
@@ -577,7 +547,7 @@ export function RecordPaymentModal({
                           const val = e.target.value.replace(/[^0-9]/g, "");
                           setAmountInput(val);
                         }}
-                        chamfer="dual"
+                        chamfer="none"
                         required
                       />
                       {amountInput && (
@@ -598,7 +568,7 @@ export function RecordPaymentModal({
                         value={memo}
                         disabled={isSigning}
                         onChange={(e) => setMemo(e.target.value)}
-                        chamfer="dual"
+                        chamfer="none"
                         required
                       />
                     </div>
@@ -625,91 +595,181 @@ export function RecordPaymentModal({
 
                     {/* Dues Periods & Amount Calculation */}
                     {duesUserId && (
-                      <div className="space-y-3 p-3 bg-muted/20 border border-border/80 rounded">
+                      <div className="space-y-3 p-3.5 sm:p-4 bg-muted/20 border border-border/80 rounded-[var(--fintech-radius-sm)] font-sans shadow-xs">
                         {unpaidPeriods === undefined ? (
-                          <div className="py-2 text-xs font-mono text-muted-foreground animate-pulse">
+                          <div className="py-2 text-xs font-mono text-muted-foreground animate-pulse text-center">
                             Loading unpaid dues cycles...
                           </div>
                         ) : unpaidPeriods.length === 0 ? (
-                          <div className="flex items-center gap-2 text-emerald-400 text-xs font-mono py-1">
-                            <CheckCircle2 className="w-4 h-4" />
-                            <span>This member has no outstanding dues! All periods are paid.</span>
+                          <div className="flex items-center gap-2 text-primary text-xs py-1">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                            <span className="font-medium text-foreground">This member has no outstanding dues! All periods are paid.</span>
                           </div>
                         ) : (
                           <>
-                            <div className="flex items-center justify-between">
-                              <label className="text-xs font-medium text-foreground">
-                                Number of Periods to Pay
+                            {/* Header row */}
+                            <div className="flex items-center justify-between gap-2">
+                              <label className="text-xs font-semibold text-foreground tracking-tight">
+                                {t("treasury.invoices.numberOfPeriods", "Number of Periods to Pay")}
                               </label>
-                              <span className="text-[11px] font-mono text-muted-foreground">
-                                Max available: {unpaidPeriods.length} cycle(s)
+                              <span className="inline-flex items-center text-[11px] font-mono font-medium text-muted-foreground bg-muted/50 border border-border/60 px-2 py-0.5 rounded-[var(--fintech-radius-sm)]">
+                                {t("treasury.invoices.maxAvailableCycles", "Max available: {{count}} cycle(s)", {
+                                  count: unpaidPeriods.length,
+                                })}
                               </span>
                             </div>
 
-                            <div className="flex items-center justify-between gap-3 pt-1">
-                              <span className="text-xs text-muted-foreground">
-                                Cycles to pay:
-                              </span>
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  chamfer="dual"
-                                  disabled={isSigning || duesPeriodCount <= 1}
-                                  onClick={() => setDuesPeriodCount((prev) => Math.max(1, prev - 1))}
-                                  className="h-8 w-8 p-0 flex items-center justify-center cursor-pointer shrink-0 disabled:opacity-40"
-                                  title="Decrease periods"
-                                >
-                                  <Minus className="w-3.5 h-3.5" />
-                                </Button>
+                            {/* Stepper & Preset Controls */}
+                            <div className="space-y-2.5 pt-0.5">
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="text-sm sm:text-base font-bold text-foreground">
+                                  {t("treasury.invoices.cyclesToPay", "Cycles to pay:")}
+                                </span>
 
-                                <input
-                                  type="text"
-                                  inputMode="numeric"
-                                  value={duesPeriodCount}
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    chamfer="none"
+                                    disabled={isSigning || duesPeriodCount <= 1}
+                                    onClick={() => setDuesPeriodCount((prev) => Math.max(1, prev - 1))}
+                                    className="h-9 w-9 p-0 flex items-center justify-center cursor-pointer shrink-0 disabled:opacity-30 rounded-[var(--fintech-radius-sm)] border-border/80 bg-background hover:bg-muted/50 text-foreground transition-all active:scale-95 shadow-xs"
+                                    title="Decrease periods"
+                                  >
+                                    <Minus className="w-4 h-4" />
+                                  </Button>
+
+                                  <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={duesPeriodCount}
+                                    disabled={isSigning}
+                                    onChange={(e) => {
+                                      const raw = e.target.value.replace(/[^0-9]/g, "");
+                                      if (!raw) {
+                                        setDuesPeriodCount(1);
+                                        return;
+                                      }
+                                      const val = parseInt(raw, 10);
+                                      setDuesPeriodCount(Math.min(unpaidPeriods.length, Math.max(1, val)));
+                                    }}
+                                    className="h-9 w-12 p-0 text-center font-sans font-bold text-base bg-background border border-border/80 rounded-[var(--fintech-radius-sm)] text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary tabular-nums shrink-0 shadow-xs"
+                                  />
+
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    chamfer="none"
+                                    disabled={isSigning || duesPeriodCount >= unpaidPeriods.length}
+                                    onClick={() => setDuesPeriodCount((prev) => Math.min(unpaidPeriods.length, prev + 1))}
+                                    className="h-9 w-9 p-0 flex items-center justify-center cursor-pointer shrink-0 disabled:opacity-30 rounded-[var(--fintech-radius-sm)] border-border/80 bg-background hover:bg-muted/50 text-foreground transition-all active:scale-95 shadow-xs"
+                                    title="Increase periods"
+                                  >
+                                    <Plus className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </div>
+
+                              {/* Quick Preset Chips */}
+                              <div className="flex items-center gap-1.5 pt-0.5">
+                                <button
+                                  type="button"
                                   disabled={isSigning}
-                                  onChange={(e) => {
-                                    const raw = e.target.value.replace(/[^0-9]/g, "");
-                                    if (!raw) {
-                                      setDuesPeriodCount(1);
-                                      return;
-                                    }
-                                    const val = parseInt(raw, 10);
-                                    setDuesPeriodCount(Math.min(unpaidPeriods.length, Math.max(1, val)));
-                                  }}
-                                  className="h-8 w-8 p-0 text-center font-mono font-bold text-sm bg-background border border-border text-primary focus:outline-none focus:border-primary shrink-0"
-                                />
-
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  chamfer="dual"
-                                  disabled={isSigning || duesPeriodCount >= unpaidPeriods.length}
-                                  onClick={() => setDuesPeriodCount((prev) => Math.min(unpaidPeriods.length, prev + 1))}
-                                  className="h-8 w-8 p-0 flex items-center justify-center cursor-pointer shrink-0 disabled:opacity-40"
-                                  title="Increase periods"
+                                  onClick={() => setDuesPeriodCount(1)}
+                                  className={`px-3 py-1.5 text-xs font-medium rounded-[var(--fintech-radius-sm)] border transition-all cursor-pointer ${
+                                    duesPeriodCount === 1
+                                      ? "bg-primary text-primary-foreground border-primary font-semibold shadow-xs"
+                                      : "bg-background/80 border-border/70 text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                                  }`}
                                 >
-                                  <Plus className="w-3.5 h-3.5" />
-                                </Button>
+                                  {t("treasury.invoices.cycleSingle", "1 Cycle")}
+                                </button>
+
+                                {unpaidPeriods.length > 1 && (
+                                  <button
+                                    type="button"
+                                    disabled={isSigning}
+                                    onClick={() => setDuesPeriodCount(2)}
+                                    className={`px-3 py-1.5 text-xs font-medium rounded-[var(--fintech-radius-sm)] border transition-all cursor-pointer ${
+                                      duesPeriodCount === 2
+                                        ? "bg-primary text-primary-foreground border-primary font-semibold shadow-xs"
+                                        : "bg-background/80 border-border/70 text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                                    }`}
+                                  >
+                                    {t("treasury.invoices.cyclesMultiple", "{{count}} Cycles", { count: 2 })}
+                                  </button>
+                                )}
+
+                                <button
+                                  type="button"
+                                  disabled={isSigning}
+                                  onClick={() => setDuesPeriodCount(unpaidPeriods.length)}
+                                  className={`px-3 py-1.5 text-xs font-medium rounded-[var(--fintech-radius-sm)] border transition-all cursor-pointer ${
+                                    duesPeriodCount === unpaidPeriods.length
+                                      ? "bg-primary text-primary-foreground border-primary font-semibold shadow-xs"
+                                      : "bg-background/80 border-border/70 text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                                  }`}
+                                >
+                                  {t("treasury.invoices.allCycles", "All ({{count}})", { count: unpaidPeriods.length })}
+                                </button>
                               </div>
                             </div>
 
-                            {/* Covered cycles preview */}
-                            <div className="pt-2 border-t border-border/60 space-y-1 text-xs font-mono">
-                              <div className="flex items-center justify-between text-muted-foreground text-[11px]">
-                                <span>Covered Cycle(s):</span>
-                                <span className="text-foreground font-semibold">
+                            {/* Divider & Preview Summary */}
+                            <div className="pt-3 border-t border-border/60 space-y-2.5">
+                              <div className="flex items-center justify-between gap-2 text-sm">
+                                <span className="text-muted-foreground font-medium flex items-center gap-2 shrink-0">
+                                  <CalendarDays className="w-4 h-4 text-muted-foreground" />
+                                  {t("treasury.invoices.coveredCycles", "Covered Cycle(s):")}
+                                </span>
+                                <span className="text-foreground font-semibold text-right truncate max-w-[210px] sm:max-w-none">
                                   {formatPeriodsRange(selectedPeriodsToPay)}
                                 </span>
                               </div>
 
-                              <div className="flex items-center justify-between text-muted-foreground text-[11px] pt-1">
-                                <span>Calculated Total Credit:</span>
-                                <span className="text-emerald-400 font-bold text-sm">
+                              <div className="flex items-center justify-between gap-2 text-sm pt-0.5">
+                                <span className="text-muted-foreground font-medium">
+                                  {t("treasury.invoices.calculatedTotal", "Calculated Total:")}
+                                </span>
+                                <span className="text-base font-bold text-primary font-sans tabular-nums text-right">
                                   {currentFund?.currency ?? "IDR"} {duesCalculatedAmount.toLocaleString("id-ID")}
                                 </span>
+                              </div>
+
+                              {/* Expandable Breakdown Toggle */}
+                              <div className="pt-2 border-t border-border/40">
+                                <button
+                                  type="button"
+                                  onClick={() => setShowDuesBreakdown((prev) => !prev)}
+                                  className="flex items-center justify-between w-full py-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                                >
+                                  <span>
+                                    {t("treasury.invoices.viewCycleBreakdown", "Rincian Siklus")} ({selectedPeriodsToPay.length})
+                                  </span>
+                                  <ChevronDown
+                                    className={`w-4 h-4 transition-transform duration-200 ${
+                                      showDuesBreakdown ? "rotate-180" : ""
+                                    }`}
+                                  />
+                                </button>
+
+                                {showDuesBreakdown && (
+                                  <div className="pt-2 space-y-1.5 max-h-36 overflow-y-auto pr-1 animate-in fade-in duration-150">
+                                    {selectedPeriodsToPay.map((p) => (
+                                      <div
+                                        key={p.periodId || p.membershipId}
+                                        className="flex items-center justify-between py-1 px-2 rounded-[var(--fintech-radius-sm)] bg-background/50 border border-border/40 text-[11px]"
+                                      >
+                                        <span className="truncate font-medium text-foreground">{p.periodLabel}</span>
+                                        <span className="text-muted-foreground shrink-0 tabular-nums font-sans">
+                                          {currentFund?.currency || "IDR"} {p.amount.toLocaleString("id-ID")}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </>
@@ -728,89 +788,111 @@ export function RecordPaymentModal({
                         placeholder={defaultDuesMemo || "e.g. Member Dues Payment"}
                         disabled={isSigning}
                         onChange={(e) => setCustomDuesMemo(e.target.value)}
-                        chamfer="dual"
+                        chamfer="none"
                         required
                       />
                     </div>
                   </>
                 )}
 
-                {/* Target Destination Fund Selector */}
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-medium text-foreground">
-                      Destination Fund *
-                    </label>
-                    {selectedFundId === defaultFundId && defaultFundId && (
-                      <span className="text-[10px] font-mono text-primary px-1.5 py-0.5 bg-primary/10 border border-primary/20">
-                        Auto-selected from active view
-                      </span>
-                    )}
-                  </div>
-                  {funds && funds.length > 0 ? (
-                    <select
-                      value={selectedFundId ?? ""}
-                      onChange={(e) => setSelectedFundIdState(e.target.value as Id<"funds">)}
-                      disabled={isSigning}
-                      className="w-full h-9 px-2.5 bg-background border border-border text-xs text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-                      required
-                    >
-                      {funds.map((fund) => (
-                        <option key={fund._id} value={fund._id}>
-                          {fund.name} ({fund.currency})
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <div className="text-xs text-muted-foreground italic py-1">
-                      No active funds available.
-                    </div>
-                  )}
-                </div>
-
-                {/* Signing Key Selector */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground flex items-center justify-between">
-                    <span>Treasurer Signing Key *</span>
-                    <span className="text-[10px] text-muted-foreground font-mono">
-                      Browser ECDSA P-256
+                {/* Advanced Options Toggle */}
+                <div className="pt-1">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
+                    <span className="truncate max-w-[200px]">
+                      Fund: <strong className="text-foreground">{currentFund?.name ?? "Default"}</strong>
                     </span>
-                  </label>
-                  <select
-                    value={selectedKeyId}
-                    onChange={(e) => setSelectedKeyIdState(e.target.value)}
-                    disabled={isSigning}
-                    className="w-full h-9 px-2.5 bg-background border border-border text-xs text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-                    required
-                  >
-                    {availableKeysOnDevice.length > 0 && (
-                      <optgroup label="Available on this device">
-                        {availableKeysOnDevice.map((k) => (
-                          <option key={k.keyId} value={k.keyId}>
-                            ● {k.label ? `${k.label} (${k.keyId.slice(0, 10)}...)` : `Key (${k.keyId.slice(0, 10)}...)`} [Ready]
-                          </option>
-                        ))}
-                      </optgroup>
-                    )}
-                    {otherDeviceKeys.length > 0 && (
-                      <optgroup label="Other devices (Missing private key)">
-                        {otherDeviceKeys.map((k) => (
-                          <option key={k.keyId} value={k.keyId}>
-                            ⚠ {k.label ? `${k.label} (${k.keyId.slice(0, 10)}...)` : `Key (${k.keyId.slice(0, 10)}...)`} [No private key]
-                          </option>
-                        ))}
-                      </optgroup>
-                    )}
-                  </select>
-                  {isKeyAvailableOnDevice ? (
-                    <div className="flex items-center gap-1.5 text-emerald-400 text-[11px] font-mono">
-                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                      <span>Signing key is ready in browser storage</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1.5 text-amber-400 text-[11px] font-mono">
-                      <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                      <span>Private key not found on this device. Switch to a ready key or generate one.</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowAdvanced(!showAdvanced)}
+                      className="text-primary hover:underline flex items-center gap-1 cursor-pointer shrink-0 ml-2"
+                    >
+                      <KeyRound className="w-3.5 h-3.5" />
+                      <span>{showAdvanced ? "Hide Options" : "Advanced Options"}</span>
+                      <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAdvanced ? "rotate-180" : ""}`} />
+                    </button>
+                  </div>
+
+                  {showAdvanced && (
+                    <div className="mt-2.5 p-3 bg-muted/20 border border-border/70 rounded-[var(--fintech-radius-sm)] space-y-3.5 animate-in fade-in-50 duration-150">
+                      {/* Target Destination Fund Selector */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-medium text-foreground">
+                            Destination Fund *
+                          </label>
+                          {selectedFundId === defaultFundId && defaultFundId && (
+                            <span className="text-[10px] font-mono text-primary px-1.5 py-0.5 bg-primary/10 border border-primary/20">
+                              Auto-selected
+                            </span>
+                          )}
+                        </div>
+                        {funds && funds.length > 0 ? (
+                          <select
+                            value={selectedFundId ?? ""}
+                            onChange={(e) => setSelectedFundIdState(e.target.value as Id<"funds">)}
+                            disabled={isSigning}
+                            className="w-full h-8 px-2 bg-background border border-border text-xs text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer rounded-[var(--fintech-radius-xs)]"
+                            required
+                          >
+                            {funds.map((fund) => (
+                              <option key={fund._id} value={fund._id}>
+                                {fund.name} ({fund.currency})
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <div className="text-xs text-muted-foreground italic py-1">
+                            No active funds available.
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Signing Key Selector */}
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-foreground flex items-center justify-between">
+                          <span>Treasurer Signing Key *</span>
+                          <span className="text-[10px] text-muted-foreground font-mono">
+                            ECDSA P-256
+                          </span>
+                        </label>
+                        <select
+                          value={selectedKeyId}
+                          onChange={(e) => setSelectedKeyIdState(e.target.value)}
+                          disabled={isSigning}
+                          className="w-full h-8 px-2 bg-background border border-border text-xs text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer rounded-[var(--fintech-radius-xs)]"
+                          required
+                        >
+                          {availableKeysOnDevice.length > 0 && (
+                            <optgroup label="Available on this device">
+                              {availableKeysOnDevice.map((k) => (
+                                <option key={k.keyId} value={k.keyId}>
+                                  ● {k.label ? `${k.label} (${k.keyId.slice(0, 10)}...)` : `Key (${k.keyId.slice(0, 10)}...)`} [Ready]
+                                </option>
+                              ))}
+                            </optgroup>
+                          )}
+                          {otherDeviceKeys.length > 0 && (
+                            <optgroup label="Other devices (Missing private key)">
+                              {otherDeviceKeys.map((k) => (
+                                <option key={k.keyId} value={k.keyId}>
+                                  ⚠ {k.label ? `${k.label} (${k.keyId.slice(0, 10)}...)` : `Key (${k.keyId.slice(0, 10)}...)`} [No private key]
+                                </option>
+                              ))}
+                            </optgroup>
+                          )}
+                        </select>
+                        {isKeyAvailableOnDevice ? (
+                          <div className="flex items-center gap-1.5 text-emerald-400 text-[11px] font-mono">
+                            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                            <span>Signing key ready on this device</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 text-amber-400 text-[11px] font-mono">
+                            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                            <span>Private key not found on this device.</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -826,7 +908,7 @@ export function RecordPaymentModal({
                     <Button
                       type="button"
                       variant="outline"
-                      chamfer="dual"
+                      chamfer="none"
                       onClick={onClose}
                       disabled={isSigning || isHolding}
                       size="sm"
@@ -837,7 +919,7 @@ export function RecordPaymentModal({
                     <Button
                       type="button"
                       variant="cyber"
-                      chamfer="dual"
+                      chamfer="none"
                       size="sm"
                       disabled={isSubmitDisabled}
                       onPointerDown={startHold}
@@ -892,11 +974,7 @@ export function RecordPaymentModal({
                 </div>
               </form>
             )}
-          </CardContent>
-        </Card>
       </div>
-    </div>
+    </ResponsiveDialog>
   );
-
-  return createPortal(modalContent, document.body);
 }

@@ -2,7 +2,9 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
-import { ThemeProvider } from "@boredkevin/ui";
+import { ThemeProvider as BoredKevinThemeProvider } from "@boredkevin/ui";
+import { ThemeProvider } from "./contexts/ThemeContext";
+import { ThemeSync } from "./components/common/ThemeSync";
 import "@fontsource/plus-jakarta-sans/400.css";
 import "@fontsource/plus-jakarta-sans/500.css";
 import "@fontsource/plus-jakarta-sans/600.css";
@@ -37,9 +39,12 @@ createRoot(document.getElementById("root")!).render(
         !window.location.pathname.startsWith("/reset-password")
       }
     >
-      <ThemeProvider>
-        <App />
-      </ThemeProvider>
+      <BoredKevinThemeProvider>
+        <ThemeProvider>
+          <ThemeSync />
+          <App />
+        </ThemeProvider>
+      </BoredKevinThemeProvider>
     </ConvexAuthProvider>
   </StrictMode>,
 );

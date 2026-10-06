@@ -21,8 +21,11 @@ import "./gateways/adapters/index";
 export {
   createDuesInvoice,
   createCustomInvoice,
+  updateInvoice,
+  deleteInvoice,
   cancelInvoice,
   getInvoice,
+  getInvoiceById,
   listInvoices,
   _getInvoiceByNumber,
   _updateInvoicePendingPayment,

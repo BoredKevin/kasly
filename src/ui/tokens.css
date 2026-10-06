@@ -1,0 +1,139 @@
+/* Global Fintech & Design System Tokens */
+:root {
+  --fintech-card: 0 0% 100%;
+  --fintech-card-hover: 0 0% 98%;
+  --fintech-border: 0 0% 88%;
+  --fintech-border-subtle: 0 0% 92%;
+  --fintech-muted: 0 0% 45%;
+  --fintech-radius-xs: 4px;
+  --fintech-radius-sm: 6px;
+  --fintech-radius-md: 10px;
+  --fintech-radius-lg: 14px;
+
+  /* Ultra-sharp, WCAG AAA compliant status tokens for light mode */
+  --status-neutral: 0 0% 25%;
+  --status-neutral-bg: 0 0% 92%;
+  --status-neutral-border: 0 0% 75%;
+
+  --status-success: 160 84% 22%;
+  --status-success-bg: 158 70% 93%;
+  --status-success-border: 160 65% 72%;
+
+  --status-warning: 30 95% 24%;
+  --status-warning-bg: 38 85% 92%;
+  --status-warning-border: 32 75% 68%;
+
+  --status-danger: 350 85% 30%;
+  --status-danger-bg: 350 85% 94%;
+  --status-danger-border: 350 70% 74%;
+
+  --status-info: 215 90% 28%;
+  --status-info-bg: 215 85% 93%;
+  --status-info-border: 215 70% 72%;
+
+  /* High-contrast dynamic color tokens for light mode (WCAG AAA readability) */
+  --color-amber-200-dyn: 30 95% 22%;
+  --color-amber-300-dyn: 30 95% 26%;
+  --color-amber-400-dyn: 30 95% 30%;
+  --color-amber-500-dyn: 30 95% 35%;
+
+  --color-emerald-300-dyn: 160 84% 22%;
+  --color-emerald-400-dyn: 160 84% 26%;
+  --color-emerald-500-dyn: 160 84% 32%;
+
+  --color-rose-300-dyn: 350 85% 30%;
+  --color-rose-400-dyn: 350 85% 35%;
+  --color-rose-500-dyn: 350 85% 42%;
+
+  --color-sky-300-dyn: 215 90% 26%;
+  --color-sky-400-dyn: 215 90% 32%;
+  --color-sky-500-dyn: 215 90% 40%;
+}
+
+.dark {
+  --fintech-card: 0 0% 5.5%;
+  --fintech-card-hover: 0 0% 7.5%;
+  --fintech-border: 0 0% 14.9%;
+  --fintech-border-subtle: 0 0% 12%;
+  --fintech-muted: 0 0% 63%;
+
+  /* High luminescence status tokens for dark mode */
+  --status-neutral: 0 0% 75%;
+  --status-neutral-bg: 0 0% 100% / 0.08;
+  --status-neutral-border: 0 0% 100% / 0.15;
+
+  --status-success: 156 75% 52%;
+  --status-success-bg: 156 75% 52% / 0.15;
+  --status-success-border: 156 75% 52% / 0.35;
+
+  --status-warning: 42 96% 56%;
+  --status-warning-bg: 42 96% 56% / 0.16;
+  --status-warning-border: 42 96% 56% / 0.38;
+
+  --status-danger: 350 90% 65%;
+  --status-danger-bg: 350 90% 65% / 0.15;
+  --status-danger-border: 350 90% 65% / 0.35;
+
+  --status-info: 205 95% 60%;
+  --status-info-bg: 205 95% 60% / 0.15;
+  --status-info-border: 205 95% 60% / 0.35;
+
+  /* Tactical neon palette tokens for dark mode */
+  --color-amber-200-dyn: 48 96% 76%;
+  --color-amber-300-dyn: 45 93% 58%;
+  --color-amber-400-dyn: 43 96% 56%;
+  --color-amber-500-dyn: 38 92% 50%;
+
+  --color-emerald-300-dyn: 156 72% 67%;
+  --color-emerald-400-dyn: 156 75% 52%;
+  --color-emerald-500-dyn: 160 84% 39%;
+
+  --color-rose-300-dyn: 350 89% 75%;
+  --color-rose-400-dyn: 350 90% 65%;
+  --color-rose-500-dyn: 350 89% 60%;
+
+  --color-sky-300-dyn: 199 89% 74%;
+  --color-sky-400-dyn: 205 95% 60%;
+  --color-sky-500-dyn: 199 89% 48%;
+}
+
+/* Seamless override of Card borders & surfaces */
+.fintech-panel {
+  background-color: hsl(var(--card) / 0.95);
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--fintech-radius-md);
+}
+
+.fintech-row {
+  border-bottom: 1px solid hsl(var(--border) / 0.6);
+  transition: background-color 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fintech-row:hover {
+  background-color: hsl(var(--muted) / 0.35);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* App preloader theme synchronization */
+#app-loader {
+  background-color: hsl(var(--background)) !important;
+}
+
+html:not(.dark) #app-loader div[style*="border: 1px solid rgba(255, 255, 255"] {
+  border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+html:not(.dark) #app-loader #loader-progress-bar {
+  background: hsl(var(--foreground)) !important;
+}
+
+html:not(.dark) #app-loader #loader-status-text {
+  color: rgba(0, 0, 0, 0.45) !important;
+}
+
+html:not(.dark) #app-loader #loader-percent {
+  color: rgba(0, 0, 0, 0.7) !important;
+}

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
 
 <head>
   <meta charset="UTF-8" />
@@ -10,17 +10,37 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&display=swap"
     rel="stylesheet" />
+  <script>
+    (function () {
+      try {
+        var stored = localStorage.getItem('kasly-theme');
+        var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var isDark = stored === 'dark' || (!stored && prefersDark) || (stored === 'system' && prefersDark);
+        if (stored === 'light') isDark = false;
+        var root = document.documentElement;
+        if (isDark) {
+          root.classList.add('dark');
+          root.classList.remove('light');
+          root.style.colorScheme = 'dark';
+        } else {
+          root.classList.remove('dark');
+          root.classList.add('light');
+          root.style.colorScheme = 'light';
+        }
+      } catch (e) {}
+    })();
+  </script>
   <link rel="stylesheet" href="/src/index.css" />
   <title>kasly</title>
 </head>
 
 <body class="bg-background text-foreground antialiased min-h-screen"
-  style="background-color: hsl(0 0% 3.9%); color: hsl(0 0% 98%); margin: 0;">
+  style="margin: 0;">
   <div id="root"></div>
 
   <!-- Loading Overlay -->
   <div id="app-loader"
-    style="position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; background-color: hsl(0 0% 3.9%); font-family: 'JetBrains Mono', monospace, Inter, system-ui, sans-serif; transition: opacity 0.35s ease; pointer-events: auto;">
+    style="position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace, Inter, system-ui, sans-serif; transition: opacity 0.35s ease; pointer-events: auto;">
     <div style="width: 280px; max-width: 90vw; padding: 16px 20px;">
       <!-- Progress Bar with Transparent Background -->
       <div

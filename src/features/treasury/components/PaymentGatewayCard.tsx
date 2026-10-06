@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import {
-  Card,
   CardHeader,
   CardTitle,
   CardDescription,
@@ -15,6 +14,7 @@ import {
   Badge,
   Switch,
 } from "@boredkevin/ui";
+import { Panel, StatusPill } from "../../../ui";
 import {
   CreditCard,
   KeyRound,
@@ -132,7 +132,6 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
 
   // Synchronize state when config query resolves
   useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect */
     if (config && !hasInitialized) {
       setIsEnabled(config.isEnabled);
       setWebhookToken(config.webhookToken || "");
@@ -312,12 +311,12 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
   );
 
   return (
-    <Card telemetry="TREASURY.PAYMENTS" cornerLines className="bg-card border-border shadow-xl">
+    <Panel className="shadow-lg">
       {/* ── CARD HEADER ── */}
       <CardHeader className="pb-4 border-b border-border/70">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 border border-primary/30 text-primary">
+            <div className="p-2 bg-primary/10 border border-primary/30 text-primary rounded-[var(--fintech-radius-sm)]">
               <CreditCard className="w-5 h-5" />
             </div>
             <div>
@@ -331,16 +330,15 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
           </div>
 
           {/* Master Switch with Mode Badge */}
-          <div className="flex items-center gap-3 bg-muted/20 border border-border/60 px-3 py-1.5">
+          <div className="flex items-center gap-3 bg-muted/20 border border-border/60 rounded-[var(--fintech-radius-sm)] px-3 py-1.5">
             {config?.hasApiKey && (
-              <Badge
-                variant={config.isTestMode ? "warning" : "success"}
-                className="font-mono text-[10px] px-2 py-0.5"
+              <StatusPill
+                tone={config.isTestMode ? "warning" : "success"}
               >
                 {config.isTestMode
                   ? t("treasury.gateway.testModeBadge")
                   : t("treasury.gateway.liveModeBadge")}
-              </Badge>
+              </StatusPill>
             )}
 
             <div className="flex items-center gap-2 border-l border-border/60 pl-2.5">
@@ -425,7 +423,7 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
                     type="button"
                     variant="outline"
                     size="sm"
-                    chamfer="dual"
+                    chamfer="none"
                     disabled={isFetching}
                     onClick={() => void handleFetchMethods()}
                     className="h-8 text-xs flex items-center gap-1.5"
@@ -529,7 +527,7 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
                         <Input
                           id="gateway-api-key"
                           type="password"
-                          chamfer="dual"
+                          chamfer="none"
                           value={apiKey}
                           onChange={(e) => setApiKey(e.target.value)}
                           placeholder={
@@ -556,7 +554,7 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
                         <Input
                           id="gateway-webhook-token"
                           type="text"
-                          chamfer="dual"
+                          chamfer="none"
                           value={webhookToken}
                           onChange={(e) => setWebhookToken(e.target.value)}
                           placeholder={t("treasury.gateway.webhookTokenPlaceholder")}
@@ -591,7 +589,7 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
                         <Input
                           id="temanqris-api-key"
                           type="password"
-                          chamfer="dual"
+                          chamfer="none"
                           value={temanQrisApiKey}
                           onChange={(e) => setTemanQrisApiKey(e.target.value)}
                           placeholder={
@@ -621,7 +619,7 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
                         <Input
                           id="temanqris-webhook-secret"
                           type="text"
-                          chamfer="dual"
+                          chamfer="none"
                           value={temanQrisWebhookSecret}
                           onChange={(e) => setTemanQrisWebhookSecret(e.target.value)}
                           placeholder="whsec_... or secret string"
@@ -656,7 +654,7 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
                       type="button"
                       variant="outline"
                       size="sm"
-                      chamfer="dual"
+                      chamfer="none"
                       onClick={handleCopyWebhookUrl}
                       className="h-7 text-xs flex items-center gap-1"
                     >
@@ -797,7 +795,7 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
                     <Input
                       id="qris-display-name"
                       type="text"
-                      chamfer="dual"
+                      chamfer="none"
                       value={qrisName}
                       onChange={(e) => setQrisName(e.target.value)}
                       placeholder="e.g. BoredKevin Design"
@@ -1109,7 +1107,7 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
           <Button
             type="submit"
             variant="cyber"
-            chamfer="dual"
+            chamfer="none"
             disabled={isSaving}
             className="text-xs font-medium flex items-center gap-1.5"
           >
@@ -1117,6 +1115,6 @@ export function PaymentGatewayCard({ organizationId }: PaymentGatewayCardProps) 
           </Button>
         </CardFooter>
       </form>
-    </Card>
+    </Panel>
   );
 }
