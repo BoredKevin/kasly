@@ -10,7 +10,6 @@ import {
   Badge,
 } from "@boredkevin/ui";
 import {
-  CalendarDays,
   AlertCircle,
   Check,
   Copy,
