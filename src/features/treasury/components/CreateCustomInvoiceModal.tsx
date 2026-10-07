@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
@@ -25,13 +25,13 @@ interface CreateCustomInvoiceModalProps {
   isOpen: boolean;
   onClose: () => void;
   organizationId: Id<"organizations">;
-  fundId: Id<"funds">;
+  fundId?: Id<"funds"> | null;
 }
 
 interface CreateCustomInvoiceModalContentProps {
   onClose: () => void;
   organizationId: Id<"organizations">;
-  fundId: Id<"funds">;
+  fundId?: Id<"funds"> | null;
 }
 
 function CreateCustomInvoiceModalContent({
@@ -43,7 +43,23 @@ function CreateCustomInvoiceModalContent({
   const [, setLocation] = useLocation();
 
   const members = useQuery(api.members.list, organizationId ? { organizationId } : "skip");
+  const funds = useQuery(api.treasury.funds.list, organizationId ? { organizationId } : "skip");
   const createInvoice = useMutation(api.treasury.borderpay.createCustomInvoice);
+
+  const [selectedFundIdState, setSelectedFundIdState] = useState<Id<"funds"> | null>(fundId ?? null);
+
+  useEffect(() => {
+    if (fundId) {
+      setSelectedFundIdState(fundId);
+    }
+  }, [fundId]);
+
+  const effectiveFundId =
+    selectedFundIdState ??
+    fundId ??
+    funds?.find((f) => !f.isArchived)?._id ??
+    funds?.[0]?._id ??
+    null;
 
   const [recipientType, setRecipientType] = useState<"member" | "guest">("member");
   const [selectedUserId, setSelectedUserId] = useState<string>("");
@@ -64,6 +80,10 @@ function CreateCustomInvoiceModalContent({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || amount <= 0 || !payerName.trim()) return;
+    if (!effectiveFundId) {
+      setError("Please select a destination fund.");
+      return;
+    }
 
     setIsSubmitting(true);
     setError(null);
@@ -71,7 +91,7 @@ function CreateCustomInvoiceModalContent({
     try {
       const result = await createInvoice({
         organizationId,
-        fundId,
+        fundId: effectiveFundId,
         targetUserId: recipientType === "member" && selectedUserId ? (selectedUserId as Id<"users">) : undefined,
         title: title.trim(),
         description: description.trim() || undefined,
@@ -218,6 +238,39 @@ function CreateCustomInvoiceModalContent({
                     <span>{error}</span>
                   </div>
                 )}
+
+                {/* Destination Fund Selector */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-foreground block">
+                      {t("treasury.invoices.destinationFund", "Destination Fund")} *
+                    </label>
+                    {effectiveFundId === fundId && fundId && (
+                      <span className="text-[10px] font-mono text-primary px-1.5 py-0.5 bg-primary/10 border border-primary/20">
+                        Auto-selected
+                      </span>
+                    )}
+                  </div>
+                  {funds && funds.length > 0 ? (
+                    <select
+                      value={effectiveFundId ?? ""}
+                      onChange={(e) => setSelectedFundIdState(e.target.value as Id<"funds">)}
+                      disabled={isSubmitting}
+                      className="w-full h-8 px-2.5 bg-background border border-border text-xs text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer rounded-[var(--fintech-radius-xs)]"
+                      required
+                    >
+                      {funds.map((f) => (
+                        <option key={f._id} value={f._id}>
+                          {f.name} ({f.currency}) {f.isArchived ? "[Archived]" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="text-xs text-muted-foreground italic py-1">
+                      No active funds available.
+                    </div>
+                  )}
+                </div>
 
                 {/* Recipient Mode Tabs */}
                 <div className="grid grid-cols-2 gap-1.5 p-1 bg-muted/30 border border-border">

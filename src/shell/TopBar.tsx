@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Authenticated, useQuery, useConvexAuth } from "convex/react";
 import { Link, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
@@ -39,21 +40,31 @@ export function TopBar() {
     isAuthenticated && effectiveOrgId ? { organizationId: effectiveOrgId } : "skip"
   );
 
-  // If user has orgs but activeOrgId is not set, set it
-  if (orgs && orgs.length > 0 && !activeOrgId) {
-    setActiveOrgId(orgs[0]._id);
-  }
+  // If user has orgs but activeOrgId is not set or invalid, sync it
+  useEffect(() => {
+    if (orgs && orgs.length > 0) {
+      if (!activeOrgId || !orgs.some((o) => o._id === activeOrgId)) {
+        setActiveOrgId(orgs[0]._id);
+      }
+    }
+  }, [orgs, activeOrgId, setActiveOrgId]);
 
-  // Derive active fund
+  // Derive active fund: prioritize active fund if present in funds list, otherwise pick first active
   const currentFund =
+    funds?.find((f) => f._id === activeFundId && !f.isArchived) ??
     funds?.find((f) => f._id === activeFundId) ??
     funds?.find((f) => !f.isArchived) ??
     funds?.[0];
 
-  // Auto-sync active fund in context if not yet set
-  if (funds && funds.length > 0 && !activeFundId && currentFund) {
-    setActiveFundId(currentFund._id);
-  }
+  // Auto-sync active fund in context if not yet set or if activeFundId is not valid
+  useEffect(() => {
+    if (funds && funds.length > 0 && currentFund) {
+      const isStoredValid = funds.some((f) => f._id === activeFundId && !f.isArchived);
+      if (!isStoredValid) {
+        setActiveFundId(currentFund._id);
+      }
+    }
+  }, [funds, activeFundId, currentFund, setActiveFundId]);
 
   const isTreasuryActive = location.startsWith("/treasury") || location === "/";
   const isOrgActive = location.startsWith("/organization");

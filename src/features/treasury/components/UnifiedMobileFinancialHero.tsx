@@ -28,7 +28,7 @@ interface UnifiedMobileFinancialHeroProps {
     isArchived?: boolean;
   }>;
   activeFundId: Id<"funds"> | null;
-  onSelectFund: (fundId: Id<"funds">) => void;
+  onSelectFund?: (fundId: Id<"funds">) => void;
   unpaidPeriods: Array<{
     membershipId: Id<"duesMemberships">;
     duesEventId: Id<"duesEvents">;

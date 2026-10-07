@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useConvex } from "convex/react";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
+import { useActiveWorkspace } from "../../../contexts";
 import { Panel } from "../../../ui/Panel";
 import { StatCard } from "../../../ui/StatCard";
 import { StatusPill } from "../../../ui/StatusPill";
@@ -65,10 +66,10 @@ export function BulkDuesEntryPane({
   const funds = useQuery(api.treasury.funds.list, { organizationId });
   const myKeys = useQuery(api.treasury.keys.getMyKeys, { organizationId });
 
-  // Selected Fund
-  const [selectedFundIdState, setSelectedFundIdState] = useState<Id<"funds"> | null>(null);
+  // Selected Fund from Active Workspace
+  const { activeFundId } = useActiveWorkspace();
   const selectedFundId =
-    selectedFundIdState ??
+    activeFundId ??
     initialFundId ??
     funds?.find((f) => !f.isArchived)?._id ??
     funds?.[0]?._id ??
@@ -187,10 +188,14 @@ export function BulkDuesEntryPane({
   const [searchMemberQuery, setSearchMemberQuery] = useState("");
   const [searchStagedQuery, setSearchStagedQuery] = useState("");
 
-  const handleSelectFund = (newFundId: Id<"funds">) => {
-    setSelectedFundIdState(newFundId);
+  // Sync draft whenever selectedFundId changes
+  useEffect(() => {
+    if (!selectedFundId || typeof window === "undefined") {
+      setStagedItems([]);
+      return;
+    }
     try {
-      const saved = localStorage.getItem(`kasly_bulk_dues_draft_${organizationId}_${newFundId}`);
+      const saved = localStorage.getItem(`kasly_bulk_dues_draft_${organizationId}_${selectedFundId}`);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed?.rows)) {
@@ -202,7 +207,7 @@ export function BulkDuesEntryPane({
       // Ignore
     }
     setStagedItems([]);
-  };
+  }, [organizationId, selectedFundId]);
 
   // Auto-persist draft
   useEffect(() => {
@@ -590,27 +595,17 @@ export function BulkDuesEntryPane({
 
       {/* Fund & Signing Key Context */}
       <Panel className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Destination Fund */}
+        {/* Destination Fund (Active Workspace Fund) */}
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-foreground block">
             Destination Fund
           </label>
-          {funds && funds.length > 0 ? (
-            <select
-              value={selectedFundId ?? ""}
-              onChange={(e) => handleSelectFund(e.target.value as Id<"funds">)}
-              disabled={isProcessing}
-              className="w-full h-8 px-2.5 bg-background border border-border rounded-[var(--fintech-radius-sm)] text-xs text-foreground focus:outline-none focus:border-primary cursor-pointer font-mono"
-            >
-              {funds.map((f) => (
-                <option key={f._id} value={f._id}>
-                  {f.name} ({f.currency})
-                </option>
-              ))}
-            </select>
-          ) : (
-            <div className="text-xs text-muted-foreground italic py-1">No active funds available.</div>
-          )}
+          <div className="h-8 px-2.5 bg-muted/20 border border-border/80 rounded-[var(--fintech-radius-sm)] flex items-center justify-between text-xs text-foreground font-mono">
+            <span className="font-medium truncate">{currentFund?.name ?? "Treasury"}</span>
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 shrink-0">
+              {currency}
+            </span>
+          </div>
         </div>
 
         {/* Treasurer Signing Key */}

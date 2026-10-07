@@ -25,7 +25,7 @@ interface TreasurySidebarProps {
   onSelectTab?: (tab: TreasuryTab) => void;
   activeOrgId: Id<"organizations"> | null;
   activeFundId: Id<"funds"> | null;
-  onSelectFund: (id: Id<"funds">) => void;
+  onSelectFund?: (id: Id<"funds">) => void;
   onOpenRecordPayment: (prefill?: any) => void;
   onOpenDueEvent: () => void;
   onOpenCreateFund: () => void;
@@ -38,7 +38,6 @@ export function TreasurySidebar({
   onSelectTab,
   activeOrgId,
   activeFundId,
-  onSelectFund,
   onOpenRecordPayment,
   onOpenDueEvent,
   onOpenCreateFund,
@@ -65,17 +64,10 @@ export function TreasurySidebar({
     activeOrgId ? { organizationId: activeOrgId } : "skip"
   );
 
-  const funds = useQuery(
-    api.treasury.funds.list,
-    activeOrgId ? { organizationId: activeOrgId } : "skip"
-  );
-
   const duesSummary = useQuery(
     api.treasury.dues.getDuesSummary,
     activeOrgId && activeFundId ? { organizationId: activeOrgId, fundId: activeFundId } : "skip"
   );
-
-  const activeFund = funds?.find((f) => f._id === activeFundId);
 
   const canSign = Boolean(
     myMembership?.isOwner ||
@@ -302,63 +294,6 @@ export function TreasurySidebar({
           </div>
         </div>
       )}
-
-      {/* Fund Switcher Section */}
-      <div className="pt-4 border-t border-border/60 space-y-2">
-        <div className="flex items-center justify-between text-[11px] font-mono tracking-wider text-muted-foreground uppercase px-2 font-medium">
-          <span>{t("treasury.sidebar.activeFund") || "Active Fund"}</span>
-          {activeFund && (
-            <StatusPill
-              tone={activeFund.isFrozen ? "danger" : "info"}
-              className="text-[10px] py-0 px-1.5"
-            >
-              {activeFund.isFrozen ? "FROZEN" : activeFund.currency}
-            </StatusPill>
-          )}
-        </div>
-
-        <div className="p-3 rounded-[var(--fintech-radius-md)] bg-muted/20 border border-border/60 space-y-2.5">
-          {funds && funds.length > 0 ? (
-            <div className="relative">
-              <select
-                value={activeFundId ?? ""}
-                onChange={(e) => {
-                  onSelectFund(e.target.value as Id<"funds">);
-                  onAfterSelect?.();
-                }}
-                className="w-full h-8 px-2.5 pr-8 bg-background border border-border/80 rounded-[var(--fintech-radius-sm)] text-xs text-foreground font-medium focus:outline-none focus:ring-1 focus:ring-primary appearance-none cursor-pointer truncate"
-              >
-                {funds.map((fund) => (
-                  <option key={fund._id} value={fund._id}>
-                    {fund.isFrozen ? "⚠️ [FROZEN] " : ""}{fund.name} ({fund.currency})
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 top-2.5 pointer-events-none text-muted-foreground" />
-            </div>
-          ) : (
-            <div className="text-xs text-muted-foreground italic py-1">
-              {t("treasury.sidebar.noFundsFound") || "No funds found"}
-            </div>
-          )}
-
-          {canAdmin && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                onOpenCreateFund();
-                onAfterSelect?.();
-              }}
-              className="w-full h-7 text-xs px-2 flex items-center justify-center gap-1 cursor-pointer"
-            >
-              <Plus className="w-3 h-3" />
-              <span>{t("nav.newFund") || "New Fund"}</span>
-            </Button>
-          )}
-        </div>
-      </div>
     </div>
   );
 }
