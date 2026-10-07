@@ -116,10 +116,18 @@ export function MemberDuesBanner({
               chamfer="none"
               size="sm"
               onClick={onOpenPayDues}
-              className="w-full sm:w-auto h-9 text-xs font-semibold px-4 flex items-center justify-center gap-2 cursor-pointer shadow-md bg-primary text-primary-foreground hover:bg-primary/90"
+              className="w-full sm:w-auto h-9 text-xs font-semibold px-4 flex items-center justify-center gap-2 cursor-pointer pay-cta-glow bg-primary text-primary-foreground hover:bg-primary/90 relative overflow-hidden group"
             >
-              <CreditCard className="w-3.5 h-3.5" />
-              <span>{t("treasury.overview.payDuesNow", "Pay Dues Now")}</span>
+              {/* Swiping shine effect */}
+              <span
+                className="absolute inset-0 pointer-events-none overflow-hidden rounded-[inherit]"
+                aria-hidden="true"
+              >
+                <span className="absolute top-0 bottom-0 left-0 w-1/2 shine-gradient-swipe animate-shine-sweep" />
+              </span>
+
+              <CreditCard className="w-3.5 h-3.5 relative z-10" />
+              <span className="relative z-10">{t("treasury.overview.payDuesNow", "Pay Dues Now")}</span>
             </Button>
 
             {unpaidCount > 1 && (

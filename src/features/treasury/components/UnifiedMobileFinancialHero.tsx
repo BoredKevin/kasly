@@ -137,11 +137,19 @@ export function UnifiedMobileFinancialHero({
             chamfer="none"
             size="default"
             onClick={onOpenPayDues}
-            className="w-full h-11 text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 transition-all rounded-[var(--fintech-radius-sm)] shadow-md mt-2"
+            className="w-full h-11 text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 transition-all rounded-[var(--fintech-radius-sm)] pay-cta-glow mt-2 relative overflow-hidden group"
           >
-            <CreditCard className="w-4 h-4" />
-            <span>
-              {t("treasury.overview.payDuesNow", "Bayar")} ({formatMoney(totalUnpaid, currency)})
+            {/* Swiping shine effect */}
+            <span
+              className="absolute inset-0 pointer-events-none overflow-hidden rounded-[inherit]"
+              aria-hidden="true"
+            >
+              <span className="absolute top-0 bottom-0 left-0 w-1/2 shine-gradient-swipe animate-shine-sweep" />
+            </span>
+
+            <CreditCard className="w-4 h-4 relative z-10" />
+            <span className="relative z-10">
+              {t("treasury.overview.payDuesNow", "Bayar")}
             </span>
           </Button>
         </div>
