@@ -395,7 +395,22 @@
       "fromCycle": "Dari Siklus",
       "toCycle": "Hingga Siklus",
       "downloadPdf": "Unduh PDF",
-      "downloadJson": "Unduh JSON"
+      "downloadJson": "Unduh JSON",
+      "memberSheetTitle": "Detail Iuran Anggota",
+      "memberSheetSubtitle": "Status kewajiban kas dan riwayat pembayaran anggota.",
+      "totalOutstanding": "Total Tunggakan",
+      "unpaidCount": "{{count}} Belum Lunas",
+      "createInvoiceBtn": "Buat Faktur Tunggakan",
+      "recordCashBtn": "Catat Bayar Tunai",
+      "timelineTitle": "Siklus Iuran",
+      "noCycles": "Belum ada siklus penarikan iuran untuk kas ini.",
+      "paidAt": "Dibayar",
+      "viewProof": "Bukti",
+      "viewProofTitle": "Lihat Bukti Transaksi",
+      "cycleInvoice": "Faktur",
+      "cycleInvoiceTitle": "Terbitkan Faktur",
+      "cyclePay": "Bayar",
+      "cyclePayTitle": "Catat Bayar Tunai"
     },
     "keys": {
       "title": "Kunci Kriptografis Bendahara",
