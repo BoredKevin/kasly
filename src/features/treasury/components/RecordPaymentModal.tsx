@@ -81,6 +81,7 @@ export function RecordPaymentModal({
   useEffect(() => {
     let isMounted = true;
     if (isOpen) {
+      setSelectedFundIdState(defaultFundId ?? null);
       listStoredKeys()
         .then((stored) => {
           if (isMounted) {
@@ -98,7 +99,7 @@ export function RecordPaymentModal({
     return () => {
       isMounted = false;
     };
-  }, [isOpen]);
+  }, [isOpen, defaultFundId]);
 
   // Active (non-revoked) keys belonging to current user
   const activeKeys = useMemo(

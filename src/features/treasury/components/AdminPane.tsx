@@ -579,6 +579,7 @@ export function AdminPane({ organizationId, activeFundId, onOpenCreateFund }: Ad
         organizationId={organizationId}
         isOpen={isPreRegModalOpen}
         onClose={() => setIsPreRegModalOpen(false)}
+        initialFundId={activeFundId}
       />
     </div>
   );

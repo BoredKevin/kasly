@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "convex/react";
 import { useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
@@ -40,9 +40,13 @@ export function TreasuryView({
   const { activeOrgId, setActiveOrgId, activeFundId: workspaceFundId, setActiveFundId } = useActiveWorkspace();
 
   // If user has orgs but activeOrgId is not set, select the first one
-  if (orgs && orgs.length > 0 && !activeOrgId) {
-    setActiveOrgId(orgs[0]._id);
-  }
+  useEffect(() => {
+    if (orgs && orgs.length > 0) {
+      if (!activeOrgId || !orgs.some((o) => o._id === activeOrgId)) {
+        setActiveOrgId(orgs[0]._id);
+      }
+    }
+  }, [orgs, activeOrgId, setActiveOrgId]);
 
   const effectiveOrgId = activeOrgId ?? orgs?.[0]?._id;
 
@@ -58,13 +62,15 @@ export function TreasuryView({
 
   // Derive active fund: prioritize workspace selection if present in funds list, otherwise pick first active
   const activeFundId =
-    workspaceFundId && funds?.some((f) => f._id === workspaceFundId)
+    workspaceFundId && funds?.some((f) => f._id === workspaceFundId && !f.isArchived)
       ? workspaceFundId
       : (funds?.find((f) => !f.isArchived)?._id ?? funds?.[0]?._id ?? null);
 
-  if (activeFundId && activeFundId !== workspaceFundId) {
-    setActiveFundId(activeFundId);
-  }
+  useEffect(() => {
+    if (activeFundId && activeFundId !== workspaceFundId) {
+      setActiveFundId(activeFundId);
+    }
+  }, [activeFundId, workspaceFundId, setActiveFundId]);
 
   const activeFund = funds?.find((f) => f._id === activeFundId);
 
@@ -211,7 +217,6 @@ export function TreasuryView({
               if (tab === "admin") setLocation("/treasury/admin");
             }}
             activeFundId={activeFundId}
-            onSelectFund={setActiveFundId}
             onOpenRecordPayment={handleOpenRecordPayment}
             onOpenDueEvent={() => setIsDueEventOpen(true)}
             onOpenCreateFund={() => setIsCreateFundOpen(true)}

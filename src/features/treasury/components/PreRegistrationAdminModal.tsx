@@ -36,12 +36,14 @@ interface PreRegistrationAdminModalProps {
   organizationId: Id<"organizations">;
   isOpen: boolean;
   onClose: () => void;
+  initialFundId?: Id<"funds"> | null;
 }
 
 export function PreRegistrationAdminModal({
   organizationId,
   isOpen,
   onClose,
+  initialFundId,
 }: PreRegistrationAdminModalProps) {
   const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -57,13 +59,17 @@ export function PreRegistrationAdminModal({
 
   const funds = useQuery(api.treasury.funds.list, isOpen ? { organizationId } : "skip");
   const activeFunds = useMemo<Doc<"funds">[]>(() => funds?.filter((f: Doc<"funds">) => !f.isArchived) ?? [], [funds]);
-  const [selectedFundId, setSelectedFundId] = useState<Id<"funds"> | null>(null);
+  const [selectedFundId, setSelectedFundId] = useState<Id<"funds"> | null>(initialFundId ?? null);
 
   useEffect(() => {
-    if (!selectedFundId && activeFunds.length > 0) {
-      setSelectedFundId(activeFunds[0]._id);
+    if (isOpen) {
+      if (initialFundId && activeFunds.some((f) => f._id === initialFundId)) {
+        setSelectedFundId(initialFundId);
+      } else if (activeFunds.length > 0 && (!selectedFundId || !activeFunds.some((f) => f._id === selectedFundId))) {
+        setSelectedFundId(activeFunds[0]._id);
+      }
     }
-  }, [activeFunds, selectedFundId]);
+  }, [isOpen, initialFundId, activeFunds]);
 
   const duesEvents = useQuery(
     api.treasury.dues.listDuesEvents,

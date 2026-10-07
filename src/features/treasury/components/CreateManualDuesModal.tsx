@@ -111,6 +111,12 @@ export function CreateManualDuesModal({
     defaultFundId ?? null
   );
 
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedFundIdState(defaultFundId ?? null);
+    }
+  }, [isOpen, defaultFundId]);
+
   const selectedFundId = selectedFundIdState ?? defaultFundId ?? funds?.[0]?._id ?? null;
   const currentFund = funds?.find((f) => f._id === selectedFundId);
 
