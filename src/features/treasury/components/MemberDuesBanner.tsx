@@ -80,35 +80,32 @@ export function MemberDuesBanner({
               {t("treasury.overview.outstandingDuesTitle", "Outstanding Dues")}
             </span>
           </div>
-
-          <StatusPill tone="warning">
-            {unpaidCount} {unpaidCount > 1 ? "Cycles" : "Cycle"}
-          </StatusPill>
         </div>
 
         {/* Amount and Due Context */}
         <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3">
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <div className="text-2xl sm:text-3xl font-bold font-mono tracking-tight text-amber-300">
               {formatMoney(totalUnpaid, currency)}
             </div>
 
-            {oldestPeriod && (
-              <div className="flex items-center gap-1.5 text-xs text-amber-200/90">
-                <Calendar className="w-3.5 h-3.5 shrink-0 text-amber-400" />
-                <span>
-                  {oldestPeriod.periodLabel}
-                  {" • "}
+            <div className="flex items-center gap-2 text-xs text-amber-200/90">
+              <StatusPill tone="warning" className="text-[11px] py-0 px-2 shrink-0">
+                {t(unpaidCount > 1 ? "treasury.overview.cycles" : "treasury.overview.cycle_one", { count: unpaidCount })}
+              </StatusPill>
+              {oldestPeriod && (
+                <>
+                  <span>•</span>
                   {isOverdue ? (
                     <span className="text-rose-400 font-semibold">
-                      Overdue ({formatDate(oldestPeriod.dueDate)})
+                      {t("treasury.overview.overdue", "Overdue")} ({formatDate(oldestPeriod.dueDate)})
                     </span>
                   ) : (
-                    <span>Due {formatDate(oldestPeriod.dueDate)}</span>
+                    <span>{t("treasury.overview.due", "Due")} {formatDate(oldestPeriod.dueDate)}</span>
                   )}
-                </span>
-              </div>
-            )}
+                </>
+              )}
+            </div>
           </div>
 
           {/* Actions: Pay Now + Breakdown Toggle */}

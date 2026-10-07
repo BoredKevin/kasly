@@ -105,29 +105,30 @@ export function UnifiedMobileFinancialHero({
               <Receipt className="w-4 h-4 text-amber-400" />
               <span>{t("treasury.overview.outstandingDuesTitle", "Tunggakan Anda")}</span>
             </span>
-            <StatusPill tone="warning">
-              {t(unpaidCount > 1 ? "treasury.overview.cycles" : "treasury.overview.cycle_one", { count: unpaidCount })}
-            </StatusPill>
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <div className="text-3xl sm:text-4xl font-bold font-sans tabular-nums tracking-tight text-amber-400">
               {formatMoney(totalUnpaid, currency)}
             </div>
 
-            {oldestPeriod && (
-              <p className="text-xs text-muted-foreground truncate">
-                {oldestPeriod.periodLabel.replace("Week", t("treasury.overview.week", "Minggu"))}
-                {" • "}
-                {isOverdue ? (
-                  <span className="text-rose-400 font-medium">
-                    {t("treasury.overview.overdue", "Terlambat")} {formatDate(oldestPeriod.dueDate)}
-                  </span>
-                ) : (
-                  <span>{t("treasury.overview.due", "Jatuh Tempo")} ({formatDate(oldestPeriod.dueDate)})</span>
-                )}
-              </p>
-            )}
+            <div className="flex items-center gap-2 text-xs text-muted-foreground truncate">
+              <span className="text-amber-500 font-medium">
+                {t(unpaidCount > 1 ? "treasury.overview.cycles" : "treasury.overview.cycle_one", { count: unpaidCount })}
+              </span>
+              {oldestPeriod && (
+                <>
+                  <span>•</span>
+                  {isOverdue ? (
+                    <span className="text-rose-400 font-medium">
+                      {t("treasury.overview.overdue", "Terlambat")} {formatDate(oldestPeriod.dueDate)}
+                    </span>
+                  ) : (
+                    <span>{t("treasury.overview.due", "Jatuh Tempo")} ({formatDate(oldestPeriod.dueDate)})</span>
+                  )}
+                </>
+              )}
+            </div>
           </div>
 
           <Button
