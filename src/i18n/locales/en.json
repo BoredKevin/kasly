@@ -395,7 +395,22 @@
       "fromCycle": "From Due Cycle",
       "toCycle": "To Due Cycle",
       "downloadPdf": "Download PDF",
-      "downloadJson": "Download JSON"
+      "downloadJson": "Download JSON",
+      "memberSheetTitle": "Member Dues Details",
+      "memberSheetSubtitle": "Member dues obligations and payment history.",
+      "totalOutstanding": "Total Outstanding",
+      "unpaidCount": "{{count}} Unpaid",
+      "createInvoiceBtn": "Invoice All Dues",
+      "recordCashBtn": "Record Cash Payment",
+      "timelineTitle": "Dues Cycles",
+      "noCycles": "No recorded dues cycles for this fund.",
+      "paidAt": "Paid",
+      "viewProof": "Proof",
+      "viewProofTitle": "View Ledger Proof",
+      "cycleInvoice": "Invoice",
+      "cycleInvoiceTitle": "Generate Invoice",
+      "cyclePay": "Pay",
+      "cyclePayTitle": "Record Cash Payment"
     },
     "keys": {
       "title": "Treasurer Cryptographic Keys",

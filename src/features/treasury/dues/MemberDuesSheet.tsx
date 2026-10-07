@@ -4,7 +4,7 @@ import { Id } from "../../../../convex/_generated/dataModel";
 import { DuesMemberItem, DuesEventItem, DuesCellItem } from "../types/dues";
 import { ResponsiveDialog } from "../../../ui/ResponsiveDialog";
 import { StatusPill } from "../../../ui/StatusPill";
-import { Button } from "@boredkevin/ui";
+import { Button, Avatar, AvatarImage, AvatarFallback } from "@boredkevin/ui";
 import {
   CheckCircle2,
   Receipt,
@@ -83,154 +83,174 @@ export function MemberDuesSheet({
     <ResponsiveDialog
       isOpen={isOpen}
       onClose={onClose}
-      title={member.nickname || member.name}
-      description={member.nickname ? member.name : member.email || t("organization.member")}
+      title={t("treasury.dues.memberSheetTitle", "Detail Iuran Anggota")}
+      description={t(
+        "treasury.dues.memberSheetSubtitle",
+        "Status kewajiban kas dan riwayat pembayaran anggota."
+      )}
       maxWidth="lg"
     >
-      <div className="space-y-5">
-        {/* Member Profile & Status Header */}
+      <div className="space-y-4 pt-1">
+        {/* Member Profile & Status Card */}
         <div className="flex items-center justify-between p-3.5 bg-muted/20 border border-border/80 rounded-[var(--fintech-radius-md)]">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold text-sm shrink-0 overflow-hidden">
-              {member.image ? (
-                <img src={member.image} alt={member.name} className="w-full h-full object-cover" />
-              ) : (
-                <span>{(member.nickname || member.name).charAt(0).toUpperCase()}</span>
+            <Avatar className="w-10 h-10 border border-primary/25 shrink-0">
+              {member.image && (
+                <AvatarImage src={member.image} alt={member.name} className="object-cover" />
               )}
-            </div>
-            <div className="min-w-0">
+              <AvatarFallback className="bg-primary/10 text-primary font-bold text-sm">
+                {(member.nickname || member.name).charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 space-y-0.5">
               <p className="font-semibold text-sm text-foreground truncate">
                 {member.nickname || member.name}
               </p>
-              {member.email && (
-                <p className="text-xs text-muted-foreground truncate">{member.email}</p>
-              )}
+              <p className="text-xs text-muted-foreground truncate">
+                {member.nickname ? `${member.name} • ${member.email || ""}` : member.email || ""}
+              </p>
             </div>
           </div>
 
-          <div>
+          <div className="shrink-0">
             {member.unpaidPeriodsCount > 0 ? (
-              <StatusPill tone="warning">
-                {member.unpaidPeriodsCount}{" "}
-                {t("treasury.dues.unpaid", "unpaid").toLowerCase()}
+              <StatusPill tone="warning" className="text-xs font-semibold">
+                {t("treasury.dues.unpaidCount", {
+                  count: member.unpaidPeriodsCount,
+                  defaultValue: `${member.unpaidPeriodsCount} Belum Lunas`,
+                })}
               </StatusPill>
             ) : (
-              <StatusPill tone="success">
-                {t("treasury.dues.paid", "Paid up")}
+              <StatusPill tone="success" className="text-xs font-semibold">
+                ✓ {t("treasury.dues.paid", "LUNAS")}
               </StatusPill>
             )}
           </div>
         </div>
 
-        {/* Quick Outstanding Summary */}
+        {/* Quick Outstanding Summary Card */}
         {member.unpaidPeriodsCount > 0 && (
-          <div className="p-3.5 bg-amber-500/10 border border-amber-500/25 rounded-[var(--fintech-radius-md)] flex items-center justify-between gap-4">
-            <div>
-              <p className="text-xs text-amber-300 font-medium">
-                {t("treasury.overview.outstandingDuesTitle", "Outstanding Dues")}
-              </p>
-              <p className="text-lg font-bold text-foreground font-mono">
-                {formatMoney(totalOwed, currency)}
-              </p>
-              <p className="text-[11px] text-muted-foreground">
-                {member.unpaidPeriodsCount} {t("treasury.dues.unpaid", "cycle(s) due")}
-              </p>
+          <div className="p-4 bg-amber-500/10 border border-amber-500/25 rounded-[var(--fintech-radius-md)] space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <span className="text-xs text-amber-300 font-medium tracking-wide">
+                  {t("treasury.dues.totalOutstanding", "Total Tunggakan")}
+                </span>
+                <p className="text-xl sm:text-2xl font-bold text-foreground font-mono tabular-nums whitespace-nowrap mt-0.5">
+                  {formatMoney(totalOwed, currency)}
+                </p>
+              </div>
+
+              <StatusPill tone="warning" className="text-xs font-medium shrink-0">
+                {t("treasury.overview.unpaidDues", {
+                  count: member.unpaidPeriodsCount,
+                  defaultValue: `${member.unpaidPeriodsCount} periode belum lunas`,
+                })}
+              </StatusPill>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
-              {canManage && onOpenCreateInvoice && (
-                <Button
-                  type="button"
-                  variant="cyber"
-                  chamfer="none"
-                  size="sm"
-                  onClick={() => {
-                    onClose();
-                    onOpenCreateInvoice({
-                      userId: member.userId,
-                      periodCount: member.unpaidPeriodsCount,
-                    });
-                  }}
-                  className="h-8 text-xs cursor-pointer flex items-center gap-1.5"
-                >
-                  <Receipt className="w-3.5 h-3.5" />
-                  <span>{t("treasury.invoices.createDuesBtn", "Invoice All")}</span>
-                </Button>
-              )}
+            {(canManage || canSign) && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2.5 border-t border-amber-500/20">
+                {canManage && onOpenCreateInvoice && (
+                  <Button
+                    type="button"
+                    variant="cyber"
+                    chamfer="none"
+                    size="sm"
+                    onClick={() => {
+                      onClose();
+                      onOpenCreateInvoice({
+                        userId: member.userId,
+                        periodCount: member.unpaidPeriodsCount,
+                      });
+                    }}
+                    className="h-8.5 text-xs font-medium cursor-pointer w-full justify-center flex items-center gap-1.5"
+                  >
+                    <Receipt className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">
+                      {t("treasury.dues.createInvoiceBtn", "Buat Faktur Tunggakan")}
+                    </span>
+                  </Button>
+                )}
 
-              {canSign && onOpenRecordPayment && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  chamfer="none"
-                  size="sm"
-                  onClick={() => {
-                    onClose();
-                    onOpenRecordPayment({
-                      userId: member.userId,
-                      periodCount: member.unpaidPeriodsCount,
-                      fundId: fundId ?? undefined,
-                    });
-                  }}
-                  className="h-8 text-xs cursor-pointer flex items-center gap-1.5"
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>{t("treasury.invoices.actionRecordManual", "Record Cash")}</span>
-                </Button>
-              )}
-            </div>
+                {canSign && onOpenRecordPayment && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    chamfer="none"
+                    size="sm"
+                    onClick={() => {
+                      onClose();
+                      onOpenRecordPayment({
+                        userId: member.userId,
+                        periodCount: member.unpaidPeriodsCount,
+                        fundId: fundId ?? undefined,
+                      });
+                    }}
+                    className="h-8.5 text-xs font-medium cursor-pointer w-full justify-center flex items-center gap-1.5 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 hover:border-emerald-500/50"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span className="truncate">
+                      {t("treasury.dues.recordCashBtn", "Catat Bayar Tunai")}
+                    </span>
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         )}
 
         {/* Cycles Timeline */}
         <div className="space-y-2">
           <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            {t("treasury.dues.timelineTitle", "Dues Cycles")} ({memberEvents.length})
+            {t("treasury.dues.timelineTitle", "Siklus Iuran")} ({memberEvents.length})
           </h4>
 
           {memberEvents.length === 0 ? (
             <div className="p-6 text-center text-xs text-muted-foreground">
-              {t("treasury.dues.noCycles", "No recorded dues cycles for this fund.")}
+              {t("treasury.dues.noCycles", "Belum ada siklus penarikan iuran untuk kas ini.")}
             </div>
           ) : (
-            <div className="divide-y divide-border/60 border border-border/80 rounded-[var(--fintech-radius-md)] overflow-hidden max-h-[360px] overflow-y-auto">
+            <div className="divide-y divide-border/60 border border-border/80 rounded-[var(--fintech-radius-md)] overflow-y-auto overflow-x-hidden max-h-[360px]">
               {memberEvents.map(({ event, cell, isPaid, isWaived, isInvoiced, isUnpaid }) => (
                 <div
                   key={event._id}
                   className="p-3 bg-card/60 hover:bg-card/90 transition-colors flex items-center justify-between gap-3 text-xs"
                 >
-                  <div className="min-w-0 space-y-0.5">
-                    <div className="flex items-center gap-2">
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-foreground truncate">
                         {event.periodLabel}
                       </span>
                       {isPaid && (
-                        <StatusPill tone="success">
+                        <StatusPill tone="success" className="text-[10px] py-0 px-1.5">
                           {isWaived
-                            ? t("treasury.dues.waived", "Waived")
-                            : t("treasury.dues.paid", "Paid")}
+                            ? t("treasury.dues.waived", "DIBEBASKAN")
+                            : t("treasury.dues.paid", "LUNAS")}
                         </StatusPill>
                       )}
                       {isInvoiced && (
-                        <StatusPill tone="warning">
-                          {t("treasury.invoices.cellInvoiced", "Invoiced")}
+                        <StatusPill tone="warning" className="text-[10px] py-0 px-1.5">
+                          {t("treasury.invoices.cellInvoiced", "Faktur Dibuat")}
                         </StatusPill>
                       )}
                       {isUnpaid && (
-                        <StatusPill tone="danger">
-                          {t("treasury.dues.unpaid", "Unpaid")}
+                        <StatusPill tone="danger" className="text-[10px] py-0 px-1.5">
+                          {t("treasury.dues.unpaid", "BELUM LUNAS")}
                         </StatusPill>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                      <span className="font-mono">{formatMoney(event.amount, currency)}</span>
+                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground flex-wrap">
+                      <span className="font-mono tabular-nums">{formatMoney(event.amount, currency)}</span>
                       <span>·</span>
-                      <span>Due {formatDate(event.dueDate)}</span>
+                      <span>
+                        {t("treasury.overview.due", "Jatuh Tempo")} {formatDate(event.dueDate)}
+                      </span>
                       {cell?.paidAt && (
                         <>
                           <span>·</span>
                           <span className="text-emerald-400/90 font-mono">
-                            Paid {formatDate(cell.paidAt)}
+                            {t("treasury.dues.paidAt", "Dibayar")} {formatDate(cell.paidAt)}
                           </span>
                         </>
                       )}
@@ -250,10 +270,12 @@ export function MemberDuesSheet({
                           onOpenEntryDetails(cell.ledgerEntryId!);
                         }}
                         className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground cursor-pointer flex items-center gap-1"
-                        title="View Ledger Proof"
+                        title={t("treasury.dues.viewProofTitle", "Lihat Bukti Transaksi")}
                       >
                         <ExternalLink className="w-3 h-3" />
-                        <span className="hidden sm:inline">Proof</span>
+                        <span className="hidden sm:inline">
+                          {t("treasury.dues.viewProof", "Bukti")}
+                        </span>
                       </Button>
                     )}
 
@@ -268,9 +290,10 @@ export function MemberDuesSheet({
                           onOpenInvoiceDetails(cell.invoiceId!);
                         }}
                         className="h-7 text-xs px-2 text-amber-300 border-amber-500/40 hover:bg-amber-500/10 cursor-pointer flex items-center gap-1"
+                        title={t("treasury.invoices.openInvoice", "Buka Faktur")}
                       >
                         <Receipt className="w-3 h-3" />
-                        <span>Invoice</span>
+                        <span>{t("treasury.dues.cycleInvoice", "Faktur")}</span>
                       </Button>
                     )}
 
@@ -290,10 +313,12 @@ export function MemberDuesSheet({
                               });
                             }}
                             className="h-7 text-xs px-2 cursor-pointer flex items-center gap-1"
-                            title="Generate Invoice Link"
+                            title={t("treasury.dues.cycleInvoiceTitle", "Buat Faktur Siklus Ini")}
                           >
                             <Receipt className="w-3 h-3" />
-                            <span className="hidden sm:inline">Invoice</span>
+                            <span className="hidden sm:inline">
+                              {t("treasury.dues.cycleInvoice", "Faktur")}
+                            </span>
                           </Button>
                         )}
 
@@ -313,10 +338,12 @@ export function MemberDuesSheet({
                               });
                             }}
                             className="h-7 text-xs px-2 text-emerald-400 border-emerald-500/40 hover:bg-emerald-500/10 cursor-pointer flex items-center gap-1"
-                            title="Record Cash Payment"
+                            title={t("treasury.dues.cyclePayTitle", "Catat Bayar Tunai Siklus Ini")}
                           >
                             <CheckCircle2 className="w-3 h-3" />
-                            <span className="hidden sm:inline">Pay</span>
+                            <span className="hidden sm:inline">
+                              {t("treasury.dues.cyclePay", "Bayar")}
+                            </span>
                           </Button>
                         )}
                       </div>
