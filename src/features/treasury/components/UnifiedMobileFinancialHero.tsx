@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { Id } from "../../../../convex/_generated/dataModel";
 import { Panel } from "../../../ui/Panel";
-import { StatusPill } from "../../../ui/StatusPill";
 import { Button } from "@boredkevin/ui";
 import {
   CheckCircle2,

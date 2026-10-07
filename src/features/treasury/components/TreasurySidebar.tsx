@@ -8,14 +8,11 @@ import {
   ScrollText,
   KeyRound,
   ShieldCheck,
-  ChevronDown,
-  Plus,
   PenLine,
   CalendarDays,
   Receipt,
   Users,
 } from "lucide-react";
-import { Button } from "@boredkevin/ui";
 import { StatusPill } from "../../../ui";
 
 export type TreasuryTab = "overview" | "ledger" | "dues" | "invoices" | "keys" | "admin" | "bulk-dues";
@@ -28,7 +25,7 @@ interface TreasurySidebarProps {
   onSelectFund?: (id: Id<"funds">) => void;
   onOpenRecordPayment: (prefill?: any) => void;
   onOpenDueEvent: () => void;
-  onOpenCreateFund: () => void;
+  onOpenCreateFund?: () => void;
   onAfterSelect?: () => void;
   className?: string;
 }
@@ -40,7 +37,6 @@ export function TreasurySidebar({
   activeFundId,
   onOpenRecordPayment,
   onOpenDueEvent,
-  onOpenCreateFund,
   onAfterSelect,
   className = "",
 }: TreasurySidebarProps) {
