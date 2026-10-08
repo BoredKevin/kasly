@@ -337,6 +337,13 @@ export default function App() {
           </TreasuryErrorBoundary>
         </ProtectedLayout>
       </Route>
+      <Route path="/treasury/dues/manage">
+        <ProtectedLayout>
+          <TreasuryErrorBoundary>
+            <TreasuryView />
+          </TreasuryErrorBoundary>
+        </ProtectedLayout>
+      </Route>
       <Route path="/treasury/bulk-dues">
         <ProtectedLayout>
           <TreasuryErrorBoundary>
