@@ -82,7 +82,7 @@ export function TreasuryView({
   const getTabFromLocation = (loc: string): TreasuryTab | "entry" => {
     if (loc.startsWith("/tx/") || entryIdentifier) return "entry";
     if (loc === "/treasury/ledger") return "ledger";
-    if (loc === "/treasury/dues") return "dues";
+    if (loc === "/treasury/dues" || loc === "/treasury/dues/manage") return "dues";
     if (loc === "/treasury/bulk-dues" || loc === "/treasury/dues/bulk") return "bulk-dues";
     if (loc === "/treasury/invoices") return "invoices";
     if (loc === "/treasury/keys") return "keys";
@@ -269,6 +269,10 @@ export function TreasuryView({
                   fundId={activeFundId}
                   fundName={activeFund?.name}
                   currency={activeFund?.currency}
+                  subpage={location === "/treasury/dues/manage" ? "manage" : "overview"}
+                  onSubpageChange={(sub) => {
+                    setLocation(sub === "manage" ? "/treasury/dues/manage" : "/treasury/dues");
+                  }}
                   onOpenRecordPayment={handleOpenRecordPayment}
                   onOpenEntryDetails={handleInspectEntryById}
                   onOpenAdminTab={() => setLocation("/treasury/admin")}

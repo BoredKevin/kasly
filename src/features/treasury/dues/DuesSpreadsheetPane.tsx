@@ -16,6 +16,7 @@ import {
   Download,
   Users,
   CalendarPlus,
+  CalendarDays,
 } from "lucide-react";
 import { useFormat } from "../../../hooks/useFormat";
 import { DuesMemberItem, DuesEventItem, DuesCellItem } from "../types/dues";
@@ -27,6 +28,7 @@ import { ExportDuesModal } from "./ExportDuesModal";
 import { CreateInvoiceModal } from "../components/CreateInvoiceModal";
 import { InvoiceDetailsModal } from "../invoices/InvoiceDetailsModal";
 import { EditInvoiceModal } from "../invoices/EditInvoiceModal";
+import { DuesCyclesManager } from "./DuesCyclesManager";
 
 interface DuesSpreadsheetPaneProps {
   organizationId: Id<"organizations">;
@@ -34,6 +36,8 @@ interface DuesSpreadsheetPaneProps {
   fundId: Id<"funds"> | null;
   fundName?: string;
   currency?: string;
+  subpage?: "overview" | "manage";
+  onSubpageChange?: (sub: "overview" | "manage") => void;
   onOpenRecordPayment: (prefill?: {
     userId?: Id<"users">;
     duesEventId?: Id<"duesEvents">;
@@ -52,6 +56,8 @@ export function DuesSpreadsheetPane({
   fundId,
   fundName,
   currency = "IDR",
+  subpage = "overview",
+  onSubpageChange,
   onOpenRecordPayment,
   onOpenEntryDetails,
   onOpenAdminTab,
@@ -85,9 +91,9 @@ export function DuesSpreadsheetPane({
     api.treasury.dues.getDuesSpreadsheet,
     organizationId && fundId
       ? {
-          organizationId,
-          fundId,
-        }
+        organizationId,
+        fundId,
+      }
       : "skip"
   );
 
@@ -95,9 +101,9 @@ export function DuesSpreadsheetPane({
     api.treasury.dues.getDuesSummary,
     organizationId && fundId
       ? {
-          organizationId,
-          fundId,
-        }
+        organizationId,
+        fundId,
+      }
       : "skip"
   );
 
@@ -179,6 +185,41 @@ export function DuesSpreadsheetPane({
 
   return (
     <div className="space-y-5">
+      {/* Subpage Navigation Switcher */}
+      <div className="flex items-center justify-between border-b border-border/70 pb-3">
+        <div className="flex items-center gap-1.5 p-1 bg-card/60 backdrop-blur-md rounded-[var(--fintech-radius-sm)] border border-border">
+          <button
+            type="button"
+            onClick={() => onSubpageChange?.("overview")}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-[var(--fintech-radius-sm)] text-xs font-medium transition-all cursor-pointer ${subpage === "overview"
+                ? "bg-primary/20 text-primary border border-primary/30 shadow-[0_0_12px_rgba(var(--primary-rgb),0.2)]"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-transparent"
+              }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>{t("treasury.dues.subpageMembers", "Members Overview")}</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-muted/60 text-muted-foreground font-mono">
+              {members.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onSubpageChange?.("manage")}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-[var(--fintech-radius-sm)] text-xs font-medium transition-all cursor-pointer ${subpage === "manage"
+                ? "bg-primary/20 text-primary border border-primary/30 shadow-[0_0_12px_rgba(var(--primary-rgb),0.2)]"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50 border border-transparent"
+              }`}
+          >
+            <CalendarDays className="w-3.5 h-3.5" />
+            <span>{t("treasury.dues.subpageCycles", "Manage Cycles")}</span>
+            <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-muted/60 text-muted-foreground font-mono">
+              {events.length}
+            </span>
+          </button>
+        </div>
+      </div>
+
       {/* Top Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <StatCard
@@ -188,8 +229,8 @@ export function DuesSpreadsheetPane({
               ? duesSummary.config.intervalType === "weekly"
                 ? "Weekly Dues"
                 : duesSummary.config.intervalType === "monthly"
-                ? "Monthly Dues"
-                : `Every ${duesSummary.config.intervalValue}d`
+                  ? "Monthly Dues"
+                  : `Every ${duesSummary.config.intervalValue}d`
               : "Schedule Paused"
           }
           hint={
@@ -213,87 +254,109 @@ export function DuesSpreadsheetPane({
         />
 
         <StatCard
-          label={t("treasury.overview.outstandingDuesTitle", "Outstanding Members")}
+          label={t("treasury.dues.totalOutstanding", "Outstanding Members")}
           value={`${duesSummary.totalUnpaidMemberships}`}
           hint={`Across ${duesSummary.totalEvents} recorded cycles`}
         />
       </div>
 
-      {/* Header with Title and Actions */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-base font-semibold text-foreground">
-            {t("treasury.dues.title", "Member Dues")}
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            {t("treasury.dues.description", "Track and manage dues collection for this fund.")}
-          </p>
-        </div>
+      {subpage === "manage" ? (
+        <DuesCyclesManager
+          organizationId={organizationId}
+          organizationName={organizationName}
+          fundId={fundId}
+          fundName={fundName}
+          currency={currency}
+          canManage={canManage}
+          canSign={canSign}
+          onOpenCreateDues={onOpenCreateDues}
+          onOpenRecordPayment={onOpenRecordPayment}
+          onOpenInvoiceDetails={(invId) => setSelectedInvoiceId(invId)}
+          onOpenCreateInvoice={(prefill) => {
+            setInvoicePrefillUserId(prefill.userId);
+            setInvoicePrefillPeriodCount(prefill.periodCount);
+            setIsInvoiceModalOpen(true);
+          }}
+        />
+      ) : (
+        <>
+          {/* Header with Title and Actions */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold text-foreground">
+                {t("treasury.dues.title", "Member Dues")}
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                {t("treasury.dues.description", "Track and manage dues collection for this fund.")}
+              </p>
+            </div>
 
-        {/* Action buttons (Grid view is disabled for now) */}
-        <div className="flex items-center gap-2">
-          {fundName && (
-            <Button
-              type="button"
-              variant="outline"
-              chamfer="none"
-              size="sm"
-              onClick={() => setIsExportModalOpen(true)}
-              disabled={events.length === 0}
-              className="h-8 text-xs flex items-center gap-1.5 cursor-pointer"
-              title="Export dues to PDF or JSON"
-            >
-              <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{t("treasury.dues.export", "Export")}</span>
-            </Button>
-          )}
+            {/* Action buttons (Grid view is disabled for now) */}
+            <div className="flex items-center gap-2">
+              {fundName && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  chamfer="none"
+                  size="sm"
+                  onClick={() => setIsExportModalOpen(true)}
+                  disabled={events.length === 0}
+                  className="h-8 text-xs flex items-center gap-1.5 cursor-pointer"
+                  title="Export dues to PDF or JSON"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{t("treasury.dues.export", "Export")}</span>
+                </Button>
+              )}
 
-          {canSign && onOpenBulkDues && (
-            <Button
-              type="button"
-              variant="cyber"
-              chamfer="none"
-              size="sm"
-              onClick={onOpenBulkDues}
-              className="h-8 text-xs flex items-center gap-1.5 cursor-pointer font-semibold"
-              title="Record dues payments for multiple members in batch"
-            >
-              <Users className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Bulk Entry</span>
-            </Button>
-          )}
+              {canSign && onOpenBulkDues && (
+                <Button
+                  type="button"
+                  variant="cyber"
+                  chamfer="none"
+                  size="sm"
+                  onClick={onOpenBulkDues}
+                  className="h-8 text-xs flex items-center gap-1.5 cursor-pointer font-semibold"
+                  title="Record dues payments for multiple members in batch"
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Bulk Entry</span>
+                </Button>
+              )}
 
-          {canManage && onOpenCreateDues && (
-            <Button
-              type="button"
-              variant="outline"
-              chamfer="none"
-              size="sm"
-              onClick={onOpenCreateDues}
-              className="h-8 text-xs flex items-center gap-1.5 cursor-pointer"
-              title={t("treasury.dues.manualCreateCycle", "Create Cycle")}
-            >
-              <CalendarPlus className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{t("treasury.dues.manualCreateCycle", "Create Cycle")}</span>
-            </Button>
-          )}
-        </div>
-      </div>
+              {canManage && onOpenCreateDues && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  chamfer="none"
+                  size="sm"
+                  onClick={onOpenCreateDues}
+                  className="h-8 text-xs flex items-center gap-1.5 cursor-pointer"
+                  title={t("treasury.dues.manualCreateCycle", "Create Cycle")}
+                >
+                  <CalendarPlus className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{t("treasury.dues.manualCreateCycle", "Create Cycle")}</span>
+                </Button>
+              )}
+            </div>
+          </div>
 
-      {/* Main View Area: Member List (Grid view disabled for now) */}
-      <MemberDuesList
-        members={members}
-        events={events}
-        cellMap={cellMap}
-        currency={currency}
-        canManage={canManage}
-        onSelectMember={(member) => setSelectedMemberForSheet(member)}
-        onOpenCreateInvoice={(prefill) => {
-          setInvoicePrefillUserId(prefill.userId);
-          setInvoicePrefillPeriodCount(prefill.periodCount);
-          setIsInvoiceModalOpen(true);
-        }}
-      />
+          {/* Main View Area: Member List (Grid view disabled for now) */}
+          <MemberDuesList
+            members={members}
+            events={events}
+            cellMap={cellMap}
+            currency={currency}
+            canManage={canManage}
+            onSelectMember={(member) => setSelectedMemberForSheet(member)}
+            onOpenCreateInvoice={(prefill) => {
+              setInvoicePrefillUserId(prefill.userId);
+              setInvoicePrefillPeriodCount(prefill.periodCount);
+              setIsInvoiceModalOpen(true);
+            }}
+          />
+        </>
+      )}
 
       {/* Member Dues Sheet */}
       <MemberDuesSheet
@@ -332,10 +395,10 @@ export function DuesSpreadsheetPane({
           summary={
             duesSummary
               ? {
-                  totalUnpaidMemberships: duesSummary.totalUnpaidMemberships,
-                  totalEvents: duesSummary.totalEvents,
-                  config: duesSummary.config,
-                }
+                totalUnpaidMemberships: duesSummary.totalUnpaidMemberships,
+                totalEvents: duesSummary.totalEvents,
+                config: duesSummary.config,
+              }
               : undefined
           }
         />
@@ -393,10 +456,10 @@ export function DuesSpreadsheetPane({
         description={
           invoiceToCancel
             ? t(
-                "treasury.invoices.cancelConfirmDesc",
-                `Are you sure you want to cancel invoice ${invoiceToCancel.invoiceNumber}? Reserved dues cycles will be released.`,
-                { number: invoiceToCancel.invoiceNumber }
-              )
+              "treasury.invoices.cancelConfirmDesc",
+              `Are you sure you want to cancel invoice ${invoiceToCancel.invoiceNumber}? Reserved dues cycles will be released.`,
+              { number: invoiceToCancel.invoiceNumber }
+            )
             : ""
         }
         confirmText={
