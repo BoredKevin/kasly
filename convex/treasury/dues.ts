@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation, internalMutation } from "../_generated/server";
+import { paginationOptsValidator } from "convex/server";
 import { internal } from "../_generated/api";
 import { requirePermission } from "../authz";
 import { PERMISSIONS } from "../permissions";
@@ -609,6 +610,7 @@ export const listDuesEvents = query({
     organizationId: v.id("organizations"),
     fundId: v.id("funds"),
     limit: v.optional(v.number()),
+    includeArchived: v.optional(v.boolean()),
   },
   returns: v.array(
     v.object({
@@ -621,6 +623,7 @@ export const listDuesEvents = query({
       amount: v.number(),
       totalMembers: v.number(),
       paidCount: v.number(),
+      isArchived: v.optional(v.boolean()),
     })
   ),
   handler: async (ctx, args) => {
@@ -647,7 +650,10 @@ export const listDuesEvents = query({
         ? await eventsQuery.take(args.limit)
         : await eventsQuery.collect();
 
-    return events;
+    if (args.includeArchived) {
+      return events;
+    }
+    return events.filter((e) => !e.isArchived);
   },
 });
 
@@ -820,7 +826,7 @@ export const getDuesSpreadsheet = query({
         ? await rawEventsQuery.take(args.limitEvents)
         : await rawEventsQuery.collect();
 
-    const events = [...rawEvents].reverse();
+    const events = [...rawEvents].filter((e) => !e.isArchived).reverse();
 
     // 2. Fetch members and their user profiles
     const rawMembers = await ctx.db
@@ -1179,3 +1185,600 @@ export const waiveDues = mutation({
     };
   },
 });
+
+/**
+ * Returns paginated dues cycles for a specific fund using Convex reactive cursor pagination.
+ */
+export const listDuesEventsPaginated = query({
+  args: {
+    organizationId: v.id("organizations"),
+    fundId: v.id("funds"),
+    paginationOpts: paginationOptsValidator,
+    includeArchived: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    await requirePermission(
+      ctx,
+      args.organizationId,
+      PERMISSIONS.VIEW_TREASURY
+    );
+
+    const fund = await ctx.db.get("funds", args.fundId);
+    if (!fund || fund.organizationId !== args.organizationId) {
+      throw new Error("Fund not found or does not belong to this organization.");
+    }
+
+    if (args.includeArchived) {
+      return await ctx.db
+        .query("duesEvents")
+        .withIndex("by_fundId_and_dueDate", (q) =>
+          q.eq("fundId", args.fundId)
+        )
+        .order("desc")
+        .paginate(args.paginationOpts);
+    }
+
+    // By default, filter active non-archived events
+    const paginated = await ctx.db
+      .query("duesEvents")
+      .withIndex("by_fundId_and_dueDate", (q) =>
+        q.eq("fundId", args.fundId)
+      )
+      .order("desc")
+      // eslint-disable-next-line @convex-dev/no-filter-in-query
+      .filter((q) => q.or(
+        q.eq(q.field("isArchived"), false),
+        q.eq(q.field("isArchived"), undefined)
+      ))
+      .paginate(args.paginationOpts);
+
+    return paginated;
+  },
+});
+
+/**
+ * Returns detailed inspection data for a single dues cycle, including collection metrics
+ * and individual member status records.
+ */
+export const getDuesEventDetails = query({
+  args: {
+    organizationId: v.id("organizations"),
+    fundId: v.id("funds"),
+    duesEventId: v.id("duesEvents"),
+  },
+  handler: async (ctx, args) => {
+    await requirePermission(
+      ctx,
+      args.organizationId,
+      PERMISSIONS.VIEW_TREASURY
+    );
+
+    const fund = await ctx.db.get("funds", args.fundId);
+    if (!fund || fund.organizationId !== args.organizationId) {
+      throw new Error("Fund not found or does not belong to this organization.");
+    }
+
+    const event = await ctx.db.get("duesEvents", args.duesEventId);
+    if (!event || event.fundId !== args.fundId) {
+      throw new Error("Dues cycle event not found.");
+    }
+
+    const memberships = await ctx.db
+      .query("duesMemberships")
+      .withIndex("by_duesEventId", (q) => q.eq("duesEventId", event._id))
+      .collect();
+
+    const memberDetails = [];
+    let paidAmountTotal = 0;
+
+    for (const m of memberships) {
+      const user = await ctx.db.get("users", m.userId);
+      const member = await ctx.db.get("members", m.memberId);
+
+      if (m.hasPaid && !m.isWaived) {
+        paidAmountTotal += event.amount;
+      }
+
+      memberDetails.push({
+        _id: m._id,
+        memberId: m.memberId,
+        userId: m.userId,
+        hasPaid: m.hasPaid,
+        isWaived: m.isWaived,
+        paidAt: m.paidAt,
+        paymentMethod: m.paymentMethod,
+        invoiceId: m.invoiceId,
+        name: member?.nickname || user?.name || "Unknown Member",
+        nickname: member?.nickname,
+        email: user?.email,
+        image: user?.image,
+      });
+    }
+
+    memberDetails.sort((a, b) => a.name.localeCompare(b.name));
+
+    const totalExpectedAmount = event.totalMembers * event.amount;
+    const unpaidCount = Math.max(0, event.totalMembers - event.paidCount);
+    const collectionRate = event.totalMembers > 0
+      ? Math.round((event.paidCount / event.totalMembers) * 100)
+      : 0;
+
+    return {
+      event: {
+        _id: event._id,
+        _creationTime: event._creationTime,
+        periodLabel: event.periodLabel,
+        dueDate: event.dueDate,
+        amount: event.amount,
+        totalMembers: event.totalMembers,
+        paidCount: event.paidCount,
+        isArchived: Boolean(event.isArchived),
+      },
+      stats: {
+        totalExpectedAmount,
+        totalCollectedAmount: paidAmountTotal,
+        unpaidCount,
+        collectionRate,
+      },
+      members: memberDetails,
+    };
+  },
+});
+
+/**
+ * Updates an existing dues cycle's metadata (periodLabel, dueDate, amount, isArchived).
+ * Protects CLE ledger integrity: dues amount cannot be modified once payments exist.
+ * Auto-syncs newly joined organization members into the cycle roster.
+ */
+export const updateDuesCycle = mutation({
+  args: {
+    organizationId: v.id("organizations"),
+    fundId: v.id("funds"),
+    duesEventId: v.id("duesEvents"),
+    periodLabel: v.optional(v.string()),
+    dueDate: v.optional(v.number()),
+    amount: v.optional(v.number()),
+    isArchived: v.optional(v.boolean()),
+  },
+  returns: v.id("duesEvents"),
+  handler: async (ctx, args) => {
+    await requirePermission(
+      ctx,
+      args.organizationId,
+      PERMISSIONS.MANAGE_TREASURY
+    );
+
+    const fund = await ctx.db.get("funds", args.fundId);
+    if (!fund || fund.organizationId !== args.organizationId) {
+      throw new Error("Fund not found or does not belong to this organization.");
+    }
+
+    const event = await ctx.db.get("duesEvents", args.duesEventId);
+    if (!event || event.fundId !== args.fundId) {
+      throw new Error("Dues cycle event not found.");
+    }
+
+    const patchPayload: Record<string, any> = {};
+
+    // 1. Period Label update
+    if (args.periodLabel !== undefined) {
+      const trimmedLabel = args.periodLabel.trim();
+      if (!trimmedLabel) {
+        throw new Error("Period label cannot be empty.");
+      }
+
+      if (trimmedLabel.toLowerCase() !== event.periodLabel.toLowerCase()) {
+        const existingEvents = await ctx.db
+          .query("duesEvents")
+          .withIndex("by_fundId", (q) => q.eq("fundId", args.fundId))
+          .collect();
+
+        const duplicate = existingEvents.some(
+          (e) => e._id !== event._id && e.periodLabel.toLowerCase().trim() === trimmedLabel.toLowerCase()
+        );
+
+        if (duplicate) {
+          throw new Error(`A dues cycle with label '${trimmedLabel}' already exists in this fund.`);
+        }
+      }
+
+      patchPayload.periodLabel = trimmedLabel;
+    }
+
+    // 2. Due Date update
+    if (args.dueDate !== undefined) {
+      if (isNaN(args.dueDate) || args.dueDate <= 0) {
+        throw new Error("Invalid due date provided.");
+      }
+      patchPayload.dueDate = args.dueDate;
+    }
+
+    // 3. Amount update (with CLE payment protection)
+    if (args.amount !== undefined && args.amount !== event.amount) {
+      if (args.amount <= 0 || !Number.isInteger(args.amount)) {
+        throw new Error("Amount must be a positive integer.");
+      }
+
+      if (event.paidCount > 0) {
+        throw new Error(
+          `Cannot modify dues amount for cycle '${event.periodLabel}': ${event.paidCount} payment(s) have already been committed to the cryptographic ledger. Revert payments first.`
+        );
+      }
+
+      patchPayload.amount = args.amount;
+    }
+
+    // 4. Archive state update
+    if (args.isArchived !== undefined) {
+      patchPayload.isArchived = args.isArchived;
+    }
+
+    // 5. Auto-sync active organization members into this cycle
+    const members = await ctx.db
+      .query("members")
+      .withIndex("by_organizationId", (q) =>
+        q.eq("organizationId", args.organizationId)
+      )
+      .collect();
+
+    const bans = await ctx.db
+      .query("bans")
+      .withIndex("by_organizationId", (q) =>
+        q.eq("organizationId", args.organizationId)
+      )
+      .collect();
+
+    const bannedUserIds = new Set(bans.map((b) => b.userId));
+    const activeMembers = members.filter((m) => !bannedUserIds.has(m.userId));
+
+    const existingMemberships = await ctx.db
+      .query("duesMemberships")
+      .withIndex("by_duesEventId", (q) => q.eq("duesEventId", event._id))
+      .collect();
+
+    const existingMemberIds = new Set(existingMemberships.map((m) => m.memberId));
+
+    for (const member of activeMembers) {
+      if (!existingMemberIds.has(member._id)) {
+        await ctx.db.insert("duesMemberships", {
+          duesEventId: event._id,
+          organizationId: args.organizationId,
+          fundId: args.fundId,
+          memberId: member._id,
+          userId: member.userId,
+          hasPaid: false,
+        });
+      }
+    }
+
+    patchPayload.totalMembers = activeMembers.length;
+
+    await ctx.db.patch("duesEvents", event._id, patchPayload);
+    return event._id;
+  },
+});
+
+/**
+ * Deletes or archives a single dues cycle.
+ * - If unpaid: permanently deletes cycle, memberships, and cancels pending draft invoices.
+ * - If payments exist: safely soft-archives the cycle if allowArchive is true, preserving ledger proofs.
+ */
+export const deleteDuesCycle = mutation({
+  args: {
+    organizationId: v.id("organizations"),
+    fundId: v.id("funds"),
+    duesEventId: v.id("duesEvents"),
+    allowArchive: v.optional(v.boolean()),
+  },
+  returns: v.object({
+    action: v.union(v.literal("deleted"), v.literal("archived")),
+    eventId: v.id("duesEvents"),
+  }),
+  handler: async (ctx, args) => {
+    await requirePermission(
+      ctx,
+      args.organizationId,
+      PERMISSIONS.MANAGE_TREASURY
+    );
+
+    const fund = await ctx.db.get("funds", args.fundId);
+    if (!fund || fund.organizationId !== args.organizationId) {
+      throw new Error("Fund not found or does not belong to this organization.");
+    }
+
+    const event = await ctx.db.get("duesEvents", args.duesEventId);
+    if (!event || event.fundId !== args.fundId) {
+      throw new Error("Dues cycle event not found.");
+    }
+
+    const memberships = await ctx.db
+      .query("duesMemberships")
+      .withIndex("by_duesEventId", (q) => q.eq("duesEventId", event._id))
+      .collect();
+
+    const hasPaidMembers = event.paidCount > 0 || memberships.some((m) => m.hasPaid || m.ledgerEntryId);
+
+    if (hasPaidMembers) {
+      if (args.allowArchive !== false) {
+        await ctx.db.patch("duesEvents", event._id, { isArchived: true });
+        return { action: "archived" as const, eventId: event._id };
+      }
+
+      throw new Error(
+        `Cannot delete cycle '${event.periodLabel}': Payments have already been committed to the cryptographic ledger. You can archive this cycle instead.`
+      );
+    }
+
+    // Cancel any open draft/pending invoices linked to this cycle's memberships
+    for (const m of memberships) {
+      if (m.invoiceId) {
+        const inv = await ctx.db.get("invoices", m.invoiceId);
+        if (inv && (inv.status === "draft" || inv.status === "pending")) {
+          await ctx.db.patch("invoices", inv._id, { status: "cancelled" });
+        }
+      }
+      await ctx.db.delete("duesMemberships", m._id);
+    }
+
+    await ctx.db.delete("duesEvents", event._id);
+    return { action: "deleted" as const, eventId: event._id };
+  },
+});
+
+/**
+ * Multi-select batch deletion and archival of dues cycles.
+ * Safely removes unpaid cycles and soft-archives paid cycles.
+ */
+export const deleteBatchDuesCycles = mutation({
+  args: {
+    organizationId: v.id("organizations"),
+    fundId: v.id("funds"),
+    duesEventIds: v.array(v.id("duesEvents")),
+    allowArchive: v.optional(v.boolean()),
+  },
+  returns: v.object({
+    deletedCount: v.number(),
+    archivedCount: v.number(),
+    skippedCount: v.number(),
+    processedIds: v.array(v.id("duesEvents")),
+  }),
+  handler: async (ctx, args) => {
+    await requirePermission(
+      ctx,
+      args.organizationId,
+      PERMISSIONS.MANAGE_TREASURY
+    );
+
+    const fund = await ctx.db.get("funds", args.fundId);
+    if (!fund || fund.organizationId !== args.organizationId) {
+      throw new Error("Fund not found or does not belong to this organization.");
+    }
+
+    let deletedCount = 0;
+    let archivedCount = 0;
+    let skippedCount = 0;
+    const processedIds: any[] = [];
+    const shouldArchivePaid = args.allowArchive !== false;
+
+    for (const eventId of args.duesEventIds) {
+      const event = await ctx.db.get("duesEvents", eventId);
+      if (!event || event.fundId !== args.fundId) {
+        skippedCount++;
+        continue;
+      }
+
+      const memberships = await ctx.db
+        .query("duesMemberships")
+        .withIndex("by_duesEventId", (q) => q.eq("duesEventId", event._id))
+        .collect();
+
+      const hasPaidMembers = event.paidCount > 0 || memberships.some((m) => m.hasPaid || m.ledgerEntryId);
+
+      if (hasPaidMembers) {
+        if (shouldArchivePaid) {
+          await ctx.db.patch("duesEvents", event._id, { isArchived: true });
+          archivedCount++;
+          processedIds.push(event._id);
+        } else {
+          skippedCount++;
+        }
+      } else {
+        for (const m of memberships) {
+          if (m.invoiceId) {
+            const inv = await ctx.db.get("invoices", m.invoiceId);
+            if (inv && (inv.status === "draft" || inv.status === "pending")) {
+              await ctx.db.patch("invoices", inv._id, { status: "cancelled" });
+            }
+          }
+          await ctx.db.delete("duesMemberships", m._id);
+        }
+        await ctx.db.delete("duesEvents", event._id);
+        deletedCount++;
+        processedIds.push(event._id);
+      }
+    }
+
+    return {
+      deletedCount,
+      archivedCount,
+      skippedCount,
+      processedIds,
+    };
+  },
+});
+
+/**
+ * Shifts due dates for selected dues cycles by +/- N days.
+ */
+export const bulkAdjustDates = mutation({
+  args: {
+    organizationId: v.id("organizations"),
+    fundId: v.id("funds"),
+    duesEventIds: v.array(v.id("duesEvents")),
+    offsetDays: v.number(),
+  },
+  returns: v.object({
+    updatedCount: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    await requirePermission(
+      ctx,
+      args.organizationId,
+      PERMISSIONS.MANAGE_TREASURY
+    );
+
+    const fund = await ctx.db.get("funds", args.fundId);
+    if (!fund || fund.organizationId !== args.organizationId) {
+      throw new Error("Fund not found or does not belong to this organization.");
+    }
+
+    const offsetMs = args.offsetDays * 86400000;
+    let updatedCount = 0;
+
+    for (const eventId of args.duesEventIds) {
+      const event = await ctx.db.get("duesEvents", eventId);
+      if (event && event.fundId === args.fundId) {
+        const newDate = Math.max(0, event.dueDate + offsetMs);
+        await ctx.db.patch("duesEvents", event._id, { dueDate: newDate });
+        updatedCount++;
+      }
+    }
+
+    return { updatedCount };
+  },
+});
+
+/**
+ * Updates dues rate/amount across selected cycles that have zero recorded payments.
+ * Cycles with existing payments are safely skipped to preserve ledger continuity.
+ */
+export const bulkAdjustAmounts = mutation({
+  args: {
+    organizationId: v.id("organizations"),
+    fundId: v.id("funds"),
+    duesEventIds: v.array(v.id("duesEvents")),
+    amount: v.number(),
+  },
+  returns: v.object({
+    updatedCount: v.number(),
+    skippedCount: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    await requirePermission(
+      ctx,
+      args.organizationId,
+      PERMISSIONS.MANAGE_TREASURY
+    );
+
+    if (args.amount <= 0 || !Number.isInteger(args.amount)) {
+      throw new Error("Amount must be a positive integer.");
+    }
+
+    const fund = await ctx.db.get("funds", args.fundId);
+    if (!fund || fund.organizationId !== args.organizationId) {
+      throw new Error("Fund not found or does not belong to this organization.");
+    }
+
+    let updatedCount = 0;
+    let skippedCount = 0;
+
+    for (const eventId of args.duesEventIds) {
+      const event = await ctx.db.get("duesEvents", eventId);
+      if (!event || event.fundId !== args.fundId) {
+        skippedCount++;
+        continue;
+      }
+
+      if (event.paidCount > 0) {
+        skippedCount++;
+        continue;
+      }
+
+      await ctx.db.patch("duesEvents", event._id, { amount: args.amount });
+      updatedCount++;
+    }
+
+    return { updatedCount, skippedCount };
+  },
+});
+
+/**
+ * Enrolls any missing active organization members into an existing dues cycle roster.
+ */
+export const syncCycleMembers = mutation({
+  args: {
+    organizationId: v.id("organizations"),
+    fundId: v.id("funds"),
+    duesEventId: v.id("duesEvents"),
+  },
+  returns: v.object({
+    addedCount: v.number(),
+    totalMembers: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    await requirePermission(
+      ctx,
+      args.organizationId,
+      PERMISSIONS.MANAGE_TREASURY
+    );
+
+    const fund = await ctx.db.get("funds", args.fundId);
+    if (!fund || fund.organizationId !== args.organizationId) {
+      throw new Error("Fund not found or does not belong to this organization.");
+    }
+
+    const event = await ctx.db.get("duesEvents", args.duesEventId);
+    if (!event || event.fundId !== args.fundId) {
+      throw new Error("Dues cycle event not found.");
+    }
+
+    const members = await ctx.db
+      .query("members")
+      .withIndex("by_organizationId", (q) =>
+        q.eq("organizationId", args.organizationId)
+      )
+      .collect();
+
+    const bans = await ctx.db
+      .query("bans")
+      .withIndex("by_organizationId", (q) =>
+        q.eq("organizationId", args.organizationId)
+      )
+      .collect();
+
+    const bannedUserIds = new Set(bans.map((b) => b.userId));
+    const activeMembers = members.filter((m) => !bannedUserIds.has(m.userId));
+
+    const existingMemberships = await ctx.db
+      .query("duesMemberships")
+      .withIndex("by_duesEventId", (q) => q.eq("duesEventId", event._id))
+      .collect();
+
+    const existingMemberIds = new Set(existingMemberships.map((m) => m.memberId));
+    let addedCount = 0;
+
+    for (const member of activeMembers) {
+      if (!existingMemberIds.has(member._id)) {
+        await ctx.db.insert("duesMemberships", {
+          duesEventId: event._id,
+          organizationId: args.organizationId,
+          fundId: args.fundId,
+          memberId: member._id,
+          userId: member.userId,
+          hasPaid: false,
+        });
+        addedCount++;
+      }
+    }
+
+    await ctx.db.patch("duesEvents", event._id, {
+      totalMembers: activeMembers.length,
+    });
+
+    return {
+      addedCount,
+      totalMembers: activeMembers.length,
+    };
+  },
+});
+

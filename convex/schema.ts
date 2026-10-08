@@ -228,9 +228,11 @@ export default defineSchema({
     amount: v.number(), // Dues amount snapshotted at creation
     totalMembers: v.number(), // Snapshot of member count at creation
     paidCount: v.number(), // Denormalized count of paid members
+    isArchived: v.optional(v.boolean()),
   })
     .index("by_fundId", ["fundId"])
     .index("by_fundId_and_dueDate", ["fundId", "dueDate"])
+    .index("by_fundId_and_isArchived", ["fundId", "isArchived"])
     .index("by_organizationId", ["organizationId"])
     .index("by_organizationId_and_dueDate", ["organizationId", "dueDate"]),
 
