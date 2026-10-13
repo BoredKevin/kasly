@@ -51,34 +51,35 @@ export const list = query({
         .take(100);
     }
 
-    const results = [];
-    for (const fund of funds) {
-      let balance = 0;
-      let isFrozen = false;
-      let integrityError: string | undefined = undefined;
+    const results = await Promise.all(
+      funds.map(async (fund) => {
+        let balance = 0;
+        let isFrozen = false;
+        let integrityError: string | undefined = undefined;
 
-      try {
-        balance = await deriveFundBalance(ctx, fund._id);
-      } catch (err: unknown) {
-        isFrozen = true;
-        integrityError =
-          err instanceof Error ? err.message : "Ledger integrity failure: Ledger is frozen.";
-      }
+        try {
+          balance = await deriveFundBalance(ctx, fund._id);
+        } catch (err: unknown) {
+          isFrozen = true;
+          integrityError =
+            err instanceof Error ? err.message : "Ledger integrity failure: Ledger is frozen.";
+        }
 
-      results.push({
-        _id: fund._id,
-        _creationTime: fund._creationTime,
-        organizationId: fund.organizationId,
-        name: fund.name,
-        description: fund.description,
-        currency: fund.currency,
-        createdBy: fund.createdBy,
-        isArchived: fund.isArchived,
-        balance,
-        isFrozen,
-        integrityError,
-      });
-    }
+        return {
+          _id: fund._id,
+          _creationTime: fund._creationTime,
+          organizationId: fund.organizationId,
+          name: fund.name,
+          description: fund.description,
+          currency: fund.currency,
+          createdBy: fund.createdBy,
+          isArchived: fund.isArchived,
+          balance,
+          isFrozen,
+          integrityError,
+        };
+      })
+    );
 
     return results;
   },

@@ -324,7 +324,7 @@ For exhaustive field specifications, cryptographic algorithms, hash chaining for
 * `ledgerCheckpoints` — Periodic running balance and entry hash snapshots for $O(1)$ fast balance replay.
 * `duesConfig` — Recurring dues schedule settings scoped per fund (`intervalType`, `intervalValue`, `amount`, `isEnabled`, `nextScheduledAt`).
 * `duesEvents` — Historical and active dues cycle snapshots per fund (`periodLabel`, `dueDate`, `amount`, `totalMembers`, `paidCount`).
-* `duesMemberships` — Member payment and waiver tracking per dues cycle (`duesEventId`, `fundId`, `userId`, `memberId`, `hasPaid`, `isWaived`, `paidAt`, `ledgerEntryId`, `invoiceId`, `paymentMethod`). Indexed by `by_ledgerEntryId` and `by_invoiceId` for $O(1)$ reversal rollback and invoice tracking.
+* `duesMemberships` — Member payment and waiver tracking per dues cycle (`duesEventId`, `fundId`, `userId`, `memberId`, `hasPaid`, `isWaived`, `paidAt`, `ledgerEntryId`, `invoiceId`, `paymentMethod`). Indexed by `by_fundId`, `by_duesEventId`, `by_ledgerEntryId`, and `by_invoiceId` for $O(1)$ fund-wide spreadsheet matrix generation, reversal rollback, and invoice tracking.
 
 ---
 
@@ -388,6 +388,10 @@ Represents an individual payable invoice for dues or ad-hoc custom charges with 
 **Indexes:**
 * `by_invoiceNumber` on `["invoiceNumber"]` — Instant $O(1)$ public resolution for `/invoice/:invoiceNumber`.
 * `by_organizationId` on `["organizationId"]` — List invoices for organization administrative overview.
+* `by_organizationId_and_fundId` on `["organizationId", "fundId"]` — Compound indexed query for fund-scoped invoice listings.
 * `by_organizationId_and_userId` on `["organizationId", "userId"]` — Fetch invoices belonging to a specific member.
 * `by_organizationId_and_status` on `["organizationId", "status"]` — Filter invoices by lifecycle state.
-* `by_borderpayOrderId` on `["borderpayOrderId"]` — Webhook resolution by upstream order ID.
+* `by_gatewayReferenceId` on `["gatewayReferenceId"]` — Instant $O(1)$ lookup for universal webhook settlement by provider order ID.
+* `by_borderpayReferenceId` on `["borderpayReferenceId"]` — $O(1)$ backward-compatible resolution for BorderPay webhooks.
+* `by_fundId` on `["fundId"]` — Filter invoices by destination fund.
+* `by_status` on `["status"]` — Global status index.

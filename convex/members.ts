@@ -60,37 +60,38 @@ export const list = query({
       )
       .take(args.limit ?? 100);
 
-    const results = [];
-    for (const member of members) {
-      const user = await ctx.db.get("users", member.userId);
-      const roles = (
-        await Promise.all(
-          (member.roleIds ?? []).map((roleId) => ctx.db.get("roles", roleId)),
+    const results = await Promise.all(
+      members.map(async (member) => {
+        const user = await ctx.db.get("users", member.userId);
+        const roles = (
+          await Promise.all(
+            (member.roleIds ?? []).map((roleId) => ctx.db.get("roles", roleId)),
+          )
         )
-      )
-        .filter((r): r is NonNullable<typeof r> => r !== null)
-        .sort((a, b) => b.position - a.position);
+          .filter((r): r is NonNullable<typeof r> => r !== null)
+          .sort((a, b) => b.position - a.position);
 
-      const shouldExposeEmail = canViewEmails || member.userId === callerUser._id;
+        const shouldExposeEmail = canViewEmails || member.userId === callerUser._id;
 
-      results.push({
-        _id: member._id,
-        _creationTime: member._creationTime,
-        organizationId: member.organizationId,
-        userId: member.userId,
-        email: shouldExposeEmail ? user?.email : undefined,
-        name: user?.name,
-        nickname: member.nickname,
-        joinedAt: member.joinedAt,
-        roles: roles.map((r) => ({
-          _id: r._id,
-          name: r.name,
-          color: r.color,
-          position: r.position,
-        })),
-        isOwner: member.userId === organization.ownerId,
-      });
-    }
+        return {
+          _id: member._id,
+          _creationTime: member._creationTime,
+          organizationId: member.organizationId,
+          userId: member.userId,
+          email: shouldExposeEmail ? user?.email : undefined,
+          name: user?.name,
+          nickname: member.nickname,
+          joinedAt: member.joinedAt,
+          roles: roles.map((r) => ({
+            _id: r._id,
+            name: r.name,
+            color: r.color,
+            position: r.position,
+          })),
+          isOwner: member.userId === organization.ownerId,
+        };
+      })
+    );
 
     return results;
   },
@@ -553,21 +554,22 @@ export const listBans = query({
       )
       .take(100);
 
-    const results = [];
-    for (const b of bans) {
-      const user = await ctx.db.get("users", b.userId);
-      results.push({
-        _id: b._id,
-        _creationTime: b._creationTime,
-        organizationId: b.organizationId,
-        userId: b.userId,
-        userEmail: user?.email,
-        userName: user?.name,
-        reason: b.reason,
-        bannedBy: b.bannedBy,
-        bannedAt: b.bannedAt,
-      });
-    }
+    const results = await Promise.all(
+      bans.map(async (b) => {
+        const user = await ctx.db.get("users", b.userId);
+        return {
+          _id: b._id,
+          _creationTime: b._creationTime,
+          organizationId: b.organizationId,
+          userId: b.userId,
+          userEmail: user?.email,
+          userName: user?.name,
+          reason: b.reason,
+          bannedBy: b.bannedBy,
+          bannedAt: b.bannedAt,
+        };
+      })
+    );
 
     return results;
   },

@@ -4,27 +4,18 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
 import { ResponsiveDialog } from "../../../ui";
-import {
-  Button,
-  Input,
-} from "@boredkevin/ui";
+import { Button } from "@boredkevin/ui";
 import {
   PenLine,
-  ArrowUpRight,
-  ArrowDownLeft,
   KeyRound,
   ShieldAlert,
-  Lock,
   CalendarDays,
-  CheckCircle2,
-  AlertTriangle,
-  Minus,
-  Plus,
-  Sparkles,
-  ChevronDown,
 } from "lucide-react";
 import { loadKeypair, listStoredKeys, signLedgerPayload, SigningPayload } from "../../../lib/treasury-crypto";
-import { MemberSearchSelect } from "./MemberSearchSelect";
+import { ManualPaymentForm } from "./payment/ManualPaymentForm";
+import { DuesPaymentForm } from "./payment/DuesPaymentForm";
+import { AdvancedSigningOptions } from "./payment/AdvancedSigningOptions";
+import { HoldToSignButton } from "./payment/HoldToSignButton";
 
 interface RecordPaymentModalProps {
   isOpen: boolean;
@@ -146,7 +137,7 @@ export function RecordPaymentModal({
   const [isSigning, setIsSigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 5-second hold to commit state
+  // 3-second hold to commit state
   const [holdProgress, setHoldProgress] = useState<number>(0);
   const [isHolding, setIsHolding] = useState<boolean>(false);
   const holdTimerRef = useRef<number | null>(null);
@@ -344,6 +335,7 @@ export function RecordPaymentModal({
   };
 
   const currentFund = funds?.find((f) => f._id === selectedFundId);
+  const currency = currentFund?.currency ?? "IDR";
 
   return (
     <ResponsiveDialog
@@ -360,621 +352,210 @@ export function RecordPaymentModal({
       <div className="pt-2 space-y-4">
         {/* Mode Switcher Tabs */}
         <div className="grid grid-cols-2 gap-2 p-1 bg-muted/40 border border-border/70 rounded-[var(--fintech-radius-sm)]">
-              <Button
-                type="button"
-                variant={paymentMode === "manual" ? "cyber" : "ghost"}
-                chamfer="none"
-                size="sm"
-                onClick={() => {
-                  setPaymentMode("manual");
-                  setError(null);
-                }}
-                className={`text-xs flex items-center justify-center gap-2 cursor-pointer ${paymentMode === "manual"
-                  ? ""
-                  : "text-muted-foreground hover:text-foreground"
-                  }`}
-              >
-                <PenLine className="w-3.5 h-3.5" />
-                <span>Manual Entry</span>
-              </Button>
+          <Button
+            type="button"
+            variant={paymentMode === "manual" ? "cyber" : "ghost"}
+            chamfer="none"
+            size="sm"
+            onClick={() => {
+              setPaymentMode("manual");
+              setError(null);
+            }}
+            className={`text-xs flex items-center justify-center gap-2 cursor-pointer ${
+              paymentMode === "manual" ? "" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <PenLine className="w-3.5 h-3.5" />
+            <span>Manual Entry</span>
+          </Button>
 
-              <Button
-                type="button"
-                variant={paymentMode === "dues" ? "cyber" : "ghost"}
-                chamfer="none"
-                size="sm"
-                onClick={() => {
-                  setPaymentMode("dues");
-                  setError(null);
-                }}
-                className={`text-xs flex items-center justify-center gap-2 cursor-pointer ${paymentMode === "dues"
-                  ? ""
-                  : "text-muted-foreground hover:text-foreground"
-                  }`}
-              >
-                <CalendarDays className="w-3.5 h-3.5" />
-                <span>Dues Payment</span>
-              </Button>
+          <Button
+            type="button"
+            variant={paymentMode === "dues" ? "cyber" : "ghost"}
+            chamfer="none"
+            size="sm"
+            onClick={() => {
+              setPaymentMode("dues");
+              setError(null);
+            }}
+            className={`text-xs flex items-center justify-center gap-2 cursor-pointer ${
+              paymentMode === "dues" ? "" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <CalendarDays className="w-3.5 h-3.5" />
+            <span>Dues Payment</span>
+          </Button>
+        </div>
+
+        {activeKeys.length === 0 ? (
+          <div className="space-y-4">
+            <div className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-start gap-2.5">
+              <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="font-semibold text-foreground">
+                  No Approved Signing Key Available
+                </p>
+                <p className="text-muted-foreground text-[11px] leading-relaxed">
+                  You must generate a keypair on this device and have it approved by an administrator before you can sign ledger entries.
+                </p>
+              </div>
             </div>
 
-            {activeKeys.length === 0 ? (
-              <div className="space-y-4">
-                <div className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-start gap-2.5">
-                  <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <p className="font-semibold text-foreground">
-                      No Approved Signing Key Available
-                    </p>
-                    <p className="text-muted-foreground text-[11px] leading-relaxed">
-                      You must generate a keypair on this device and have it approved by an administrator before you can sign ledger entries.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    chamfer="none"
-                    onClick={onClose}
-                    size="sm"
-                    className="text-xs cursor-pointer"
-                  >
-                    Cancel
-                  </Button>
-                  {onOpenKeyGen && (
-                    <Button
-                      type="button"
-                      variant="cyber"
-                      chamfer="none"
-                      size="sm"
-                      onClick={() => {
-                        onClose();
-                        onOpenKeyGen();
-                      }}
-                      className="text-xs flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <KeyRound className="w-3.5 h-3.5" />
-                      <span>Generate Keypair</span>
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ) : availableKeysOnDevice.length === 0 && !isLoadingLocalKeys ? (
-              <div className="space-y-4">
-                <div className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-start gap-2.5">
-                  <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <p className="font-semibold text-foreground">
-                      No Signing Key Found on This Device
-                    </p>
-                    <p className="text-muted-foreground text-[11px] leading-relaxed">
-                      You have {activeKeys.length} approved key(s) registered in this organization, but their private keys are stored on another device or browser. Because private keys are non-extractable, you need to generate a keypair on this device to sign transactions here.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    chamfer="none"
-                    onClick={onClose}
-                    size="sm"
-                    className="text-xs cursor-pointer"
-                  >
-                    Cancel
-                  </Button>
-                  {onOpenKeyGen && (
-                    <Button
-                      type="button"
-                      variant="cyber"
-                      chamfer="none"
-                      size="sm"
-                      onClick={() => {
-                        onClose();
-                        onOpenKeyGen();
-                      }}
-                      className="text-xs flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <KeyRound className="w-3.5 h-3.5" />
-                      <span>Generate Keypair on This Device</span>
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                }}
-                className="space-y-4"
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
+              <Button
+                type="button"
+                variant="outline"
+                chamfer="none"
+                onClick={onClose}
+                size="sm"
+                className="text-xs cursor-pointer"
               >
-                {paymentMode === "manual" ? (
-                  <>
-                    {/* Transaction Direction Selector Tab */}
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-foreground">
-                        Transaction Direction *
-                      </label>
-                      <div className="grid grid-cols-2 gap-1 p-1 bg-muted/40 border border-border/80">
-                        <Button
-                          type="button"
-                          variant={direction === "credit" ? "cyber" : "ghost"}
-                          chamfer="none"
-                          size="sm"
-                          onClick={() => setDirection("credit")}
-                          className={`h-8 text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer transition-all ${direction === "credit"
-                            ? "bg-emerald-500/25 text-emerald-300 border border-emerald-500/70 shadow-sm font-bold"
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted/20"
-                            }`}
-                        >
-                          <ArrowDownLeft className="w-4 h-4 text-emerald-400" />
-                          <span>Credit (Income)</span>
-                        </Button>
-                        <Button
-                          type="button"
-                          variant={direction === "debit" ? "cyber" : "ghost"}
-                          chamfer="none"
-                          size="sm"
-                          onClick={() => setDirection("debit")}
-                          className={`h-8 text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer transition-all ${direction === "debit"
-                            ? "bg-red-500/25 text-red-300 border border-red-500/70 shadow-sm font-bold"
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted/20"
-                            }`}
-                        >
-                          <ArrowUpRight className="w-4 h-4 text-red-400" />
-                          <span>Debit (Expense)</span>
-                        </Button>
-                      </div>
-                    </div>
+                Cancel
+              </Button>
+              {onOpenKeyGen && (
+                <Button
+                  type="button"
+                  variant="cyber"
+                  chamfer="none"
+                  size="sm"
+                  onClick={() => {
+                    onClose();
+                    onOpenKeyGen();
+                  }}
+                  className="text-xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <KeyRound className="w-3.5 h-3.5" />
+                  <span>Generate Keypair</span>
+                </Button>
+              )}
+            </div>
+          </div>
+        ) : availableKeysOnDevice.length === 0 && !isLoadingLocalKeys ? (
+          <div className="space-y-4">
+            <div className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-start gap-2.5">
+              <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="font-semibold text-foreground">
+                  No Signing Key Found on This Device
+                </p>
+                <p className="text-muted-foreground text-[11px] leading-relaxed">
+                  You have {activeKeys.length} approved key(s) registered in this organization, but their private keys are stored on another device or browser. Because private keys are non-extractable, you need to generate a keypair on this device to sign transactions here.
+                </p>
+              </div>
+            </div>
 
-                    {/* Amount Input */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <label className="text-xs font-medium text-foreground">
-                          Amount ({currentFund?.currency ?? "Units"}) *
-                        </label>
-                        <span className="text-[10px] text-muted-foreground font-mono">
-                          Smallest Integer Units
-                        </span>
-                      </div>
-                      <Input
-                        type="text"
-                        placeholder="e.g. 500000"
-                        value={amountInput}
-                        disabled={isSigning}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/[^0-9]/g, "");
-                          setAmountInput(val);
-                        }}
-                        chamfer="none"
-                        required
-                      />
-                      {amountInput && (
-                        <p className="text-[11px] font-mono text-primary">
-                          Formatted: {currentFund?.currency} {parseInt(amountInput, 10).toLocaleString()}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Memo */}
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-foreground">
-                        Memo / Description *
-                      </label>
-                      <Input
-                        type="text"
-                        placeholder="e.g. Operating expense / grant receipt"
-                        value={memo}
-                        disabled={isSigning}
-                        onChange={(e) => setMemo(e.target.value)}
-                        chamfer="none"
-                        required
-                      />
-                    </div>
-                  </>
-                ) : (
-                  /* DUES PAYMENT MODE FORM */
-                  <>
-                    {/* Member Selection */}
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-foreground">
-                        Select Member *
-                      </label>
-                      <MemberSearchSelect
-                        members={members}
-                        value={duesUserId}
-                        onChange={(userId) => {
-                          setManualDuesUserId(userId);
-                          setDuesPeriodCount(1);
-                        }}
-                        disabled={isSigning}
-                        placeholder="Search member by nickname, name, or email..."
-                      />
-                    </div>
-
-                    {/* Dues Periods & Amount Calculation */}
-                    {duesUserId && (
-                      <div className="space-y-3 p-3.5 sm:p-4 bg-muted/20 border border-border/80 rounded-[var(--fintech-radius-sm)] font-sans shadow-xs">
-                        {unpaidPeriods === undefined ? (
-                          <div className="py-2 text-xs font-mono text-muted-foreground animate-pulse text-center">
-                            Loading unpaid dues cycles...
-                          </div>
-                        ) : unpaidPeriods.length === 0 ? (
-                          <div className="flex items-center gap-2 text-primary text-xs py-1">
-                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                            <span className="font-medium text-foreground">This member has no outstanding dues! All periods are paid.</span>
-                          </div>
-                        ) : (
-                          <>
-                            {/* Header row */}
-                            <div className="flex items-center justify-between gap-2">
-                              <label className="text-xs font-semibold text-foreground tracking-tight">
-                                {t("treasury.invoices.numberOfPeriods", "Number of Periods to Pay")}
-                              </label>
-                              <span className="inline-flex items-center text-[11px] font-mono font-medium text-muted-foreground bg-muted/50 border border-border/60 px-2 py-0.5 rounded-[var(--fintech-radius-sm)]">
-                                {t("treasury.invoices.maxAvailableCycles", "Max available: {{count}} cycle(s)", {
-                                  count: unpaidPeriods.length,
-                                })}
-                              </span>
-                            </div>
-
-                            {/* Stepper & Preset Controls */}
-                            <div className="space-y-2.5 pt-0.5">
-                              <div className="flex items-center justify-between gap-3">
-                                <span className="text-sm sm:text-base font-bold text-foreground">
-                                  {t("treasury.invoices.cyclesToPay", "Cycles to pay:")}
-                                </span>
-
-                                <div className="flex items-center gap-1.5 shrink-0">
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    chamfer="none"
-                                    disabled={isSigning || duesPeriodCount <= 1}
-                                    onClick={() => setDuesPeriodCount((prev) => Math.max(1, prev - 1))}
-                                    className="h-9 w-9 p-0 flex items-center justify-center cursor-pointer shrink-0 disabled:opacity-30 rounded-[var(--fintech-radius-sm)] border-border/80 bg-background hover:bg-muted/50 text-foreground transition-all active:scale-95 shadow-xs"
-                                    title="Decrease periods"
-                                  >
-                                    <Minus className="w-4 h-4" />
-                                  </Button>
-
-                                  <input
-                                    type="text"
-                                    inputMode="numeric"
-                                    value={duesPeriodCount}
-                                    disabled={isSigning}
-                                    onChange={(e) => {
-                                      const raw = e.target.value.replace(/[^0-9]/g, "");
-                                      if (!raw) {
-                                        setDuesPeriodCount(1);
-                                        return;
-                                      }
-                                      const val = parseInt(raw, 10);
-                                      setDuesPeriodCount(Math.min(unpaidPeriods.length, Math.max(1, val)));
-                                    }}
-                                    className="h-9 w-12 p-0 text-center font-sans font-bold text-base bg-background border border-border/80 rounded-[var(--fintech-radius-sm)] text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary tabular-nums shrink-0 shadow-xs"
-                                  />
-
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    chamfer="none"
-                                    disabled={isSigning || duesPeriodCount >= unpaidPeriods.length}
-                                    onClick={() => setDuesPeriodCount((prev) => Math.min(unpaidPeriods.length, prev + 1))}
-                                    className="h-9 w-9 p-0 flex items-center justify-center cursor-pointer shrink-0 disabled:opacity-30 rounded-[var(--fintech-radius-sm)] border-border/80 bg-background hover:bg-muted/50 text-foreground transition-all active:scale-95 shadow-xs"
-                                    title="Increase periods"
-                                  >
-                                    <Plus className="w-4 h-4" />
-                                  </Button>
-                                </div>
-                              </div>
-
-                              {/* Quick Preset Chips */}
-                              <div className="flex items-center gap-1.5 pt-0.5">
-                                <button
-                                  type="button"
-                                  disabled={isSigning}
-                                  onClick={() => setDuesPeriodCount(1)}
-                                  className={`px-3 py-1.5 text-xs font-medium rounded-[var(--fintech-radius-sm)] border transition-all cursor-pointer ${
-                                    duesPeriodCount === 1
-                                      ? "bg-primary text-primary-foreground border-primary font-semibold shadow-xs"
-                                      : "bg-background/80 border-border/70 text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                                  }`}
-                                >
-                                  {t("treasury.invoices.cycleSingle", "1 Cycle")}
-                                </button>
-
-                                {unpaidPeriods.length > 1 && (
-                                  <button
-                                    type="button"
-                                    disabled={isSigning}
-                                    onClick={() => setDuesPeriodCount(2)}
-                                    className={`px-3 py-1.5 text-xs font-medium rounded-[var(--fintech-radius-sm)] border transition-all cursor-pointer ${
-                                      duesPeriodCount === 2
-                                        ? "bg-primary text-primary-foreground border-primary font-semibold shadow-xs"
-                                        : "bg-background/80 border-border/70 text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                                    }`}
-                                  >
-                                    {t("treasury.invoices.cyclesMultiple", "{{count}} Cycles", { count: 2 })}
-                                  </button>
-                                )}
-
-                                <button
-                                  type="button"
-                                  disabled={isSigning}
-                                  onClick={() => setDuesPeriodCount(unpaidPeriods.length)}
-                                  className={`px-3 py-1.5 text-xs font-medium rounded-[var(--fintech-radius-sm)] border transition-all cursor-pointer ${
-                                    duesPeriodCount === unpaidPeriods.length
-                                      ? "bg-primary text-primary-foreground border-primary font-semibold shadow-xs"
-                                      : "bg-background/80 border-border/70 text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                                  }`}
-                                >
-                                  {t("treasury.invoices.allCycles", "All ({{count}})", { count: unpaidPeriods.length })}
-                                </button>
-                              </div>
-                            </div>
-
-                            {/* Divider & Preview Summary */}
-                            <div className="pt-3 border-t border-border/60 space-y-2.5">
-                              <div className="flex items-center justify-between gap-2 text-sm">
-                                <span className="text-muted-foreground font-medium flex items-center gap-2 shrink-0">
-                                  <CalendarDays className="w-4 h-4 text-muted-foreground" />
-                                  {t("treasury.invoices.coveredCycles", "Covered Cycle(s):")}
-                                </span>
-                                <span className="text-foreground font-semibold text-right truncate max-w-[210px] sm:max-w-none">
-                                  {formatPeriodsRange(selectedPeriodsToPay)}
-                                </span>
-                              </div>
-
-                              <div className="flex items-center justify-between gap-2 text-sm pt-0.5">
-                                <span className="text-muted-foreground font-medium">
-                                  {t("treasury.invoices.calculatedTotal", "Calculated Total:")}
-                                </span>
-                                <span className="text-base font-bold text-primary font-sans tabular-nums text-right">
-                                  {currentFund?.currency ?? "IDR"} {duesCalculatedAmount.toLocaleString("id-ID")}
-                                </span>
-                              </div>
-
-                              {/* Expandable Breakdown Toggle */}
-                              <div className="pt-2 border-t border-border/40">
-                                <button
-                                  type="button"
-                                  onClick={() => setShowDuesBreakdown((prev) => !prev)}
-                                  className="flex items-center justify-between w-full py-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                                >
-                                  <span>
-                                    {t("treasury.invoices.viewCycleBreakdown", "Rincian Siklus")} ({selectedPeriodsToPay.length})
-                                  </span>
-                                  <ChevronDown
-                                    className={`w-4 h-4 transition-transform duration-200 ${
-                                      showDuesBreakdown ? "rotate-180" : ""
-                                    }`}
-                                  />
-                                </button>
-
-                                {showDuesBreakdown && (
-                                  <div className="pt-2 space-y-1.5 max-h-36 overflow-y-auto pr-1 animate-in fade-in duration-150">
-                                    {selectedPeriodsToPay.map((p) => (
-                                      <div
-                                        key={p.membershipId}
-                                        className="flex items-center justify-between py-1 px-2 rounded-[var(--fintech-radius-sm)] bg-background/50 border border-border/40 text-[11px]"
-                                      >
-                                        <span className="truncate font-medium text-foreground">{p.periodLabel}</span>
-                                        <span className="text-muted-foreground shrink-0 tabular-nums font-sans">
-                                          {currentFund?.currency || "IDR"} {p.amount.toLocaleString("id-ID")}
-                                        </span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Dues Memo Input */}
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-foreground">
-                        Ledger Memo *
-                      </label>
-                      <Input
-                        type="text"
-                        value={effectiveDuesMemo}
-                        placeholder={defaultDuesMemo || "e.g. Member Dues Payment"}
-                        disabled={isSigning}
-                        onChange={(e) => setCustomDuesMemo(e.target.value)}
-                        chamfer="none"
-                        required
-                      />
-                    </div>
-                  </>
-                )}
-
-                {/* Advanced Options Toggle */}
-                <div className="pt-1">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
-                    <span className="truncate max-w-[200px]">
-                      Fund: <strong className="text-foreground">{currentFund?.name ?? "Default"}</strong>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setShowAdvanced(!showAdvanced)}
-                      className="text-primary hover:underline flex items-center gap-1 cursor-pointer shrink-0 ml-2"
-                    >
-                      <KeyRound className="w-3.5 h-3.5" />
-                      <span>{showAdvanced ? "Hide Options" : "Advanced Options"}</span>
-                      <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAdvanced ? "rotate-180" : ""}`} />
-                    </button>
-                  </div>
-
-                  {showAdvanced && (
-                    <div className="mt-2.5 p-3 bg-muted/20 border border-border/70 rounded-[var(--fintech-radius-sm)] space-y-3.5 animate-in fade-in-50 duration-150">
-                      {/* Target Destination Fund Selector */}
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <label className="text-xs font-medium text-foreground">
-                            Destination Fund *
-                          </label>
-                          {selectedFundId === defaultFundId && defaultFundId && (
-                            <span className="text-[10px] font-mono text-primary px-1.5 py-0.5 bg-primary/10 border border-primary/20">
-                              Auto-selected
-                            </span>
-                          )}
-                        </div>
-                        {funds && funds.length > 0 ? (
-                          <select
-                            value={selectedFundId ?? ""}
-                            onChange={(e) => setSelectedFundIdState(e.target.value as Id<"funds">)}
-                            disabled={isSigning}
-                            className="w-full h-8 px-2 bg-background border border-border text-xs text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer rounded-[var(--fintech-radius-xs)]"
-                            required
-                          >
-                            {funds.map((fund) => (
-                              <option key={fund._id} value={fund._id}>
-                                {fund.name} ({fund.currency})
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <div className="text-xs text-muted-foreground italic py-1">
-                            No active funds available.
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Signing Key Selector */}
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-foreground flex items-center justify-between">
-                          <span>Treasurer Signing Key *</span>
-                          <span className="text-[10px] text-muted-foreground font-mono">
-                            ECDSA P-256
-                          </span>
-                        </label>
-                        <select
-                          value={selectedKeyId}
-                          onChange={(e) => setSelectedKeyIdState(e.target.value)}
-                          disabled={isSigning}
-                          className="w-full h-8 px-2 bg-background border border-border text-xs text-foreground font-mono focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer rounded-[var(--fintech-radius-xs)]"
-                          required
-                        >
-                          {availableKeysOnDevice.length > 0 && (
-                            <optgroup label="Available on this device">
-                              {availableKeysOnDevice.map((k) => (
-                                <option key={k.keyId} value={k.keyId}>
-                                  ● {k.label ? `${k.label} (${k.keyId.slice(0, 10)}...)` : `Key (${k.keyId.slice(0, 10)}...)`} [Ready]
-                                </option>
-                              ))}
-                            </optgroup>
-                          )}
-                          {otherDeviceKeys.length > 0 && (
-                            <optgroup label="Other devices (Missing private key)">
-                              {otherDeviceKeys.map((k) => (
-                                <option key={k.keyId} value={k.keyId}>
-                                  ⚠ {k.label ? `${k.label} (${k.keyId.slice(0, 10)}...)` : `Key (${k.keyId.slice(0, 10)}...)`} [No private key]
-                                </option>
-                              ))}
-                            </optgroup>
-                          )}
-                        </select>
-                        {isKeyAvailableOnDevice ? (
-                          <div className="flex items-center gap-1.5 text-emerald-400 text-[11px] font-mono">
-                            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                            <span>Signing key ready on this device</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1.5 text-amber-400 text-[11px] font-mono">
-                            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                            <span>Private key not found on this device.</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {error && (
-                  <div className="p-2.5 bg-destructive/15 border border-destructive/40 text-destructive-foreground text-xs font-mono">
-                    {error}
-                  </div>
-                )}
-
-                <div className="pt-3 border-t border-border space-y-1.5">
-                  <div className="flex items-center justify-end gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      chamfer="none"
-                      onClick={onClose}
-                      disabled={isSigning || isHolding}
-                      size="sm"
-                      className="text-xs cursor-pointer"
-                    >
-                      {t("common.cancel")}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="cyber"
-                      chamfer="none"
-                      size="sm"
-                      disabled={isSubmitDisabled}
-                      onPointerDown={startHold}
-                      onPointerUp={stopHold}
-                      onPointerLeave={stopHold}
-                      onPointerCancel={stopHold}
-                      onContextMenu={(e) => e.preventDefault()}
-                      className={`relative overflow-hidden text-xs flex items-center justify-center gap-1.5 cursor-pointer select-none px-4 py-2 min-w-[220px] transition-all ${isHolding ? "border-emerald-400/80 shadow-[0_0_15px_rgba(52,211,153,0.3)]" : ""
-                        }`}
-                    >
-                      {/* 5-second Hold Progress Fill */}
-                      {isHolding && (
-                        <div
-                          className="absolute inset-0 bg-emerald-500/35 pointer-events-none transition-none"
-                          style={{
-                            width: `${Math.min(100, holdProgress * 100)}%`,
-                          }}
-                        />
-                      )}
-
-                      <span className="relative z-10 flex items-center gap-1.5 font-mono">
-                        {isSigning ? (
-                          <>
-                            <Sparkles className="w-3.5 h-3.5 animate-spin text-emerald-400" />
-                            <span>Signing & Committing...</span>
-                          </>
-                        ) : isHolding ? (
-                          <>
-                            <Lock className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-                            <span>
-                              Hold to Sign: {((HOLD_DURATION_MS * (1 - holdProgress)) / 1000).toFixed(1)}s
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <Lock className="w-3.5 h-3.5" />
-                            <span>
-                              {paymentMode === "dues"
-                                ? `Hold to Sign (${currentFund?.currency ?? "IDR"} ${duesCalculatedAmount.toLocaleString("id-ID")})`
-                                : "Hold to Sign & Commit"}
-                            </span>
-                          </>
-                        )}
-                      </span>
-                    </Button>
-                  </div>
-                  {!isSubmitDisabled && !isSigning && (
-                    <p className="text-[10px] font-mono text-muted-foreground text-right">
-                      ⚠️You cannot undo this action!
-                    </p>
-                  )}
-                </div>
-              </form>
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
+              <Button
+                type="button"
+                variant="outline"
+                chamfer="none"
+                onClick={onClose}
+                size="sm"
+                className="text-xs cursor-pointer"
+              >
+                Cancel
+              </Button>
+              {onOpenKeyGen && (
+                <Button
+                  type="button"
+                  variant="cyber"
+                  chamfer="none"
+                  size="sm"
+                  onClick={() => {
+                    onClose();
+                    onOpenKeyGen();
+                  }}
+                  className="text-xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <KeyRound className="w-3.5 h-3.5" />
+                  <span>Generate Keypair on This Device</span>
+                </Button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+            }}
+            className="space-y-4"
+          >
+            {paymentMode === "manual" ? (
+              <ManualPaymentForm
+                direction={direction}
+                amountInput={amountInput}
+                memo={memo}
+                currency={currentFund?.currency ?? "Units"}
+                isSigning={isSigning}
+                onDirectionChange={setDirection}
+                onAmountChange={setAmountInput}
+                onMemoChange={setMemo}
+              />
+            ) : (
+              <DuesPaymentForm
+                members={members}
+                duesUserId={duesUserId}
+                unpaidPeriods={unpaidPeriods}
+                duesPeriodCount={duesPeriodCount}
+                showDuesBreakdown={showDuesBreakdown}
+                effectiveDuesMemo={effectiveDuesMemo}
+                defaultDuesMemo={defaultDuesMemo}
+                currency={currency}
+                duesCalculatedAmount={duesCalculatedAmount}
+                selectedPeriodsToPay={selectedPeriodsToPay}
+                periodRangeLabel={periodRangeLabel}
+                isSigning={isSigning}
+                onUserSelect={(userId) => {
+                  setManualDuesUserId(userId);
+                  setDuesPeriodCount(1);
+                }}
+                onPeriodCountChange={setDuesPeriodCount}
+                onToggleBreakdown={() => setShowDuesBreakdown((prev) => !prev)}
+                onCustomMemoChange={setCustomDuesMemo}
+              />
             )}
+
+            {/* Advanced Options Toggle */}
+            <AdvancedSigningOptions
+              funds={funds}
+              selectedFundId={selectedFundId}
+              defaultFundId={defaultFundId}
+              currentFundName={currentFund?.name}
+              selectedKeyId={selectedKeyId}
+              availableKeysOnDevice={availableKeysOnDevice}
+              otherDeviceKeys={otherDeviceKeys}
+              isKeyAvailableOnDevice={isKeyAvailableOnDevice}
+              isSigning={isSigning}
+              showAdvanced={showAdvanced}
+              onToggleAdvanced={() => setShowAdvanced(!showAdvanced)}
+              onFundChange={setSelectedFundIdState}
+              onKeyChange={setSelectedKeyIdState}
+            />
+
+            {error && (
+              <div className="p-2.5 bg-destructive/15 border border-destructive/40 text-destructive-foreground text-xs font-mono">
+                {error}
+              </div>
+            )}
+
+            <HoldToSignButton
+              paymentMode={paymentMode}
+              currency={currency}
+              duesCalculatedAmount={duesCalculatedAmount}
+              isSigning={isSigning}
+              isHolding={isHolding}
+              holdProgress={holdProgress}
+              holdDurationMs={HOLD_DURATION_MS}
+              isSubmitDisabled={isSubmitDisabled}
+              cancelLabel={t("common.cancel")}
+              onClose={onClose}
+              onPointerDown={startHold}
+              onPointerUp={stopHold}
+              onPointerLeave={stopHold}
+              onPointerCancel={stopHold}
+            />
+          </form>
+        )}
       </div>
     </ResponsiveDialog>
   );

@@ -9,19 +9,17 @@ import { StatusPill } from "../../../ui/StatusPill";
 import { Button } from "@boredkevin/ui";
 import {
   Users,
-  CheckCircle2,
-  AlertTriangle,
-  Lock,
-  Sparkles,
   Trash2,
   Plus,
-  Minus,
   ArrowLeft,
   Search,
-  CheckCheck,
 } from "lucide-react";
 import { loadKeypair, listStoredKeys, signLedgerPayload, SigningPayload } from "../../../lib/treasury-crypto";
 import { useFormat } from "../../../hooks/useFormat";
+import { StagedPaymentItem, ResolvedStagedRow } from "./bulk/bulkDuesTypes";
+import { BulkDuesContextBar } from "./bulk/BulkDuesContextBar";
+import { BulkDuesTableRow } from "./bulk/BulkDuesTableRow";
+import { BulkDuesCommitBar } from "./bulk/BulkDuesCommitBar";
 
 interface BulkDuesEntryPaneProps {
   organizationId: Id<"organizations">;
@@ -29,17 +27,6 @@ interface BulkDuesEntryPaneProps {
   onNavigateBack: () => void;
   onOpenKeyGen?: () => void;
   onInspectEntry?: (entryId: Id<"ledgerEntries">) => void;
-}
-
-interface StagedPaymentItem {
-  id: string; // Unique row ID
-  userId: Id<"users">;
-  periodCount: number;
-  customMemo: string;
-  status: "idle" | "signing" | "completed" | "error";
-  errorMessage?: string;
-  entryHash?: string;
-  entryId?: Id<"ledgerEntries">;
 }
 
 const HOLD_DURATION_MS = 3000;
@@ -330,7 +317,7 @@ export function BulkDuesEntryPane({
   };
 
   // Resolved rows
-  const resolvedStagedRows = useMemo(() => {
+  const resolvedStagedRows: ResolvedStagedRow[] = useMemo(() => {
     if (!spreadsheet?.members) return [];
     return stagedItems.map((item) => {
       const member = spreadsheet.members.find((m) => m.userId === item.userId);
@@ -594,93 +581,18 @@ export function BulkDuesEntryPane({
       </div>
 
       {/* Fund & Signing Key Context */}
-      <Panel className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Destination Fund (Active Workspace Fund) */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-foreground block">
-            Destination Fund
-          </label>
-          <div className="h-8 px-2.5 bg-muted/20 border border-border/80 rounded-[var(--fintech-radius-sm)] flex items-center justify-between text-xs text-foreground font-mono">
-            <span className="font-medium truncate">{currentFund?.name ?? "Treasury"}</span>
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 shrink-0">
-              {currency}
-            </span>
-          </div>
-        </div>
-
-        {/* Treasurer Signing Key */}
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-semibold text-foreground">
-              Signing Key
-            </label>
-            <span className="text-[11px] text-muted-foreground font-mono">
-              ECDSA P-256
-            </span>
-          </div>
-
-          {availableKeysOnDevice.length === 0 && !isLoadingLocalKeys ? (
-            <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs rounded-[var(--fintech-radius-sm)] flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5">
-                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
-                <span>No signing key found on this browser.</span>
-              </div>
-              {onOpenKeyGen && (
-                <Button
-                  type="button"
-                  variant="cyber"
-                  size="sm"
-                  chamfer="none"
-                  onClick={onOpenKeyGen}
-                  className="h-6 text-[10px] px-2 cursor-pointer"
-                >
-                  Generate Key
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-1">
-              <select
-                value={selectedKeyId}
-                onChange={(e) => setSelectedKeyIdState(e.target.value)}
-                disabled={isProcessing}
-                className="w-full h-8 px-2.5 bg-background border border-border rounded-[var(--fintech-radius-sm)] text-xs text-foreground font-mono focus:outline-none focus:border-primary cursor-pointer"
-              >
-                {availableKeysOnDevice.length > 0 && (
-                  <optgroup label="Available on this device">
-                    {availableKeysOnDevice.map((k) => (
-                      <option key={k.keyId} value={k.keyId}>
-                        ● {k.label ? `${k.label} (${k.keyId.slice(0, 8)}...)` : `Key (${k.keyId.slice(0, 8)}...)`} [Ready]
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-                {otherDeviceKeys.length > 0 && (
-                  <optgroup label="Other devices (Missing private key)">
-                    {otherDeviceKeys.map((k) => (
-                      <option key={k.keyId} value={k.keyId} disabled>
-                        ⚠ {k.label ? `${k.label} (${k.keyId.slice(0, 8)}...)` : `Key (${k.keyId.slice(0, 8)}...)`} [No private key]
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
-
-              {isKeyAvailableOnDevice ? (
-                <div className="flex items-center gap-1.5 text-emerald-400 text-[11px]">
-                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                  <span>Key ready in browser storage</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1.5 text-amber-400 text-[11px]">
-                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                  <span>Selected key is not stored in this browser.</span>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </Panel>
+      <BulkDuesContextBar
+        currentFundName={currentFund?.name}
+        currency={currency}
+        availableKeysOnDevice={availableKeysOnDevice}
+        otherDeviceKeys={otherDeviceKeys}
+        selectedKeyId={selectedKeyId}
+        isKeyAvailableOnDevice={isKeyAvailableOnDevice}
+        isLoadingLocalKeys={isLoadingLocalKeys}
+        isProcessing={isProcessing}
+        onSelectKeyId={(keyId) => setSelectedKeyIdState(keyId)}
+        onOpenKeyGen={onOpenKeyGen}
+      />
 
       {/* Aggregate Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -821,7 +733,7 @@ export function BulkDuesEntryPane({
             <div className="space-y-1">
               <p className="text-sm font-semibold text-foreground">No members staged yet</p>
               <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                Click "Quick-Add All Members with Unpaid Dues" above, or search for a member to start staging.
+                Click &quot;Quick-Add All Members with Unpaid Dues&quot; above, or search for a member to start staging.
               </p>
             </div>
           </div>
@@ -840,251 +752,46 @@ export function BulkDuesEntryPane({
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/40">
-                {displayedStagedRows.map((row) => {
-                  const isCompleted = row.status === "completed";
-                  const isRowSigning = row.status === "signing";
-                  const isRowError = row.status === "error";
-
-                  return (
-                    <tr
-                      key={row.id}
-                      className={`transition-colors ${
-                        isCompleted
-                          ? "bg-emerald-500/5 opacity-80"
-                          : isRowError
-                          ? "bg-destructive/10"
-                          : "hover:bg-muted/20"
-                      }`}
-                    >
-                      {/* Member Info */}
-                      <td className="py-2.5 px-4">
-                        <div className="font-semibold text-foreground flex items-center gap-1.5">
-                          <span>{row.member?.nickname || row.member?.name || "Member"}</span>
-                          {row.unpaidEvents.length > 0 && (
-                            <span className="text-[10px] text-amber-400 bg-amber-500/10 px-1 rounded-[var(--fintech-radius-sm)] border border-amber-500/30">
-                              {row.unpaidEvents.length} due
-                            </span>
-                          )}
-                        </div>
-                        {row.member?.nickname && (
-                          <div className="text-[11px] text-muted-foreground">
-                            {row.member.name}
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Cycles Stepper */}
-                      <td className="py-2.5 px-3 text-center">
-                        {isCompleted ? (
-                          <span className="text-xs font-bold text-emerald-400">
-                            {row.periodCount} cycle{row.periodCount > 1 ? "s" : ""}
-                          </span>
-                        ) : (
-                          <div className="flex items-center justify-center gap-1">
-                            <button
-                              type="button"
-                              disabled={isProcessing || row.periodCount <= 1}
-                              onClick={() =>
-                                handleUpdatePeriodCount(
-                                  row.id,
-                                  row.periodCount - 1,
-                                  row.unpaidEvents.length
-                                )
-                              }
-                              className="h-6 w-6 rounded border border-border flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer disabled:opacity-40"
-                            >
-                              <Minus className="w-3 h-3" />
-                            </button>
-
-                            <span className="w-7 text-center font-bold text-xs text-primary font-mono">
-                              {row.periodCount}
-                            </span>
-
-                            <button
-                              type="button"
-                              disabled={
-                                isProcessing || row.periodCount >= row.unpaidEvents.length
-                              }
-                              onClick={() =>
-                                handleUpdatePeriodCount(
-                                  row.id,
-                                  row.periodCount + 1,
-                                  row.unpaidEvents.length
-                                )
-                              }
-                              className="h-6 w-6 rounded border border-border flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer disabled:opacity-40"
-                            >
-                              <Plus className="w-3 h-3" />
-                            </button>
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Covered Cycles */}
-                      <td className="py-2.5 px-3 text-xs text-muted-foreground">
-                        {row.periodRange || "—"}
-                      </td>
-
-                      {/* Calculated Amount */}
-                      <td className="py-2.5 px-3 text-right font-bold text-emerald-400 font-mono">
-                        {formatMoney(row.amount, currency)}
-                      </td>
-
-                      {/* Memo Input */}
-                      <td className="py-2.5 px-3">
-                        {isCompleted ? (
-                          <span className="text-xs text-muted-foreground truncate block max-w-xs">
-                            {row.effectiveMemo}
-                          </span>
-                        ) : (
-                          <input
-                            type="text"
-                            value={row.customMemo}
-                            placeholder={row.defaultMemo}
-                            disabled={isProcessing}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setStagedItems((prev) =>
-                                prev.map((i) =>
-                                  i.id === row.id ? { ...i, customMemo: val } : i
-                                )
-                              );
-                            }}
-                            className="w-full h-7 px-2 bg-background border border-border rounded-[var(--fintech-radius-sm)] text-xs text-foreground focus:outline-none focus:border-primary font-mono"
-                          />
-                        )}
-                      </td>
-
-                      {/* Status Column */}
-                      <td className="py-2.5 px-3 text-center">
-                        {isCompleted ? (
-                          <div className="inline-flex items-center gap-1 text-emerald-400 text-xs font-semibold">
-                            <CheckCheck className="w-3.5 h-3.5" />
-                            {row.entryId && onInspectEntry ? (
-                              <button
-                                type="button"
-                                onClick={() => onInspectEntry(row.entryId!)}
-                                className="underline hover:text-emerald-300 cursor-pointer"
-                              >
-                                Recorded
-                              </button>
-                            ) : (
-                              <span>Recorded</span>
-                            )}
-                          </div>
-                        ) : isRowSigning ? (
-                          <div className="inline-flex items-center gap-1 text-primary text-xs font-semibold animate-pulse">
-                            <Sparkles className="w-3.5 h-3.5 animate-spin" />
-                            <span>Signing...</span>
-                          </div>
-                        ) : isRowError ? (
-                          <div
-                            className="inline-flex items-center gap-1 text-rose-400 text-xs font-semibold"
-                            title={row.errorMessage}
-                          >
-                            <AlertTriangle className="w-3.5 h-3.5" />
-                            <span>Failed</span>
-                          </div>
-                        ) : (
-                          <StatusPill tone="neutral">
-                            Staged
-                          </StatusPill>
-                        )}
-                      </td>
-
-                      {/* Action Column */}
-                      <td className="py-2.5 px-3 text-center">
-                        {!isCompleted && !isRowSigning && (
-                          <button
-                            type="button"
-                            disabled={isProcessing}
-                            onClick={() => handleRemoveRow(row.id)}
-                            className="p-1 text-muted-foreground hover:text-rose-400 cursor-pointer"
-                            title="Remove from batch"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                {displayedStagedRows.map((row) => (
+                  <BulkDuesTableRow
+                    key={row.id}
+                    row={row}
+                    currency={currency}
+                    isProcessing={isProcessing}
+                    formatMoney={formatMoney}
+                    onUpdatePeriodCount={handleUpdatePeriodCount}
+                    onUpdateCustomMemo={(rowId, val) =>
+                      setStagedItems((prev) =>
+                        prev.map((i) => (i.id === rowId ? { ...i, customMemo: val } : i))
+                      )
+                    }
+                    onRemoveRow={handleRemoveRow}
+                    onInspectEntry={onInspectEntry}
+                  />
+                ))}
               </tbody>
             </table>
           </div>
         )}
 
         {/* Batch Commit Sticky Bar */}
-        <div className="p-4 border-t border-border bg-card flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="text-xs font-semibold text-foreground flex items-center gap-2">
-              <span>Batch Total:</span>
-              <span className="font-mono text-emerald-400 text-sm font-bold">
-                {formatMoney(totalBatchAmount, currency)}
-              </span>
-              <span className="text-muted-foreground text-xs">
-                ({pendingRows.length} member{pendingRows.length === 1 ? "" : "s"} · {totalBatchCycles} cycle{totalBatchCycles === 1 ? "" : "s"})
-              </span>
-            </div>
-            <p className="text-[11px] text-muted-foreground">
-              {isProcessing
-                ? `Committing sequential blocks: ${batchProgress.current} / ${batchProgress.total} completed...`
-                : "Transactions are cryptographically signed sequentially using your local browser key."}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Button
-              type="button"
-              variant="cyber"
-              chamfer="none"
-              size="sm"
-              disabled={isSubmitDisabled}
-              onPointerDown={startHold}
-              onPointerUp={stopHold}
-              onPointerLeave={stopHold}
-              onPointerCancel={stopHold}
-              onContextMenu={(e) => e.preventDefault()}
-              className={`relative overflow-hidden text-xs flex items-center justify-center gap-1.5 cursor-pointer select-none px-6 py-2.5 min-w-[260px] transition-all rounded-[var(--fintech-radius-md)] ${
-                isHolding ? "border-emerald-400 shadow-[0_0_20px_rgba(52,211,153,0.35)]" : ""
-              }`}
-            >
-              {isHolding && (
-                <div
-                  className="absolute inset-0 bg-emerald-500/35 pointer-events-none transition-none"
-                  style={{
-                    width: `${Math.min(100, holdProgress * 100)}%`,
-                  }}
-                />
-              )}
-
-              <span className="relative z-10 flex items-center gap-1.5 font-bold">
-                {isProcessing ? (
-                  <>
-                    <Sparkles className="w-3.5 h-3.5 animate-spin text-emerald-400" />
-                    <span>
-                      Processing {batchProgress.current + 1} of {batchProgress.total}...
-                    </span>
-                  </>
-                ) : isHolding ? (
-                  <>
-                    <Lock className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-                    <span>
-                      Hold to Commit: {((HOLD_DURATION_MS * (1 - holdProgress)) / 1000).toFixed(1)}s
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <Lock className="w-3.5 h-3.5" />
-                    <span>
-                      Hold to Sign Batch ({formatMoney(totalBatchAmount, currency)})
-                    </span>
-                  </>
-                )}
-              </span>
-            </Button>
-          </div>
-        </div>
+        <BulkDuesCommitBar
+          totalBatchAmount={totalBatchAmount}
+          currency={currency}
+          pendingCount={pendingRows.length}
+          totalBatchCycles={totalBatchCycles}
+          isProcessing={isProcessing}
+          isSubmitDisabled={isSubmitDisabled}
+          isHolding={isHolding}
+          holdProgress={holdProgress}
+          holdDurationMs={HOLD_DURATION_MS}
+          batchProgress={batchProgress}
+          formatMoney={formatMoney}
+          onPointerDown={startHold}
+          onPointerUp={stopHold}
+          onPointerLeave={stopHold}
+          onPointerCancel={stopHold}
+        />
       </Panel>
     </div>
   );

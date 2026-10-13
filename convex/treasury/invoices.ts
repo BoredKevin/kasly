@@ -502,13 +502,28 @@ export const listInvoices = query({
       throw new Error("You are not a member of this organization.");
     }
 
-    const invoices = await ctx.db
-      .query("invoices")
-      .withIndex("by_organizationId", (q) =>
-        q.eq("organizationId", args.organizationId)
-      )
-      .order("desc")
-      .take(100);
+    let invoicesQuery;
+    if (args.fundId) {
+      invoicesQuery = ctx.db
+        .query("invoices")
+        .withIndex("by_organizationId_and_fundId", (q) =>
+          q.eq("organizationId", args.organizationId).eq("fundId", args.fundId!)
+        );
+    } else if (args.status && args.status !== "all") {
+      invoicesQuery = ctx.db
+        .query("invoices")
+        .withIndex("by_organizationId_and_status", (q) =>
+          q.eq("organizationId", args.organizationId).eq("status", args.status as any)
+        );
+    } else {
+      invoicesQuery = ctx.db
+        .query("invoices")
+        .withIndex("by_organizationId", (q) =>
+          q.eq("organizationId", args.organizationId)
+        );
+    }
+
+    const invoices = await invoicesQuery.order("desc").take(200);
 
     return invoices.filter((inv) => {
       if (args.fundId && inv.fundId !== args.fundId) return false;
