@@ -128,7 +128,18 @@ convex/
 ├── organizations.ts     # Organization lifecycle, settings, and ownership transfer
 ├── permissions.ts       # Permission bitsets, constants, and validators
 ├── roles.ts             # Role creation, hierarchy position ordering, and permissions
-├── schema.ts            # Database schema definitions and indexes
+├── seed.ts              # Development seed engine (demo org, users, ECDSA keys, ledger entries)
+├── schema.ts            # Database schema definitions and compound indexes
+├── __tests__/           # Comprehensive backend test suites powered by convex-test & vitest
+│   ├── helpers.ts       # Test utilities for user provisioning, WebCrypto ECDSA, and signatures
+│   ├── appSettings.test.ts
+│   ├── users.test.ts
+│   ├── organizations.test.ts
+│   ├── rolesAndMembers.test.ts
+│   ├── nisnAndPreReg.test.ts
+│   ├── treasuryLedger.test.ts
+│   ├── duesAndInvoices.test.ts
+│   └── seed.test.ts
 ├── treasury/            # Cryptographic Treasury & Ledger Engine
 │   ├── invoices.ts      # Pure invoicing domain (dues & custom charges lifecycle)
 │   ├── settlement.ts    # Universal automated CLE settlement & membership fulfillment

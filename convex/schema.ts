@@ -251,6 +251,7 @@ export default defineSchema({
     invoiceId: v.optional(v.id("invoices")),
     paymentMethod: v.optional(v.string()), // e.g. "gateway_borderpay" | "manual_cle"
   })
+    .index("by_fundId", ["fundId"])
     .index("by_duesEventId", ["duesEventId"])
     .index("by_duesEventId_and_memberId", ["duesEventId", "memberId"])
     .index("by_fundId_and_userId", ["fundId", "userId"])
@@ -371,10 +372,13 @@ export default defineSchema({
   })
     .index("by_invoiceNumber", ["invoiceNumber"])
     .index("by_organizationId", ["organizationId"])
+    .index("by_organizationId_and_fundId", ["organizationId", "fundId"])
     .index("by_organizationId_and_userId", ["organizationId", "userId"])
     .index("by_organizationId_and_status", ["organizationId", "status"])
     .index("by_fundId", ["fundId"])
-    .index("by_status", ["status"]),
+    .index("by_status", ["status"])
+    .index("by_gatewayReferenceId", ["gatewayReferenceId"])
+    .index("by_borderpayReferenceId", ["borderpayReferenceId"]),
 });
 
 
