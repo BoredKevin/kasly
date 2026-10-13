@@ -12,7 +12,7 @@ import {
   Wallet,
   ShieldAlert,
 } from "lucide-react";
-import { LedgerTimeline } from "./LedgerTimeline";
+import { LedgerTimeline } from "../ledger";
 import { CreateInvoiceModal } from "./CreateInvoiceModal";
 import { UnifiedMobileFinancialHero } from "./UnifiedMobileFinancialHero";
 

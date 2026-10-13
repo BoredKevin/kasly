@@ -38,7 +38,7 @@ import {
   parseRevertMemo,
   findReversalForEntry,
   findTargetEntry,
-} from "../utils/revertUtils";
+} from "../lib/revertUtils";
 
 interface SharedEntryPageProps {
   identifier: string;
