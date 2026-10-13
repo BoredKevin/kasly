@@ -109,23 +109,24 @@ export const listPendingKeys = query({
       )
       .take(100);
 
-    const results = [];
-    for (const item of pending) {
-      const user = await ctx.db.get("users", item.userId);
-      results.push({
-        _id: item._id,
-        _creationTime: item._creationTime,
-        organizationId: item.organizationId,
-        userId: item.userId,
-        userName: user?.name,
-        userEmail: user?.email,
-        keyId: item.keyId,
-        publicKeyJwk: item.publicKeyJwk,
-        label: item.label,
-        requestedAt: item.requestedAt,
-        status: item.status,
-      });
-    }
+    const results = await Promise.all(
+      pending.map(async (item) => {
+        const user = await ctx.db.get("users", item.userId);
+        return {
+          _id: item._id,
+          _creationTime: item._creationTime,
+          organizationId: item.organizationId,
+          userId: item.userId,
+          userName: user?.name,
+          userEmail: user?.email,
+          keyId: item.keyId,
+          publicKeyJwk: item.publicKeyJwk,
+          label: item.label,
+          requestedAt: item.requestedAt,
+          status: item.status,
+        };
+      })
+    );
 
     return results;
   },
@@ -283,27 +284,28 @@ export const listActiveKeys = query({
       )
       .take(200);
 
-    const results = [];
-    for (const k of keys) {
-      const user = await ctx.db.get("users", k.userId);
-      const regUser = await ctx.db.get("users", k.registeredBy);
-      results.push({
-        _id: k._id,
-        _creationTime: k._creationTime,
-        organizationId: k.organizationId,
-        userId: k.userId,
-        userName: user?.name,
-        userEmail: user?.email,
-        keyId: k.keyId,
-        publicKeyJwk: k.publicKeyJwk,
-        label: k.label,
-        registeredAt: k.registeredAt,
-        registeredBy: k.registeredBy,
-        registeredByName: regUser?.name,
-        revokedAt: k.revokedAt,
-        isRevoked: k.revokedAt !== undefined,
-      });
-    }
+    const results = await Promise.all(
+      keys.map(async (k) => {
+        const user = await ctx.db.get("users", k.userId);
+        const regUser = await ctx.db.get("users", k.registeredBy);
+        return {
+          _id: k._id,
+          _creationTime: k._creationTime,
+          organizationId: k.organizationId,
+          userId: k.userId,
+          userName: user?.name,
+          userEmail: user?.email,
+          keyId: k.keyId,
+          publicKeyJwk: k.publicKeyJwk,
+          label: k.label,
+          registeredAt: k.registeredAt,
+          registeredBy: k.registeredBy,
+          registeredByName: regUser?.name,
+          revokedAt: k.revokedAt,
+          isRevoked: k.revokedAt !== undefined,
+        };
+      })
+    );
 
     return results;
   },

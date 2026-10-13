@@ -164,21 +164,22 @@ export const list = query({
       )
       .take(100);
 
-    const results = [];
-    for (const inv of invites) {
-      const inviter = await ctx.db.get("users", inv.inviterId);
-      results.push({
-        _id: inv._id,
-        _creationTime: inv._creationTime,
-        code: inv.code,
-        organizationId: inv.organizationId,
-        inviterId: inv.inviterId,
-        inviterName: inviter?.name,
-        uses: inv.uses,
-        maxUses: inv.maxUses,
-        expiresAt: inv.expiresAt,
-      });
-    }
+    const results = await Promise.all(
+      invites.map(async (inv) => {
+        const inviter = await ctx.db.get("users", inv.inviterId);
+        return {
+          _id: inv._id,
+          _creationTime: inv._creationTime,
+          code: inv.code,
+          organizationId: inv.organizationId,
+          inviterId: inv.inviterId,
+          inviterName: inviter?.name,
+          uses: inv.uses,
+          maxUses: inv.maxUses,
+          expiresAt: inv.expiresAt,
+        };
+      })
+    );
 
     return results;
   },

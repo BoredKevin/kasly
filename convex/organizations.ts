@@ -150,9 +150,13 @@ export const listMine = query({
       .withIndex("by_userId", (q) => q.eq("userId", user._id))
       .take(100);
 
+    const orgDocs = await Promise.all(
+      memberships.map((m) => ctx.db.get("organizations", m.organizationId))
+    );
+
     const results = [];
-    for (const membership of memberships) {
-      const org = await ctx.db.get("organizations", membership.organizationId);
+    for (let i = 0; i < memberships.length; i++) {
+      const org = orgDocs[i];
       if (org) {
         results.push({
           _id: org._id,
@@ -163,7 +167,7 @@ export const listMine = query({
           iconUrl: org.iconUrl,
           ownerId: org.ownerId,
           isOwner: org.ownerId === user._id,
-          joinedAt: membership.joinedAt,
+          joinedAt: memberships[i].joinedAt,
         });
       }
     }
@@ -307,6 +311,46 @@ export const deleteOrganization = mutation({
       .take(1000);
     for (const b of bans) {
       await ctx.db.delete("bans", b._id);
+    }
+
+    // Cancel scheduled dues jobs and delete duesConfig
+    const duesConfigs = await ctx.db
+      .query("duesConfig")
+      .withIndex("by_organizationId", (q) =>
+        q.eq("organizationId", args.organizationId),
+      )
+      .take(100);
+    for (const dc of duesConfigs) {
+      if (dc.scheduledJobId) {
+        try {
+          await ctx.scheduler.cancel(dc.scheduledJobId);
+        } catch (err) {
+          console.warn("Could not cancel dues scheduled job on org delete:", err);
+        }
+      }
+      await ctx.db.delete("duesConfig", dc._id);
+    }
+
+    // Clean registration links
+    const regLinks = await ctx.db
+      .query("registrationLinks")
+      .withIndex("by_organizationId", (q) =>
+        q.eq("organizationId", args.organizationId),
+      )
+      .take(500);
+    for (const rl of regLinks) {
+      await ctx.db.delete("registrationLinks", rl._id);
+    }
+
+    // Clean payment config
+    const payConfig = await ctx.db
+      .query("organizationPaymentConfig")
+      .withIndex("by_organizationId", (q) =>
+        q.eq("organizationId", args.organizationId),
+      )
+      .first();
+    if (payConfig) {
+      await ctx.db.delete("organizationPaymentConfig", payConfig._id);
     }
 
     // Cascade-to-archive treasury funds (preserves immutable ledger entries and keys for audit)

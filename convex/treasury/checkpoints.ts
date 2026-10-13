@@ -102,22 +102,23 @@ export const listCheckpoints = query({
       .order("desc")
       .take(100);
 
-    const results = [];
-    for (const cp of checkpoints) {
-      const creator = await ctx.db.get("users", cp.createdBy);
-      results.push({
-        _id: cp._id,
-        _creationTime: cp._creationTime,
-        organizationId: cp.organizationId,
-        fundId: cp.fundId,
-        sequenceNumber: cp.sequenceNumber,
-        entryHash: cp.entryHash,
-        balanceAtCheckpoint: cp.balanceAtCheckpoint,
-        createdAt: cp.createdAt,
-        createdBy: cp.createdBy,
-        createdByName: creator?.name,
-      });
-    }
+    const results = await Promise.all(
+      checkpoints.map(async (cp) => {
+        const creator = await ctx.db.get("users", cp.createdBy);
+        return {
+          _id: cp._id,
+          _creationTime: cp._creationTime,
+          organizationId: cp.organizationId,
+          fundId: cp.fundId,
+          sequenceNumber: cp.sequenceNumber,
+          entryHash: cp.entryHash,
+          balanceAtCheckpoint: cp.balanceAtCheckpoint,
+          createdAt: cp.createdAt,
+          createdBy: cp.createdBy,
+          createdByName: creator?.name,
+        };
+      })
+    );
 
     return results;
   },

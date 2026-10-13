@@ -6,6 +6,7 @@ import { requirePermission } from "../authz";
 import { PERMISSIONS } from "../permissions";
 import { executeCommit } from "./ledger";
 import { computeNextFireTime, generatePeriodLabel } from "./helpers";
+import { buildDuesSpreadsheetMatrix } from "./duesSpreadsheetLogic";
 
 /**
  * Returns the dues configuration for a specific fund.
@@ -813,99 +814,12 @@ export const getDuesSpreadsheet = query({
       throw new Error("Fund not found or does not belong to this organization.");
     }
 
-    // 1. Fetch events (ordered oldest to newest for spreadsheet left-to-right)
-    const rawEventsQuery = ctx.db
-      .query("duesEvents")
-      .withIndex("by_fundId_and_dueDate", (q) =>
-        q.eq("fundId", args.fundId)
-      )
-      .order("desc");
-
-    const rawEvents =
-      args.limitEvents !== undefined
-        ? await rawEventsQuery.take(args.limitEvents)
-        : await rawEventsQuery.collect();
-
-    const events = [...rawEvents].filter((e) => !e.isArchived).reverse();
-
-    // 2. Fetch members and their user profiles
-    const rawMembers = await ctx.db
-      .query("members")
-      .withIndex("by_organizationId", (q) =>
-        q.eq("organizationId", args.organizationId)
-      )
-      .collect();
-
-    // 3. Fetch dues memberships for these events
-    const allMemberships = [];
-    for (const event of events) {
-      const eventMemberships = await ctx.db
-        .query("duesMemberships")
-        .withIndex("by_duesEventId", (q) => q.eq("duesEventId", event._id))
-        .collect();
-      allMemberships.push(...eventMemberships);
-    }
-
-    // Map memberships by memberId
-    const membershipsByMember = new Map<string, typeof allMemberships>();
-    for (const m of allMemberships) {
-      const list = membershipsByMember.get(m.memberId) ?? [];
-      list.push(m);
-      membershipsByMember.set(m.memberId, list);
-    }
-
-    // Build member rows with aggregated unpaid counts
-    const memberRows = [];
-    for (const member of rawMembers) {
-      const user = await ctx.db.get("users", member.userId);
-      const userMemberships = membershipsByMember.get(member._id) ?? [];
-      const unpaidCount = userMemberships.filter((m) => !m.hasPaid).length;
-      const totalPaidAmount = userMemberships
-        .filter((m) => m.hasPaid && !m.isWaived)
-        .reduce((sum, m) => {
-          const ev = events.find((e) => e._id === m.duesEventId);
-          return sum + (ev?.amount ?? 0);
-        }, 0);
-
-      memberRows.push({
-        _id: member._id,
-        userId: member.userId,
-        name: member.nickname || user?.name || "Unknown Member",
-        email: user?.email,
-        nickname: member.nickname,
-        image: user?.image,
-        unpaidPeriodsCount: unpaidCount,
-        totalPaidAmount,
-      });
-    }
-
-    // Sort members alphabetically by display name
-    memberRows.sort((a, b) => a.name.localeCompare(b.name));
-
-    return {
-      events: events.map((e) => ({
-        _id: e._id,
-        fundId: e.fundId,
-        periodLabel: e.periodLabel,
-        dueDate: e.dueDate,
-        amount: e.amount,
-        totalMembers: e.totalMembers,
-        paidCount: e.paidCount,
-      })),
-      members: memberRows,
-      cells: allMemberships.map((c) => ({
-        _id: c._id,
-        duesEventId: c.duesEventId,
-        fundId: c.fundId,
-        memberId: c.memberId,
-        userId: c.userId,
-        hasPaid: c.hasPaid,
-        isWaived: c.isWaived,
-        paidAt: c.paidAt,
-        ledgerEntryId: c.ledgerEntryId,
-        invoiceId: c.invoiceId,
-      })),
-    };
+    return await buildDuesSpreadsheetMatrix(
+      ctx,
+      args.organizationId,
+      args.fundId,
+      args.limitEvents
+    );
   },
 });
 

@@ -24,13 +24,23 @@ export const _getInvoiceAndPaymentContext = internalQuery({
       )
       .first();
 
-    // 2. Fallback to searching by borderpayReferenceId if not matched by invoiceNumber
+    // 2. Try searching by gatewayReferenceId using dedicated index
     if (!invoice) {
       invoice = await ctx.db
         .query("invoices")
-        .withIndex("by_organizationId", (q) => q)
-        // eslint-disable-next-line @convex-dev/no-filter-in-query
-        .filter((q) => q.eq(q.field("borderpayReferenceId"), args.referenceId))
+        .withIndex("by_gatewayReferenceId", (q) =>
+          q.eq("gatewayReferenceId", args.referenceId)
+        )
+        .first();
+    }
+
+    // 3. Fallback to searching by borderpayReferenceId using dedicated index
+    if (!invoice) {
+      invoice = await ctx.db
+        .query("invoices")
+        .withIndex("by_borderpayReferenceId", (q) =>
+          q.eq("borderpayReferenceId", args.referenceId)
+        )
         .first();
     }
 
